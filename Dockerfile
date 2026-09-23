@@ -33,7 +33,7 @@ ENV VITE_DOCKER_BUILD=1
 RUN npm run build-only
 
 # Stage 2: Build Backend
-FROM --platform=$BUILDPLATFORM golang:alpine AS backend-builder
+FROM golang:alpine AS backend-builder
 
 # 接收构建参数
 ARG HTTP_PROXY
@@ -59,7 +59,7 @@ COPY backend/ .
 # Use ARG TARGETOS and TARGETARCH to support cross-compilation
 ARG TARGETOS
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o flatnas-backend .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -ldflags="-s -w" -o flatnas-backend .
 
 # Stage 3: Final Image
 FROM alpine:latest
