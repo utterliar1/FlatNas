@@ -1025,6 +1025,17 @@ func SaveData(c *gin.Context) {
 		delete(payload, "items")
 	}
 
+	// 防御性安全检查：防止空 widgets 异常覆盖磁盘上的有效组件配置
+	if incomingWidgets, ok := payload["widgets"].([]interface{}); ok && len(incomingWidgets) == 0 {
+		if existingWidgets, hasExisting := existingData["widgets"].([]interface{}); hasExisting && len(existingWidgets) > 0 {
+			allowEmpty, _ := payload["allowEmptyWidgets"].(bool)
+			if !allowEmpty {
+				log.Printf("SaveData 拦截到异常空 widgets 覆盖请求 user=%s，保留现有 %d 个组件", username, len(existingWidgets))
+				payload["widgets"] = existingWidgets
+			}
+		}
+	}
+
 	// Single-user mode always persists as admin to avoid stale imported usernames leaking back.
 	if username == "admin" && sysConfig.AuthMode == "single" {
 		payload["username"] = "admin"

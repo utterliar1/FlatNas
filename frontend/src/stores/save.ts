@@ -93,6 +93,12 @@ export const useSaveStore = defineStore("save", () => {
           dataVersion.value = normalizeVersion(conflictState.value.serverVersion);
         }
 
+        // 防御性安全保障：防止在数据尚未拉取完毕或异常清空时将空 widgets 存入服务器
+        if (widgetsStore.widgets.length === 0) {
+          console.warn("[saveData] widgetsStore.widgets is empty during save, applying defaults to avoid clearing server widgets");
+          widgetsStore.widgets = widgetsStore.normalizeIncomingWidgets([], true);
+        }
+
         const body: Record<string, unknown> = {
           groups: groupsStore.groups,
           widgets: widgetsStore.widgets.map((w) => stripWidgetUiState(w)),
@@ -221,24 +227,29 @@ export const useSaveStore = defineStore("save", () => {
 
               // 检查服务端删除的 widget（本地有但服务端没有）
               if (canAutoMerge) {
-                for (const [id, lw] of localMap) {
-                  if (!serverMap.has(id)) {
-                    // 检查本端是否修改过该 widget
-                    let localModified = false;
-                    try {
-                      const lastSaved = JSON.parse(lastSavedJson || "{}") as { widgets?: any[] };
-                      const lastSavedW = (lastSaved.widgets || []).find((w: any) => w.id === id);
-                      if (!lastSavedW || stableStringify(lastSavedW.data) !== stableStringify(lw.data)) {
-                        localModified = true;
+                // 防御：若服务端 widgets 异常为空，绝不级联全量删除本地 widgets
+                if (serverWidgets.length === 0 && localWidgets.length > 0) {
+                  canAutoMerge = false;
+                } else {
+                  for (const [id, lw] of localMap) {
+                    if (!serverMap.has(id)) {
+                      // 检查本端是否修改过该 widget
+                      let localModified = false;
+                      try {
+                        const lastSaved = JSON.parse(lastSavedJson || "{}") as { widgets?: any[] };
+                        const lastSavedW = (lastSaved.widgets || []).find((w: any) => w.id === id);
+                        if (!lastSavedW || stableStringify(lastSavedW.data) !== stableStringify(lw.data)) {
+                          localModified = true;
+                        }
+                      } catch { localModified = true; }
+                      if (localModified) {
+                        canAutoMerge = false;
+                        break;
                       }
-                    } catch { localModified = true; }
-                    if (localModified) {
-                      canAutoMerge = false;
-                      break;
+                      // 本端未修改，服务端已删除 → 从合并结果中移除
+                      const idx = mergedWidgets.findIndex((w: any) => w.id === id);
+                      if (idx >= 0) mergedWidgets.splice(idx, 1);
                     }
-                    // 本端未修改，服务端已删除 → 从合并结果中移除
-                    const idx = mergedWidgets.findIndex((w: any) => w.id === id);
-                    if (idx >= 0) mergedWidgets.splice(idx, 1);
                   }
                 }
               }

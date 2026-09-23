@@ -187,6 +187,7 @@ export const useSyncStore = defineStore("sync", () => {
   };
 
   const detectResponseRole = (data: Record<string, unknown>): "auth" | "guest" => {
+    if (!auth.isLogged) return "guest";
     if (data.username && data.version !== undefined) return "auth";
     if (Array.isArray(data.widgets)) {
       const allPublic = (data.widgets as any[]).every((w: any) => w.isPublic === true);
@@ -285,8 +286,18 @@ export const useSyncStore = defineStore("sync", () => {
     if (data.groups) groupsStore.groups = data.groups as any;
     else groupsStore.groups = [];
 
+    const serverWidgetsEmpty = Array.isArray(data.widgets) && data.widgets.length === 0;
     const normalizedWidgets = widgetsStore.normalizeIncomingWidgets(data.widgets as any, auth.isLogged);
     widgetsStore.applyServerWidgets(normalizedWidgets, auth.isLogged, widgetsStore.layoutEditInProgress);
+
+    if (serverWidgetsEmpty && auth.isLogged && normalizedWidgets.length > 0) {
+      console.warn("[SelfHealing] Server returned empty widgets array, triggering self-healing save with defaults");
+      setTimeout(() => {
+        if (auth.isLogged && widgetsStore.widgets.length > 0) {
+          void saveData(true, true);
+        }
+      }, 1000);
+    }
 
     if (data.appConfig) {
       const incomingConfig = data.appConfig as Record<string, unknown>;

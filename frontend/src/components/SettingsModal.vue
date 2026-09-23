@@ -1122,7 +1122,7 @@ const isUnknownWidget = (type: string) => {
   return !knownTypes.includes(type);
 };
 
-const restoreMissingWidgets = () => {
+const restoreMissingWidgets = async () => {
   const defaultWidgets = createDefaultWidgetList(store.isLogged);
 
   let addedCount = 0;
@@ -1136,9 +1136,14 @@ const restoreMissingWidgets = () => {
 
   if (addedCount > 0) {
     store.markDirty();
+    try {
+      await store.saveData(true);
+    } catch (e) {
+      console.error("[restoreMissingWidgets] Save error:", e);
+    }
     alert(`${t('settings.messages.componentsRestored')} ${addedCount} ${t('settings.messages.missingComponents')}`);
-} else {
-  alert(t('settings.messages.noMissingComponents'));
+  } else {
+    alert(t('settings.messages.noMissingComponents'));
   }
 };
 
