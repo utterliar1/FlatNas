@@ -83,11 +83,18 @@ export const useCacheStore = defineStore("cache", () => {
 
       if (cache.groups) groupsStore.groups = cache.groups;
       if (cache.widgets) {
-        widgetsStore.applyServerWidgets(
-          widgetsStore.normalizeIncomingWidgets(cache.widgets as WidgetConfig[], auth.isLogged),
-          auth.isLogged,
-          widgetsStore.layoutEditInProgress,
-        );
+        const normalized = widgetsStore.normalizeIncomingWidgets(cache.widgets as WidgetConfig[], auth.isLogged);
+        // 如果缓存中的组件异常偏少（<= 2个），说明此本地快照已被污染损坏，拒绝作为信任缓存
+        if (normalized.length > 2) {
+          widgetsStore.applyServerWidgets(
+            normalized,
+            auth.isLogged,
+            widgetsStore.layoutEditInProgress,
+          );
+        } else {
+          console.warn("[loadFromCache] Cached widgets count abnormal (<=2), discarding stale cache to force remote fetch");
+          return false;
+        }
       }
       if (cache.appConfig) {
         const mergedConfig = { ...configStore.appConfig, ...cache.appConfig } as AppConfig & {
@@ -153,8 +160,9 @@ export const useCacheStore = defineStore("cache", () => {
     try {
       const res = await fetchWithTimeout("/api/data", { headers: getHeaders() });
       if (res.status === 304) {
-        if (!isClientReady.value) {
-          const reloadRes = await fetchWithTimeout("/api/data", {
+        // 如果客户端未就绪或组件异常偏少（<= 2个），304 时必须强制拉取服务端真实数据打破死锁
+        if (!isClientReady.value || widgetsStore.widgets.length <= 2) {
+          const reloadRes = await fetchWithTimeout(`/api/data?_t=${Date.now()}`, {
             headers: getHeaders(),
             cache: "reload",
           });

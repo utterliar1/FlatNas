@@ -59,6 +59,7 @@ const handleSubmit = async () => {
       const success = await store.login(username.value, password.value);
       if (success) {
         close();
+        await store.init();
       }
     }
   } catch (e: unknown) {

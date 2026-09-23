@@ -81,7 +81,7 @@ export const useSaveStore = defineStore("save", () => {
     const doSave = async () => {
       if (conflictState.value.show && !force) { hasPendingSave.value = false; return "conflict"; }
       if (configStore.isPageUnloading) return "no_change";
-      if (cacheStore.isCacheWriteGuardActive()) { cacheStore.deferredSaveRequested = true; return "no_change"; }
+      if (cacheStore.isCacheWriteGuardActive() && !force && !immediate) { cacheStore.deferredSaveRequested = true; return "no_change"; }
       if (isSaving.value) { hasPendingSave.value = true; return "no_change"; }
 
       isSaving.value = true;
@@ -170,29 +170,47 @@ export const useSaveStore = defineStore("save", () => {
           if (typeof serverVer !== "undefined") {
             const v = normalizeVersion(serverVer);
             if (conflictState.value.show) return "conflict";
+
+            const fetchFreshServerData = async () => {
+              try {
+                const fr = await fetch(`/api/data?_t=${Date.now()}`, {
+                  headers: cacheStore.getHeaders(),
+                  cache: "no-store",
+                });
+                if (fr.ok && fr.status !== 304) {
+                  return await fr.json().catch(() => null);
+                }
+              } catch (e) {
+                console.warn("[saveData] fetchFreshServerData error:", e);
+              }
+              return null;
+            };
+
             // Smart conflict check: skip popup if only widget data changed
             try {
-              const rd = await (await fetch("/api/data", { headers: cacheStore.getHeaders() })).json();
-              const rSig = buildServerLayoutSignature(buildServerLayoutMap(rd.widgets || []));
-              const lSig = buildServerLayoutSignature(buildServerLayoutMap(widgetsStore.widgets));
-              const rCfg = stripForceNetworkMode((rd.appConfig || {}) as Record<string, unknown>);
-              const lCfg = stripForceNetworkMode(configStore.appConfig as unknown as Record<string, unknown>);
-              const rssFeedsMatch = jsonEqual(rd.rssFeeds || [], rssFeeds.value);
-              const rssCategoriesMatch = jsonEqual(rd.rssCategories || [], rssCategories.value);
-              if (
-                rSig === lSig &&
-                jsonEqual(rd.groups || [], groupsStore.groups) &&
-                jsonEqual(rCfg, lCfg) &&
-                rssFeedsMatch &&
-                rssCategoriesMatch
-              ) {
-                dataVersion.value = v; await fetchData(); widgetsStore.updateLastSavedLayout(); return "saved";
+              const rd = await fetchFreshServerData();
+              if (rd) {
+                const rSig = buildServerLayoutSignature(buildServerLayoutMap(rd.widgets || []));
+                const lSig = buildServerLayoutSignature(buildServerLayoutMap(widgetsStore.widgets));
+                const rCfg = stripForceNetworkMode((rd.appConfig || {}) as Record<string, unknown>);
+                const lCfg = stripForceNetworkMode(configStore.appConfig as unknown as Record<string, unknown>);
+                const rssFeedsMatch = jsonEqual(rd.rssFeeds || [], rssFeeds.value);
+                const rssCategoriesMatch = jsonEqual(rd.rssCategories || [], rssCategories.value);
+                if (
+                  rSig === lSig &&
+                  jsonEqual(rd.groups || [], groupsStore.groups) &&
+                  jsonEqual(rCfg, lCfg) &&
+                  rssFeedsMatch &&
+                  rssCategoriesMatch
+                ) {
+                  dataVersion.value = v; await fetchData(); widgetsStore.updateLastSavedLayout(); return "saved";
+                }
               }
             } catch (e) { console.warn("Smart conflict check failed", e); }
             // Per-widget LWW 合并：差异仅在个别 widget data 时静默合并
             try {
-              const rd = await (await fetch("/api/data", { headers: cacheStore.getHeaders() })).json();
-              const serverWidgets = (rd.widgets || []) as any[];
+              const rd = await fetchFreshServerData();
+              const serverWidgets = ((rd && rd.widgets) || []) as any[];
               const localWidgets = widgetsStore.widgets as any[];
               const serverMap = new Map(serverWidgets.map((w: any) => [w.id, w]));
               const localMap = new Map(localWidgets.map((w: any) => [w.id, w]));

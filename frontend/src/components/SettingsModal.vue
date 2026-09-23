@@ -1137,11 +1137,20 @@ const restoreMissingWidgets = async () => {
   if (addedCount > 0) {
     store.markDirty();
     try {
-      await store.saveData(true);
+      if (store.conflictState) {
+        store.conflictState.show = false;
+      }
+      const saveResult = await store.saveData(true, true);
+      console.log("[restoreMissingWidgets] Forced save result:", saveResult);
+      if (saveResult === "saved") {
+        alert(`${t('settings.messages.componentsRestored')} ${addedCount} ${t('settings.messages.missingComponents')}，并已成功保存配置！`);
+      } else {
+        alert(`${t('settings.messages.componentsRestored')} ${addedCount} ${t('settings.messages.missingComponents')}（保存状态: ${saveResult}）`);
+      }
     } catch (e) {
       console.error("[restoreMissingWidgets] Save error:", e);
+      alert(`组件已恢复，但自动保存发生异常: ${e instanceof Error ? e.message : e}`);
     }
-    alert(`${t('settings.messages.componentsRestored')} ${addedCount} ${t('settings.messages.missingComponents')}`);
   } else {
     alert(t('settings.messages.noMissingComponents'));
   }
