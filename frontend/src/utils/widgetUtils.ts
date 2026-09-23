@@ -141,18 +141,8 @@ export function normalizeIncomingWidgets(
     nextWidgets.push(...listWithoutDocker);
   }
 
-  // Keep normalization and "restore defaults" aligned to the same source of truth.
-  // In guest mode, only use defaults as fillers for missing types that are already marked isPublic in user data.
-  // In logged-in mode, freely add missing defaults.
-  const isGuest = !isLoggedIn;
-  for (const fallback of createDefaultWidgetList(!!isLoggedIn)) {
-    if (!nextWidgets.some((widget) => widget.type === fallback.type)) {
-      if (isGuest) {
-        continue;
-      }
-      nextWidgets.push(fallback);
-    }
-  }
+  // Note: Only initialize defaults when nextWidgets is empty (handled above).
+  // Do NOT re-add deleted defaults here on each reload, otherwise user deletions will be undone.
 
   return nextWidgets;
 }

@@ -251,7 +251,7 @@ export const useSaveStore = defineStore("save", () => {
                   groups: rd.groups || body.groups,
                   version: v,
                 };
-                if (rd.appConfig) mergedBody.appConfig = { ...body.appConfig, ...rd.appConfig };
+                if (rd.appConfig) mergedBody.appConfig = { ...(rd.appConfig as Record<string, unknown>), ...(body.appConfig as Record<string, unknown>) };
                 const mr = await fetch("/api/save", { method: "POST", headers: cacheStore.getHeaders(), body: JSON.stringify(mergedBody) });
                 if (mr.ok) {
                   conflictState.value.show = false; hasUnsavedChanges.value = false;

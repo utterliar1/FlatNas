@@ -56,9 +56,16 @@ watch(
   { deep: true }
 );
 
-const handleEscapeKey = (e: KeyboardEvent) => {
+const handleEscapeKey = async (e: KeyboardEvent) => {
   if (e.key === "Escape" && props.show) {
     e.stopPropagation();
+    if (store.hasUnsavedChanges) {
+      try {
+        await store.saveData(true);
+      } catch (err) {
+        console.error("[SettingsModal] Save on escape error:", err);
+      }
+    }
     emit("update:show", false);
   }
 };
@@ -634,6 +641,7 @@ const confirmRemoveWidget = () => {
   if (index > -1) {
     store.widgets.splice(index, 1);
     store.markDirty();
+    store.saveData(true);
   }
   showDeleteWidgetConfirm.value = false;
   widgetToDeleteId.value = "";
@@ -753,7 +761,16 @@ const onAuthSuccess = async () => {
   await action();
 };
 
-const close = () => emit("update:show", false);
+const close = async () => {
+  if (store.hasUnsavedChanges) {
+    try {
+      await store.saveData(true);
+    } catch (e) {
+      console.error("[SettingsModal] Save on close error:", e);
+    }
+  }
+  emit("update:show", false);
+};
 
 const showPassword = ref(false);
 
@@ -1195,9 +1212,11 @@ const enableSystemStatusWidget = () => {
   if (!exists) {
     store.widgets.push(def);
     store.markDirty();
+    store.saveData();
   } else {
     exists.enable = true;
     store.markDirty();
+    store.saveData();
   }
 };
 
@@ -1207,6 +1226,7 @@ const onMobileSystemStatusDisplayChange = (e: Event) => {
   if (w) {
     w.hideOnMobile = !checked;
     store.markDirty();
+    store.saveData();
   }
 };
 
@@ -2652,6 +2672,7 @@ watch(activeTab, (val) => {
                               (e) => {
                                 w.hideOnMobile = !(e.target as HTMLInputElement).checked;
                                 store.markDirty();
+                                store.saveData();
                               }
                             " />
                           <div
