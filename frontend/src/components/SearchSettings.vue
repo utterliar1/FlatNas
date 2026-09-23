@@ -24,6 +24,43 @@ const removeSearchEngine = (key: string) => {
     store.appConfig.defaultSearchEngine = list[0]?.key || "";
   }
 };
+
+// 上传并裁剪引擎图标：统一缩放居中裁剪为 64x64，减小存储体积
+const onIconUpload = (event: Event, engine: SearchEngine) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const size = 64;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const scale = Math.max(size / img.width, size / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      try {
+        engine.icon = canvas.toDataURL("image/webp", 0.9);
+      } catch {
+        engine.icon = canvas.toDataURL("image/png");
+      }
+    };
+    img.src = reader.result as string;
+  };
+  reader.readAsDataURL(file);
+};
+
+const removeIcon = (engine: SearchEngine) => {
+  delete engine.icon;
+};
 </script>
 
 <template>
@@ -32,7 +69,7 @@ const removeSearchEngine = (key: string) => {
       搜索引擎设置
     </h4>
     <div class="text-xs text-gray-500 mb-2">
-      拖拽调整优先级；设置默认或开启“记住上次选择”。
+      拖拽调整优先级；设置默认或开启“记住上次选择”。点击引擎图标可上传自定义图片。
     </div>
     <VueDraggable
       v-model="store.appConfig.searchEngines"
@@ -68,6 +105,40 @@ const removeSearchEngine = (key: string) => {
                 />
               </svg>
             </div>
+            <label
+              class="relative h-9 w-9 flex-shrink-0 cursor-pointer group"
+              title="点击上传引擎图标"
+            >
+              <img
+                v-if="e.icon"
+                :src="e.icon"
+                class="h-9 w-9 rounded-lg object-contain border border-gray-200 bg-white"
+              />
+              <div
+                v-else
+                class="h-9 w-9 rounded-lg border-2 border-dashed border-gray-300 bg-white flex items-center justify-center text-gray-300 text-sm font-bold group-hover:border-blue-400 group-hover:text-blue-400 transition-colors"
+              >
+                {{ e.label.slice(0, 1) }}
+              </div>
+              <span
+                class="absolute inset-0 rounded-lg bg-black/40 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] transition-opacity pointer-events-none"
+                >更换</span
+              >
+              <span
+                v-if="e.icon"
+                role="button"
+                aria-label="移除图标"
+                class="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-gray-500 hover:bg-red-500 text-white text-[9px] leading-none flex items-center justify-center cursor-pointer shadow"
+                @click.stop.prevent="removeIcon(e)"
+                >✕</span
+              >
+              <input
+                type="file"
+                accept="image/*"
+                class="hidden"
+                @change="onIconUpload($event, e)"
+              />
+            </label>
             <input
               v-model="e.label"
               class="font-bold text-gray-700 bg-transparent border-b border-transparent focus:border-blue-500 outline-none w-24"

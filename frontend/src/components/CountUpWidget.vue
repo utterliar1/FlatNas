@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
+import { useAdminUnlock } from "@/composables/useAdminUnlock";
+const { unlocked: adminUnlocked } = useAdminUnlock();
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
@@ -65,7 +67,7 @@ const saveConfig = async () => {
       w.data.pauseStartTime = null;
       w.data.isRunning = false;
     }
-    store.markDirty();
+    store.markDirtyAndSave();
     calculate();
   }
   showConfig.value = false;
@@ -262,7 +264,7 @@ const toggleTimer = () => {
     }
     w.data.isRunning = true;
   }
-  store.markDirty();
+  store.markDirtyAndSave();
   calculate(); // Immediate update
 };
 
@@ -273,7 +275,7 @@ const resetTimer = () => {
   w.data.isRunning = false;
   w.data.totalPauseDuration = 0;
   w.data.pauseStartTime = null;
-  store.markDirty();
+  store.markDirtyAndSave();
   calculate();
 };
 
@@ -412,6 +414,7 @@ const isSmall = computed(
     <div class="w-full h-full flex flex-col items-center justify-center p-2 relative z-10">
       <!-- Settings Button -->
       <button
+        v-if="adminUnlocked"
         @click.stop="openConfig"
         class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-black/10 active:scale-95 z-20"
         title="设置"

@@ -1,5 +1,10 @@
 <template>
-  <div class="network-indicator" :class="statusClass" :title="statusTooltip">
+  <div
+    class="network-indicator cursor-pointer"
+    :class="statusClass"
+    :title="statusTooltip"
+    @click="registerSecretClick"
+  >
     <div class="indicator-dot" />
     <span class="indicator-text">{{ statusLabel }}</span>
     <span v-if="offlineQueueCount > 0" class="indicator-badge" :title="`${offlineQueueCount} 条待同步`">
@@ -11,8 +16,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useMainStore } from "@/stores/main";
+import { useAdminUnlock } from "@/composables/useAdminUnlock";
 
 const store = useMainStore();
+const { registerSecretClick } = useAdminUnlock();
 const offlineQueueCount = computed(() => store.offlineQueueCount);
 
 // Expose isHttpPollingActive from sync store

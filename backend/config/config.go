@@ -119,10 +119,6 @@ func ensureSystemConfig() {
 			current["authMode"] = "single"
 			changed = true
 		}
-		if _, ok := current["enableDocker"].(bool); !ok {
-			current["enableDocker"] = false
-			changed = true
-		}
 		if !changed {
 			return
 		}
@@ -140,8 +136,7 @@ func ensureSystemConfig() {
 		return
 	}
 	defaultConfig := map[string]interface{}{
-		"authMode":     "single",
-		"enableDocker": false,
+		"authMode": "single",
 	}
 	data, err := json.MarshalIndent(defaultConfig, "", "  ")
 	if err != nil {

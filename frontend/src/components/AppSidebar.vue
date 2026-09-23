@@ -2,8 +2,11 @@
 defineOptions({
   name: "AppSidebar",
 });
-import { computed, onMounted, onUnmounted, ref, nextTick, toRef } from "vue";
+import { computed, onMounted, onUnmounted, ref, nextTick, toRef, watch } from "vue";
 import { useMainStore } from "../stores/main";
+import { useStorage } from "@vueuse/core";
+import { useAdminUnlock } from "@/composables/useAdminUnlock";
+const { unlocked: adminUnlocked } = useAdminUnlock();
 import { useDevice } from "../composables/useDevice";
 import type { BookmarkCategory, BookmarkItem } from "@/types";
 import { parseBookmarks } from "../utils/bookmark";
@@ -33,7 +36,14 @@ const toggleHiddenMode = () => {
   }
 };
 const fileInput = ref<HTMLInputElement | null>(null);
-const viewMode = ref<"bookmarks" | "groups">(store.appConfig.sidebarViewMode || "bookmarks");
+// 侧边栏视图模式：本地即时持久化 + 服务端配置自动保存（多设备同步）
+const viewMode = useStorage<"bookmarks" | "groups">("flat-nas-sidebar-view", "bookmarks");
+watch(
+  () => store.appConfig.sidebarViewMode,
+  (v) => {
+    if (v === "bookmarks" || v === "groups") viewMode.value = v;
+  },
+);
 
 const sidebarHeight = ref("69.4vh");
 const sidebarTop = ref("0px");
@@ -60,7 +70,7 @@ onUnmounted(() => {
 const toggleViewMode = () => {
   viewMode.value = viewMode.value === "bookmarks" ? "groups" : "bookmarks";
   store.appConfig.sidebarViewMode = viewMode.value;
-  if (store.isLogged) store.markDirty();
+  if (store.isLogged) void store.saveData();
 };
 
 const scrollToGroup = (groupId: string) => {
@@ -167,7 +177,7 @@ const confirmAddCategory = () => {
     }
   }
 
-  store.markDirty();
+  store.markDirtyAndSave();
   showAddCategoryModal.value = false;
 };
 
@@ -268,7 +278,7 @@ const draggableBookmarkGroups = computed({
         newData.push(defaultCat);
       }
       widget.data = newData;
-      store.markDirty();
+      store.markDirtyAndSave();
     }
   },
 });
@@ -346,7 +356,7 @@ const handleFileUpload = (event: Event) => {
         }
 
         // Save store
-        store.markDirty();
+        store.markDirtyAndSave();
 
         alert(`成功导入 ${newItems.length} 个书签！`);
       } else {
@@ -365,7 +375,7 @@ const handleFileUpload = (event: Event) => {
 const handleDeleteBookmark = (category: BookmarkCategory, itemId: string) => {
   if (!store.isLogged) return;
   category.children = category.children.filter((item) => item.id !== itemId);
-  store.markDirty();
+  store.markDirtyAndSave();
   const widget = store.widgets.find((w) => w.type === "bookmarks");
   if (widget) {
     store.saveSingleWidget(widget.id, { data: widget.data, enable: widget.enable });
@@ -382,7 +392,7 @@ const handleDeleteCategory = (categoryId: string) => {
         if (activeCategory.value?.id === categoryId) {
           activeCategory.value = null;
         }
-        store.markDirty();
+        store.markDirtyAndSave();
         store.saveSingleWidget(widget.id, { data: widget.data, enable: widget.enable });
         return;
       }
@@ -613,7 +623,7 @@ const confirmEditBookmark = async () => {
       const topLevel = data.find((c) => c.id === editingBookmarkId.value);
       if (topLevel) {
         updateItem(topLevel);
-        store.markDirty();
+        store.markDirtyAndSave();
         showEditModal.value = false;
         return;
       }
@@ -638,7 +648,7 @@ const confirmEditBookmark = async () => {
             }
           }
         }
-        store.markDirty();
+        store.markDirtyAndSave();
         showEditModal.value = false;
         return;
       }
@@ -729,7 +739,7 @@ const confirmAddBookmark = async () => {
     icon: icon,
   });
 
-  store.markDirty();
+  store.markDirtyAndSave();
   if (activePath.value.length > 0) {
     const pathIds = activePath.value.map((c) => c.id);
     const newPath = pathIds
@@ -763,7 +773,7 @@ const togglePin = (item: BookmarkItem, parent: BookmarkCategory) => {
     // Let's just keep it simple: unpinning just removes the visual pin.
   }
 
-  store.markDirty();
+  store.markDirtyAndSave();
 };
 
 onMounted(() => {
@@ -802,7 +812,8 @@ const toggle = () => {
             'pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)]',
           ]
         : [
-            'z-50 rounded-xl left-4',
+            'z-50 rounded-xl',
+            isCollapsed ? (isHiddenMode ? 'left-[252px]' : 'left-[224px]') : 'left-4',
             'md:before:absolute md:before:-inset-10 md:before:content-[\'\'] md:before:bg-transparent md:before:z-[-1]',
             'backdrop-blur-[12px] shadow-[0_4px_15px_rgba(0,0,0,0.1)] bg-white/20 border border-white/20',
             isCollapsed ? (isHiddenMode ? 'w-[20px]' : 'w-[48px]') : 'w-64',
@@ -865,7 +876,7 @@ const toggle = () => {
       </button>
       <div class="flex items-center gap-2">
         <button
-          v-if="!isMobile"
+          v-if="!isMobile && adminUnlocked"
           @click="store.isLogged ? props.onOpenEdit() : null"
           class="p-1.5 rounded-xl transition-all group relative backdrop-blur-[8px] border"
           :class="[
@@ -891,7 +902,7 @@ const toggle = () => {
           </svg>
         </button>
         <button
-          v-if="!isMobile"
+          v-if="!isMobile && adminUnlocked"
           @click="toggleHiddenMode"
           class="p-1.5 rounded-xl transition-all group relative backdrop-blur-[8px] border hover:bg-white/25 hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:bg-white/15"
           :class="[
@@ -922,7 +933,7 @@ const toggle = () => {
           </svg>
         </button>
         <button
-          v-if="store.isLogged && !isCollapsed && viewMode === 'bookmarks'"
+          v-if="store.isLogged && !isCollapsed && viewMode === 'bookmarks' && adminUnlocked"
           @click="handleImportClick"
           class="p-1.5 rounded-xl transition-all group relative bg-white/10 backdrop-blur-[8px] border border-white/15 hover:bg-white/25 hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:bg-white/15 text-black"
           title="导入书签"
@@ -943,7 +954,7 @@ const toggle = () => {
           </svg>
         </button>
         <button
-          v-if="!isMobile"
+          v-if="!isMobile && adminUnlocked"
           @click="toggle"
           class="p-1.5 transition-all group relative backdrop-blur-[8px] border hover:bg-white/25 hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:bg-white/15"
           :class="[
@@ -1253,7 +1264,7 @@ const toggle = () => {
               class="space-y-1 min-h-[50px]"
               :animation="150"
               group="bookmarks"
-              @end="store.markDirty()"
+              @end="store.markDirtyAndSave()"
             >
               <div
                 v-for="item in currentFolder.children"
@@ -1364,7 +1375,7 @@ const toggle = () => {
             </VueDraggable>
           </div>
 
-          <div v-if="store.isLogged" class="p-3 border-t border-black/5 shrink-0 flex gap-2">
+          <div v-if="store.isLogged && adminUnlocked" class="p-3 border-t border-black/5 shrink-0 flex gap-2">
             <button
               @click="goHome"
               class="flex-1 p-2 rounded-lg transition-colors group flex items-center justify-center border border-dashed hover:bg-black/5 border-black/20 text-inherit text-xs"
@@ -1399,7 +1410,7 @@ const toggle = () => {
           :fallback-on-body="true"
           :disabled="isCollapsed"
           handle=".drag-handle"
-          @end="store.markDirty()"
+          @end="store.markDirtyAndSave()"
           :class="{ 'flex flex-col items-center w-full': isCollapsed }"
         >
           <button
@@ -1511,7 +1522,7 @@ const toggle = () => {
     </div>
 
     <div
-      v-if="store.isLogged && !isCollapsed && viewMode === 'bookmarks'"
+      v-if="store.isLogged && !isCollapsed && viewMode === 'bookmarks' && adminUnlocked"
       class="flex justify-between p-2 gap-2 border-t border-white/10"
     >
       <button

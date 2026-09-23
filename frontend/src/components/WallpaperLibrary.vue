@@ -118,7 +118,7 @@ const setWallpaper = (name: string, type: "pc" | "mobile") => {
         ...store.appConfig.wallpaperConfig,
         enabled: false,
       };
-      store.markDirty();
+      store.markDirtyAndSave();
     }
   } else {
     store.appConfig.mobileBackground = url;
@@ -127,7 +127,7 @@ const setWallpaper = (name: string, type: "pc" | "mobile") => {
         ...store.appConfig.mobileWallpaperConfig,
         enabled: false,
       };
-      store.markDirty();
+      store.markDirtyAndSave();
     }
   }
   return true;
@@ -207,7 +207,7 @@ const handleWallpaperPreviewError = (
           mobileWallpapers.value = [...mobileWallpapers.value];
           store.appConfig.mobileWallpaperOrder = [...mobileWallpapers.value];
         }
-        store.markDirty();
+        store.markDirtyAndSave();
       }
       removeErrorTimer = null;
     }, 1000);
@@ -354,7 +354,7 @@ const executeDelete = async (name: string, type: "pc" | "mobile") => {
         };
       }
     }
-    store.markDirty();
+    store.markDirtyAndSave();
   }
 
   const base =
@@ -777,7 +777,7 @@ const applyCustomApi = async (type: "pc" | "mobile", apply: boolean = true) => {
         prependWallpaperToList(uploadedFilename, type);
       }
       store.refreshResources();
-      store.markDirty();
+      store.markDirtyAndSave();
       alert("设置成功");
     } else {
       if (uploadedFilename) {

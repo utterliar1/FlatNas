@@ -24,7 +24,6 @@ export function createDefaultWidgetList(isLoggedIn: boolean): WidgetConfig[] {
       isPublic: true,
     },
     { id: "sidebar", type: "sidebar", enable: false, isPublic: true },
-    { id: "docker", type: "docker", enable: false, isPublic: true, colSpan: 1, rowSpan: 1 },
     {
       id: "file-transfer",
       type: "file-transfer",
@@ -68,7 +67,7 @@ export function createDefaultWidgetList(isLoggedIn: boolean): WidgetConfig[] {
   // Filter out login-only widgets for guests
   if (!isLoggedIn) {
     return base.filter((w) => {
-      const loginOnly = ["docker", "file-transfer", "system-status", "sidebar", "status-monitor"];
+      const loginOnly = ["file-transfer", "system-status", "sidebar", "status-monitor"];
       return !loginOnly.includes(w.id);
     });
   }
@@ -83,11 +82,14 @@ export function normalizeIncomingWidgets(
   input?: WidgetConfig[],
   isLoggedIn?: boolean,
 ): WidgetConfig[] {
-  const nextWidgets = Array.isArray(input) ? input.map((widget) => ({ ...widget })) : [];
+  let nextWidgets = Array.isArray(input) ? input.map((widget) => ({ ...widget })) : [];
 
   if (nextWidgets.length === 0) {
     return createDefaultWidgetList(!!isLoggedIn);
   }
+
+  // Remove any legacy docker widgets
+  nextWidgets = nextWidgets.filter((w) => w.id !== "docker" && w.type !== "docker");
 
   // Fix memo type
   const memoW = nextWidgets.find((widget) => widget.id === "memo");
@@ -95,36 +97,7 @@ export function normalizeIncomingWidgets(
     memoW.type = "memo";
   }
 
-  // Normalize Docker widget
-  let dockerCandidate = nextWidgets.find((widget) => widget.id === "docker");
-  if (!dockerCandidate) {
-    dockerCandidate = nextWidgets.find((widget) => widget.type === "docker");
-  }
-  const listWithoutDocker = nextWidgets.filter(
-    (widget) => widget.id !== "docker" && widget.type !== "docker",
-  );
-  let finalDockerWidget: WidgetConfig | undefined;
-  if (dockerCandidate) {
-    finalDockerWidget = dockerCandidate;
-    finalDockerWidget.id = "docker";
-    finalDockerWidget.type = "docker";
-    if (typeof finalDockerWidget.colSpan !== "number") finalDockerWidget.colSpan = 1;
-    if (typeof finalDockerWidget.rowSpan !== "number") finalDockerWidget.rowSpan = 1;
-    if (typeof finalDockerWidget.enable !== "boolean") finalDockerWidget.enable = false;
-    if (typeof finalDockerWidget.isPublic !== "boolean") finalDockerWidget.isPublic = true;
-  } else if (isLoggedIn) {
-    finalDockerWidget = {
-      id: "docker",
-      type: "docker",
-      enable: false,
-      isPublic: true,
-      colSpan: 1,
-      rowSpan: 1,
-    };
-  }
-  if (finalDockerWidget) {
-    listWithoutDocker.push(finalDockerWidget);
-  }
+  const listWithoutDocker = nextWidgets;
 
   // Normalize File Transfer widget (deduplicate)
   const fileTransferList = listWithoutDocker.filter((widget) => widget.type === "file-transfer");

@@ -195,7 +195,7 @@ const login = async () => {
         );
         if (targetWidget && targetWidget.data) {
           targetWidget.data.token = data.token;
-          store.markDirty();
+          store.markDirtyAndSave();
         }
         // Optionally fetch profile
         fetchProfile();

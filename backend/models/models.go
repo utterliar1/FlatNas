@@ -69,6 +69,12 @@ type AppConfig struct {
 	Theme                 string          `json:"theme,omitempty"`
 	CustomCss             string          `json:"customCss,omitempty"`
 	CustomJs              string          `json:"customJs,omitempty"`
+	InternalDomains       string          `json:"internalDomains,omitempty"`
+	NetworkRules          string          `json:"networkRules,omitempty"`
+	LanProbeTarget        string          `json:"lanProbeTarget,omitempty"`
+	AllowGuestLanAccess   bool            `json:"allowGuestLanAccess,omitempty"`
+	LatencyThresholdMs    int             `json:"latencyThresholdMs,omitempty"`
+	WhitelistLatencyMode  bool            `json:"whitelistLatencyMode,omitempty"`
 }
 
 type WallpaperConfig struct {
@@ -79,9 +85,7 @@ type WallpaperConfig struct {
 }
 
 type SystemConfig struct {
-	AuthMode     string `json:"authMode"` // "single" or "multi"
-	EnableDocker bool   `json:"enableDocker"`
-	DockerHost   string `json:"dockerHost,omitempty"`
+	AuthMode string `json:"authMode"` // "single" or "multi"
 }
 
 type LoginRequest struct {

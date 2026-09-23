@@ -99,7 +99,7 @@ const sanitizeFeed = (feed: RssFeed) => {
 
 const touchFeeds = () => {
   store.rssFeeds = [...rssFeeds.value];
-  store.markDirty();
+  store.markDirtyAndSave();
 };
 
 const addCategory = () => {
@@ -109,7 +109,7 @@ const addCategory = () => {
   }
   upsertCategory(normalized);
   newCategoryName.value = "";
-  store.markDirty();
+  store.markDirtyAndSave();
 };
 
 const removeCategory = (category: RssCategory) => {
@@ -126,7 +126,7 @@ const removeCategory = (category: RssCategory) => {
       ? { ...feed, category: "" }
       : feed,
   );
-  store.markDirty();
+  store.markDirtyAndSave();
 };
 
 const addSingleFeed = () => {
@@ -157,7 +157,7 @@ const addSingleFeed = () => {
     },
     ...rssFeeds.value,
   ];
-  store.markDirty();
+  store.markDirtyAndSave();
   quickFeed.value = {
     title: "",
     url: "",
@@ -291,7 +291,7 @@ const importFeeds = async () => {
   }
 
   store.rssFeeds = nextFeeds;
-  store.markDirty();
+  store.markDirtyAndSave();
 
   const parts = [`新增 ${created} 条`, `更新 ${updated} 条`, `跳过 ${skipped} 条`];
   if (invalidLines.length > 0) {
@@ -335,7 +335,7 @@ const importFeeds = async () => {
 
   if (titleUpdated > 0) {
     store.rssFeeds = [...nextFeeds];
-    store.markDirty();
+    store.markDirtyAndSave();
   }
 
   if (titleUpdated > 0) {
@@ -357,11 +357,11 @@ const deleteFeed = (id: string) => {
     return;
   }
   store.rssFeeds = rssFeeds.value.filter((feed) => feed.id !== id);
-  store.markDirty();
+  store.markDirtyAndSave();
 };
 
 const toggleWidgetDirty = () => {
-  store.markDirty();
+  store.markDirtyAndSave();
 };
 
 onMounted(() => {

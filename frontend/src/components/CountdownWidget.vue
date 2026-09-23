@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
+import { useAdminUnlock } from "@/composables/useAdminUnlock";
+const { unlocked: adminUnlocked } = useAdminUnlock();
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
@@ -55,7 +57,7 @@ const saveConfig = async () => {
   const w = store.widgets.find((item) => item.id === props.widget.id);
   if (w) {
     w.data = { ...w.data, ...formData.value };
-    store.markDirty();
+    store.markDirtyAndSave();
     calculate();
   }
   showConfig.value = false;
@@ -239,7 +241,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
 
     <!-- Placeholder when no data -->
     <div
-      v-if="!widget.data?.targetDate"
+      v-if="!widget.data?.targetDate && adminUnlocked"
       class="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-black/10 transition-colors p-2 text-center"
       @click="openConfig"
     >
@@ -266,6 +268,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
     <div v-else class="w-full h-full flex flex-col items-center justify-center p-2 relative z-10">
       <!-- Settings Button -->
       <button
+        v-if="adminUnlocked"
         @click.stop="openConfig"
         class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-black/10 active:scale-95 z-20"
         title="设置"

@@ -194,6 +194,11 @@ export const useMainStore = defineStore("main", () => {
   const fetchData = sync.fetchData;
   const saveData = sync.saveData;
   const markDirty = sync.markDirty;
+  // 标脏并自动保存（500ms 防抖）：用于编辑模式之外的用户操作实时落盘
+  const markDirtyAndSave = () => {
+    sync.markDirty();
+    void saveData();
+  };
   const resolveConflict = sync.resolveConflict;
   const isSaving = computed(() => sync.isSaving);
   const hasPendingSave = computed(() => sync.hasPendingSave);
@@ -333,6 +338,7 @@ export const useMainStore = defineStore("main", () => {
     fetchData,
     saveData,
     markDirty,
+    markDirtyAndSave,
     resolveConflict,
     isSaving,
     hasPendingSave,

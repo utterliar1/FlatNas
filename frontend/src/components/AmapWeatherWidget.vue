@@ -7,6 +7,8 @@ import { useResumeRefresh } from "@/composables/useResumeRefresh";
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
+import { useAdminUnlock } from "@/composables/useAdminUnlock";
+const { unlocked: adminUnlocked } = useAdminUnlock();
 
 // City Data Types
 interface CityNode {
@@ -308,7 +310,7 @@ const saveConfig = async () => {
   props.widget.data.city = configForm.value.city;
   // eslint-disable-next-line vue/no-mutating-props
   props.widget.data.apiKey = configForm.value.apiKey;
-  store.markDirty();
+  store.markDirtyAndSave();
   isConfiguring.value = false;
   await store.saveSingleWidget(props.widget.id, {
     data: props.widget.data,
@@ -477,7 +479,7 @@ watch(
     <!-- Display Mode -->
     <div v-else class="relative z-10 flex flex-col h-full">
       <button
-        v-if="store.isLogged"
+        v-if="store.isLogged && adminUnlocked"
         @click="isConfiguring = true"
         class="absolute top-2 right-2 z-20 text-gray-500 hover:text-blue-600 transition-all bg-white/30 p-1 rounded-full opacity-0 group-hover:opacity-100"
       >

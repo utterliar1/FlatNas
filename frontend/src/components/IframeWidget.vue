@@ -86,7 +86,7 @@ const toggleScale = () => {
   }
   // eslint-disable-next-line vue/no-mutating-props
   props.widget.data.scaled = isScaled.value;
-  store.markDirty();
+  store.markDirtyAndSave();
 };
 
 const onLoad = () => {

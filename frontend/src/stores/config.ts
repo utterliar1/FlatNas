@@ -25,12 +25,10 @@ export const useConfigStore = defineStore("config", () => {
   // Version / update checking
   const currentVersion = "1.2.6";
   const latestVersion = ref("");
-  const dockerUpdateAvailable = ref(false);
   const updateCheckLastAt = useStorage<number>("flat-nas-update-check-last-at", 0);
   const UPDATE_CHECK_TTL = 30 * 60 * 1000;
 
   const hasUpdate = computed(() => {
-    if (dockerUpdateAvailable.value) return true;
     if (!latestVersion.value) return false;
     const v1 = currentVersion.replace(/^v/, "");
     const v2 = latestVersion.value.replace(/^v/, "");
@@ -147,7 +145,10 @@ export const useConfigStore = defineStore("config", () => {
     customJsDisclaimerAgreed: false,
     mouseHoverEffect: "scale",
     autoUltrawide: false,
+    internalDomains: "",
     networkRules: "",
+    lanProbeTarget: "",
+    allowGuestLanAccess: false,
     networkPresets: {
       tailscale: false,
       zerotier: false,
@@ -156,12 +157,11 @@ export const useConfigStore = defineStore("config", () => {
       ngrok: false,
     },
     latencyThresholdMs: 200,
+    whitelistLatencyMode: false,
   });
 
   const systemConfig = ref<SystemConfig>({
     authMode: "single",
-    enableDocker: false,
-    dockerHost: "",
   });
 
   const lockServerSync = () => {
@@ -193,21 +193,6 @@ export const useConfigStore = defineStore("config", () => {
       }
     } catch (e) {
       console.error("Failed to check update", e);
-    }
-
-    if (!systemConfig.value.enableDocker) {
-      dockerUpdateAvailable.value = false;
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/docker-status");
-      if (res.ok) {
-        const data = await res.json();
-        dockerUpdateAvailable.value = data.state === "ready" && Boolean(data.hasUpdate);
-      }
-    } catch {
-      // ignore
     }
   };
 
@@ -256,7 +241,6 @@ export const useConfigStore = defineStore("config", () => {
     isPageUnloading,
     currentVersion,
     latestVersion,
-    dockerUpdateAvailable,
     hasUpdate,
     updateCheckLastAt,
     resourceVersion,

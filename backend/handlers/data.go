@@ -407,6 +407,13 @@ func GetData(c *gin.Context) {
 
 	filterStart := time.Now()
 	if isGuest {
+		allowGuestLanAccess := false
+		if appConfig, ok := userData["appConfig"].(map[string]interface{}); ok {
+			if v, ok := appConfig["allowGuestLanAccess"].(bool); ok && v {
+				allowGuestLanAccess = true
+			}
+		}
+
 		// Filter public items manually in the map structure
 		// This is tricky with untyped map, but necessary to preserve data integrity
 		if groups, ok := userData["groups"].([]interface{}); ok {
@@ -446,12 +453,15 @@ func GetData(c *gin.Context) {
 			userData["widgets"] = filteredWidgets
 		}
 
-		sensitiveKeys := map[string]struct{}{
-			"lanUrl":        {},
-			"backupLanUrls": {},
-			"lanHost":       {},
+		if !allowGuestLanAccess {
+			sensitiveKeys := map[string]struct{}{
+				"lanUrl":         {},
+				"backupLanUrls":  {},
+				"lanHost":        {},
+				"lanProbeTarget": {},
+			}
+			removeSensitiveFields(userData, sensitiveKeys)
 		}
-		removeSensitiveFields(userData, sensitiveKeys)
 	}
 	filterMs := time.Since(filterStart).Milliseconds()
 
@@ -1183,13 +1193,6 @@ func UpdateSystemConfig(c *gin.Context) {
 		sysConfig.AuthMode = v
 	}
 
-	if v, ok := payload["enableDocker"].(bool); ok {
-		sysConfig.EnableDocker = v
-	}
-	if v, ok := payload["dockerHost"].(string); ok {
-		sysConfig.DockerHost = v
-	}
-
 	if sysConfig.AuthMode != oldAuthMode {
 		if err := migrateAuthModeData(oldAuthMode, sysConfig.AuthMode); err != nil {
 			log.Printf("UpdateSystemConfig: data migration failed: %v", err)
@@ -1200,8 +1203,6 @@ func UpdateSystemConfig(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update system config"})
 		return
 	}
-
-	InitDocker()
 
 	c.JSON(http.StatusOK, sysConfig)
 }

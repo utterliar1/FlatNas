@@ -124,7 +124,7 @@ const handleFileUpload = (event: Event) => {
         }
 
         alert(`成功导入 ${newItems.length} 个书签`);
-        store.markDirty();
+        store.markDirtyAndSave();
         await store.saveSingleWidget(props.widget.id, {
           data: props.widget.data,
           enable: props.widget.enable,
@@ -161,7 +161,7 @@ const confirmAddCategory = async () => {
       children: [],
     });
     isAddingCategory.value = false;
-    store.markDirty();
+    store.markDirtyAndSave();
     const success = await store.saveSingleWidget(props.widget.id, {
       data: props.widget.data,
       enable: props.widget.enable,
@@ -271,7 +271,7 @@ const confirmSubmit = async () => {
     activeCategoryId.value = null;
     activeCategory.value = null;
     editingLinkId.value = null;
-    store.markDirty();
+    store.markDirtyAndSave();
     await store.saveSingleWidget(props.widget.id, {
       data: props.widget.data,
       enable: props.widget.enable,
@@ -287,7 +287,7 @@ const cancelEdit = () => {
 
 const toggleCategory = async (cat: BookmarkCategory) => {
   cat.collapsed = !cat.collapsed;
-  store.markDirty();
+  store.markDirtyAndSave();
   await store.saveSingleWidget(props.widget.id, {
     data: props.widget.data,
     enable: props.widget.enable,
@@ -295,7 +295,7 @@ const toggleCategory = async (cat: BookmarkCategory) => {
 };
 
 const onBookmarkDragEnd = async () => {
-  store.markDirty();
+  store.markDirtyAndSave();
   await store.saveSingleWidget(props.widget.id, {
     data: props.widget.data,
     enable: props.widget.enable,
@@ -321,7 +321,7 @@ const deleteItem = async (catId: string, linkId?: string) => {
   } else {
     props.widget.data.splice(catIndex, 1);
   }
-  store.markDirty();
+  store.markDirtyAndSave();
   const success = await store.saveSingleWidget(props.widget.id, {
     data: props.widget.data,
     enable: props.widget.enable,

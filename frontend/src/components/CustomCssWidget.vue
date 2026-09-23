@@ -197,13 +197,13 @@ const save = async () => {
   try {
     const success = await store.saveSingleWidget(props.widget.id, { data: newData });
     if (success) {
-      store.markDirty();
+      store.markDirtyAndSave();
     } else {
-      store.markDirty();
+      store.markDirtyAndSave();
     }
   } catch (e) {
     console.error("[CustomCssWidget] save failed:", e);
-    store.markDirty();
+    store.markDirtyAndSave();
   } finally {
     isSaving.value = false;
   }

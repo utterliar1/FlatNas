@@ -1,4 +1,4 @@
-﻿{
+{
   "appConfig": {
     "amapKey": "",
     "autoPlayMusic": false,
@@ -60,7 +60,11 @@
     "hideHeaderOnMobile": false,
     "iconShape": "rounded",
     "internalDomains": "",
+    "networkRules": "",
+    "lanProbeTarget": "",
+    "allowGuestLanAccess": false,
     "latencyThresholdMs": 200,
+    "whitelistLatencyMode": false,
     "mobileBackground": "/mobile_backgrounds/155548-17409885482e02.jpg",
     "mobileBackgroundBlur": 0,
     "mobileBackgroundMask": 0,
@@ -139,7 +143,6 @@
     "widgetAreaSize": 4
   },
   "authMode": "single",
-  "enableDocker": true,
   "groups": [
     {
       "autoHideTitle": true,
@@ -928,14 +931,6 @@
       "w": 0.5,
       "x": 4,
       "y": 1
-    },
-    {
-      "colSpan": 1,
-      "enable": false,
-      "id": "docker",
-      "isPublic": true,
-      "rowSpan": 1,
-      "type": "docker"
     }
   ]
 }

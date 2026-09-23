@@ -164,3 +164,5 @@ docs/
 .qodo
 gui-test-screenshots
 LOG.md
+/server/data/
+/.idea/

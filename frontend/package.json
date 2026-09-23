@@ -9,10 +9,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "server": "go run ../backend",
+    "server": "go -C ../backend run .",
     "server:hot": "cd ../backend && go run github.com/air-verse/air@latest -c .air.toml",
     "wait-backend": "node -e \"const base=process.env.VITE_BACKEND||'http://127.0.0.1:3000';const target=new URL('/api/system-config',base).toString();const timeoutMs=60000;const intervalMs=500;const start=Date.now();const attempt=async()=>{try{const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),1500);const res=await fetch(target,{signal:ctrl.signal});clearTimeout(t);if(res.ok){process.exit(0);}}catch(e){}if(Date.now()-start>timeoutMs){console.error('Backend health check timed out:',target);process.exit(1);}setTimeout(attempt,intervalMs);};attempt();\"",
-    "start": "run-p server \"wait-backend && dev\"",
+    "start": "run-p server start-frontend",
+    "start-frontend": "npm run wait-backend && npm run dev",
     "start:hot": "run-p server:hot \"wait-backend && dev\"",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",

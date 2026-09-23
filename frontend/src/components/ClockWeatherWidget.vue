@@ -5,6 +5,8 @@ import type { WidgetConfig } from "@/types";
 import { useWeather } from "@/composables/useWeather";
 import { formatLocationSource } from "@/utils/weather";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
+import { useAdminUnlock } from "@/composables/useAdminUnlock";
+const { unlocked: adminUnlocked } = useAdminUnlock();
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
@@ -304,7 +306,7 @@ onUnmounted(() => {
 
     <!-- 设置按钮 -->
     <div
-      v-if="props.widget && store.isLogged"
+      v-if="props.widget && store.isLogged && adminUnlocked"
       class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
     >
       <button

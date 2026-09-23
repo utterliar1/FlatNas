@@ -74,6 +74,8 @@ export interface SearchEngine {
   key: string;
   label: string;
   urlTemplate: string;
+  /** 自定义图标（data URL 或图片地址），缺省时显示首字母 */
+  icon?: string;
 }
 
 export interface WallpaperConfig {
@@ -111,6 +113,8 @@ export interface AppConfig {
   weatherEffectEnabled?: boolean;
   internalDomains?: string;
   networkRules?: string;
+  lanProbeTarget?: string;
+  allowGuestLanAccess?: boolean;
   networkPresets?: {
     tailscale?: boolean;
     zerotier?: boolean;
@@ -191,8 +195,6 @@ export interface AppConfig {
 
 export interface SystemConfig {
   authMode: "single" | "multi";
-  enableDocker: boolean;
-  dockerHost?: string;
 }
 
 export interface WidgetConfig {
