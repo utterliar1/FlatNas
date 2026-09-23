@@ -332,16 +332,9 @@
     "group": "組"
   },
   "about": {
-    "thanks": "感謝",
-    "feeders": "贊助者",
-    "specialThanks": "特別感謝意見回饋",
-    "feedAuthor": "☕ 贊助作者",
-    "alipay": "支付寶",
-    "wechat": "微信",
-    "qqGroup": "QQ群",
     "version": "版本",
-    "officialSite": "官網與介紹",
-    "wiki": "飛牛百科",
+    "description": "簡潔·高效·輕量化的個人 NAS 導航與儀表板系統",
+    "resources": "常用圖示資源",
     "iconLibrary": "圖示庫主站",
     "iconLibrary2": "圖示庫二站",
     "iconLibrary3": "圖示庫三站"

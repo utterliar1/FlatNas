@@ -332,16 +332,9 @@
     "group": "组"
   },
   "about": {
-    "thanks": "感谢",
-    "feeders": "投喂人",
-    "specialThanks": "特别鸣谢意见反馈",
-    "feedAuthor": "☕ 投喂作者",
-    "alipay": "支付宝",
-    "wechat": "微信",
-    "qqGroup": "QQ群",
     "version": "版本",
-    "officialSite": "官网与介绍",
-    "wiki": "飞牛百科",
+    "description": "简洁·高效·轻量化的个人 NAS 导航与仪表盘系统",
+    "resources": "常用图标资源",
     "iconLibrary": "图标库主站",
     "iconLibrary2": "图标库二站",
     "iconLibrary3": "图标库三站"

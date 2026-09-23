@@ -332,17 +332,10 @@
     "group": "Grp"
   },
   "about": {
-    "thanks": "Agradecimientos",
-    "feeders": "Colaboradores",
-    "specialThanks": "Agradecimiento especial por los comentarios",
-    "feedAuthor": "☕ Apoyar al autor",
-    "alipay": "Alipay",
-    "wechat": "WeChat",
-    "qqGroup": "Grupo QQ",
     "version": "Versión",
-    "officialSite": "Sitio oficial",
-    "wiki": "Wiki Feiniu",
-    "iconLibrary": "Biblioteca de iconos",
+    "description": "Panel de navegación NAS personal limpio, eficiente y ligero",
+    "resources": "Recursos de iconos",
+    "iconLibrary": "Biblioteca de iconos 1",
     "iconLibrary2": "Biblioteca de iconos 2",
     "iconLibrary3": "Biblioteca de iconos 3"
   },

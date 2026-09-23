@@ -332,17 +332,10 @@
     "group": "Grp"
   },
   "about": {
-    "thanks": "Thanks",
-    "feeders": "Contributors",
-    "specialThanks": "Special thanks for feedback",
-    "feedAuthor": "☕ Feed Author",
-    "alipay": "Alipay",
-    "wechat": "WeChat",
-    "qqGroup": "QQ Group",
     "version": "Version",
-    "officialSite": "Official Website",
-    "wiki": "Feiniu Wiki",
-    "iconLibrary": "Icon Library",
+    "description": "Clean, efficient and lightweight personal NAS navigation & dashboard",
+    "resources": "Icon Resources",
+    "iconLibrary": "Icon Library 1",
     "iconLibrary2": "Icon Library 2",
     "iconLibrary3": "Icon Library 3"
   },

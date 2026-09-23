@@ -332,17 +332,10 @@
     "group": "Grp"
   },
   "about": {
-    "thanks": "Danksagung",
-    "feeders": "Unterstützer",
-    "specialThanks": "Besonderer Dank für Feedback",
-    "feedAuthor": "☕ Autor unterstützen",
-    "alipay": "Alipay",
-    "wechat": "WeChat",
-    "qqGroup": "QQ-Gruppe",
     "version": "Version",
-    "officialSite": "Offizielle Website",
-    "wiki": "Feiniu Wiki",
-    "iconLibrary": "Symbolbibliothek",
+    "description": "Schlankes, effizientes und leichtes persönliches NAS-Dashboard",
+    "resources": "Symbolressourcen",
+    "iconLibrary": "Symbolbibliothek 1",
     "iconLibrary2": "Symbolbibliothek 2",
     "iconLibrary3": "Symbolbibliothek 3"
   },

@@ -332,17 +332,10 @@
     "group": "Grp"
   },
   "about": {
-    "thanks": "Remerciements",
-    "feeders": "Contributeurs",
-    "specialThanks": "Remerciements spéciaux pour les retours",
-    "feedAuthor": "☕ Soutenir l'auteur",
-    "alipay": "Alipay",
-    "wechat": "WeChat",
-    "qqGroup": "Groupe QQ",
     "version": "Version",
-    "officialSite": "Site officiel",
-    "wiki": "Wiki Feiniu",
-    "iconLibrary": "Bibliothèque d'icônes",
+    "description": "Tableau de bord NAS personnel épuré, efficace et léger",
+    "resources": "Ressources d'icônes",
+    "iconLibrary": "Bibliothèque d'icônes 1",
     "iconLibrary2": "Bibliothèque d'icônes 2",
     "iconLibrary3": "Bibliothèque d'icônes 3"
   },

@@ -332,17 +332,10 @@
     "group": "組"
   },
   "about": {
-    "thanks": "謝辞",
-    "feeders": "サポーター",
-    "specialThanks": "フィードバックに特別感謝",
-    "feedAuthor": "☕ 作者を支援",
-    "alipay": "Alipay",
-    "wechat": "WeChat",
-    "qqGroup": "QQグループ",
     "version": "バージョン",
-    "officialSite": "公式サイト",
-    "wiki": "Feiniu Wiki",
-    "iconLibrary": "アイコンライブラリ",
+    "description": "シンプルで軽量な個人用 NAS ナビゲーション＆ダッシュボード",
+    "resources": "アイコンリソース",
+    "iconLibrary": "アイコンライブラリ 1",
     "iconLibrary2": "アイコンライブラリ 2",
     "iconLibrary3": "アイコンライブラリ 3"
   },
