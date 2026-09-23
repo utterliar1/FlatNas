@@ -174,7 +174,7 @@ export const useSyncStore = defineStore("sync", () => {
 
   // ---- Guest/Auth dual state tree isolation ----
   // Tracks the source role of the current active layout state
-  let activeStateRole: "auth" | "guest" | "unknown" = "unknown";
+  let activeStateRole: "auth" | "guest" | "unknown" = auth.isLogged ? "auth" : "guest";
   // True if the current active layout contains non-public widgets/groups
   let hasNonPublicLayout = false;
 
@@ -264,12 +264,8 @@ export const useSyncStore = defineStore("sync", () => {
     isApplyingServerData = true;
     // Route by role: guest responses must never overwrite auth state layout
     const responseRole = detectResponseRole(data);
-    const shouldApply = responseRole === "auth"
-      ? auth.isLogged
-      : true; // guest data can always update guest state
-
-    if (!shouldApply && responseRole === "guest" && activeStateRole === "auth") {
-      console.warn("[DualState] Dropping guest data while auth state is active");
+    if (auth.isLogged && responseRole === "guest") {
+      console.warn("[DualState] Dropping guest data while auth session is active");
       isApplyingServerData = false;
       return;
     }
@@ -365,8 +361,8 @@ export const useSyncStore = defineStore("sync", () => {
 
   // ---- fetchAndProcessData ----
   const fetchAndProcessData = async () => {
-    if (cacheStore.isFetchingData) return;
-    cacheStore.isFetchingData = true;
+    if (cacheStore.isFetchingData.value) return;
+    cacheStore.isFetchingData.value = true;
     try {
       const headers: Record<string, string> = {};
       if (auth.token) headers["Authorization"] = `Bearer ${auth.token}`;
@@ -375,8 +371,10 @@ export const useSyncStore = defineStore("sync", () => {
       const data = await res.json();
       if (configStore.isServerSyncLocked && saveStore.hasUnsavedChanges) return;
       if (saveStore.saveTimer !== null || saveStore.isSaving) return;
-      if (widgetsStore.layoutDirty) {
-        if (!confirm("检测到云端数据更新，但您当前有未保存的布局修改。\n是否放弃本地修改并使用云端版本覆盖？")) return;
+      // 正在编辑模式且有脏布局时暂缓云端覆盖，避免打断用户当前拖拽；非编辑模式下一律平滑应用云端数据，彻底杜绝 confirm 弹窗阻塞与死锁
+      if (widgetsStore.layoutEditInProgress && widgetsStore.layoutDirty) {
+        console.warn("[Sync] Cloud update detected while layout edit in progress, preserving local edit");
+        return;
       }
       handleDataUpdate(data);
       widgetsStore.updateLastSavedLayout();
@@ -384,7 +382,7 @@ export const useSyncStore = defineStore("sync", () => {
         cacheStore.markServerSnapshotReady();
       }
     } catch (e) { console.error("Fetch data failed", e); }
-    finally { cacheStore.isFetchingData = false; }
+    finally { cacheStore.isFetchingData.value = false; }
   };
 
   // ---- 增量合并：批量拉取变化的 widget ----
@@ -443,7 +441,10 @@ export const useSyncStore = defineStore("sync", () => {
       try {
         const serverVersion = await fetchVersionOnly();
         if (serverVersion > dataVersion.value) await fetchAndProcessData();
-        if (saveStore.hasUnsavedChanges) { saveStore.hasPendingSave = true; setTimeout(() => saveData(), 2000); }
+        if (saveStore.hasUnsavedChanges && widgetsStore.layoutEditInProgress) {
+          saveStore.hasPendingSave = true;
+          setTimeout(() => saveData(), 2000);
+        }
         try {
           import("@/utils/offlineQueue").then(async (oq) => {
             const qSize = await oq.size();

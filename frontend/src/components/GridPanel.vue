@@ -943,6 +943,12 @@ watch(
 );
 
 const handleLayoutUpdated = (newLayout: GridLayoutItem[]) => {
+  // 核心约束：只有在处于编辑模式时，用户的主动拖拽与尺寸调整才被视为合法的布局修改
+  // 在非编辑模式下，任何 Grid 内部对齐或自适应计算都绝不得调用 store.markDirty()，杜绝假标脏与弹窗死循环
+  if (!isEditMode.value) {
+    return;
+  }
+
   // 如果是程序化更新导致的事件，跳过保存
   if (skipNextLayoutSave) {
     skipNextLayoutSave = false;

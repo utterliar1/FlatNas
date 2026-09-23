@@ -221,13 +221,18 @@ export const useWidgetsStore = defineStore("widgets", () => {
   };
 
   const checkLayoutDirty = () => {
+    // 只有在明确处于编辑状态(layoutEditInProgress)时才进行脏状态比对，非编辑状态下绝不标脏
+    if (!layoutEditInProgress.value) {
+      layoutDirty.value = false;
+      return;
+    }
     const currentLayoutMap = buildServerLayoutMap(widgets.value);
     const currentSig = buildServerLayoutSignature(currentLayoutMap);
     layoutDirty.value = currentSig !== lastSavedLayoutSignature.value;
   };
 
   watch(
-    widgets,
+    [widgets, layoutEditInProgress],
     () => {
       checkLayoutDirty();
     },

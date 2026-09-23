@@ -26,7 +26,7 @@ export const useCacheStore = defineStore("cache", () => {
   const cacheLoadedAt = ref<number | null>(null);
   const hasServerSnapshot = ref(false);
   const deferredSaveRequested = ref(false);
-  const isFetchingData = false;
+  const isFetchingData = ref(false);
   let isLoadingSnapshot = false;
   const serverSnapshotRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
