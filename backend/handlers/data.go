@@ -1033,6 +1033,26 @@ func SaveData(c *gin.Context) {
 	// 显式剔除以免被误写入用户自己的数据文件。
 	delete(payload, "sharedGroups")
 
+	// groupOrder 是用户个人对分组（含只读共享分组）展示顺序的偏好，
+	// 只允许保存为字符串 id 列表（上限 500 条）；类型非法时直接丢弃。
+	// 旧文件里已有的 groupOrder 在前端未提交该键时会按原样保留。
+	if raw, exists := payload["groupOrder"]; exists {
+		if list, ok := raw.([]interface{}); ok {
+			cleaned := make([]interface{}, 0, len(list))
+			for _, v := range list {
+				if s, ok := v.(string); ok && s != "" && len(cleaned) < 500 {
+					cleaned = append(cleaned, s)
+				}
+			}
+			payload["groupOrder"] = cleaned
+		} else if old, ok := existingData["groupOrder"]; ok {
+			// 类型非法时回退为文件中的既有偏好，避免一次脏提交丢失用户的排序设置。
+			payload["groupOrder"] = old
+		} else {
+			delete(payload, "groupOrder")
+		}
+	}
+
 	// Single-user mode always persists as admin to avoid stale imported usernames leaking back.
 	if username == "admin" && sysConfig.AuthMode == "single" {
 		payload["username"] = "admin"

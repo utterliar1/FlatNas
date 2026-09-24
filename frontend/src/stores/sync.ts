@@ -237,6 +237,7 @@ export const useSyncStore = defineStore("sync", () => {
     ...data,
     groups: groupsStore.groups,
     sharedGroups: groupsStore.sharedGroups,
+    groupOrder: groupsStore.groupOrder,
     widgets: widgetsStore.widgets,
     appConfig: configStore.appConfig,
     rssFeeds: rssFeeds.value,
@@ -289,6 +290,12 @@ export const useSyncStore = defineStore("sync", () => {
     // 共享分组（多用户共同的书签分组）：后端对非管理员用户注入的只读副本
     groupsStore.sharedGroups = Array.isArray(data.sharedGroups)
       ? (data.sharedGroups as any)
+      : [];
+
+    // 分组混排顺序偏好：用户个人对「自己的分组 + 只读共享分组」的展示顺序，
+    // 随用户自己的数据文件保存，仅影响本端渲染。
+    groupsStore.groupOrder = Array.isArray(data.groupOrder)
+      ? (data.groupOrder as string[])
       : [];
 
     const normalizedWidgets = widgetsStore.normalizeIncomingWidgets(data.widgets as any, auth.isLogged);

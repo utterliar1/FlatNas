@@ -95,6 +95,8 @@ export const useSaveStore = defineStore("save", () => {
 
         const body: Record<string, unknown> = {
           groups: groupsStore.groups,
+          // 分组混排顺序偏好（含只读共享分组的 id 顺序），随用户数据一起持久化
+          groupOrder: Array.isArray(groupsStore.groupOrder) ? groupsStore.groupOrder : [],
           widgets: widgetsStore.widgets.map((w) => stripWidgetUiState(w)),
           appConfig: stripForceNetworkMode(configStore.appConfig as unknown as Record<string, unknown>),
           rssFeeds: rssFeeds.value,

@@ -973,30 +973,66 @@ const filterGroupForDisplay = (g: NavGroup, readonly: boolean): NavGroup => ({
   }),
 });
 
+// 将自己的分组与只读共享分组按当前用户的混排偏好（groupOrder）排列：
+//   - groupOrder 中的 id 按其顺序展示（已失效的 id 自动忽略）；
+//   - 未记录在 groupOrder 中的分组按默认顺序追加（自己的在前、共享的在后）。
+const mergeGroupsForDisplay = (own: NavGroup[], shared: NavGroup[]): NavGroup[] => {
+  const order = store.groupOrder || [];
+  if (order.length === 0) return [...own, ...shared];
+  const byId = new Map<string, NavGroup>();
+  for (const g of own) byId.set(g.id, g);
+  for (const g of shared) byId.set(g.id, g);
+  const merged: NavGroup[] = [];
+  const used = new Set<string>();
+  for (const id of order) {
+    const g = byId.get(id);
+    if (g && !used.has(id)) {
+      merged.push(g);
+      used.add(id);
+    }
+  }
+  for (const g of own) {
+    if (!used.has(g.id)) {
+      merged.push(g);
+      used.add(g.id);
+    }
+  }
+  for (const g of shared) {
+    if (!used.has(g.id)) {
+      merged.push(g);
+      used.add(g.id);
+    }
+  }
+  return merged;
+};
+
 const displayGroups = computed(() => {
-  // ✨ 性能优化：在编辑模式且无搜索时，直接返回 store.groups 引用
+  const editing = isEditMode.value && !searchText.value;
+  // 性能优化：编辑模式且无共享分组时，直接返回 store.groups 引用，
   // 这样 VueDraggable 就能直接操作 store 中的数组，确保拖拽状态实时同步。
-  // 共享分组是只读副本、不参与拖拽，故编辑模式下不并入。
-  if (isEditMode.value && !searchText.value) {
+  if (editing && (store.sharedGroups || []).length === 0) {
     return store.groups;
   }
 
-  const ownGroups = store.groups
-    .map((g) => filterGroupForDisplay(g, false))
-    .filter((g) => {
-      if (store.isLogged) return true;
-      return g.items.length > 0 || !!g.preset;
-    });
+  const ownGroups = editing
+    ? [...store.groups]
+    : store.groups
+        .map((g) => filterGroupForDisplay(g, false))
+        .filter((g) => {
+          if (store.isLogged) return true;
+          return g.items.length > 0 || !!g.preset;
+        });
 
-  // 多用户共同的书签分组：拼接在本人分组之后，统一以只读方式渲染
+  // 多用户共同的书签分组：统一以只读方式渲染；编辑模式下同样并入列表，
+  // 允许拖动调整展示顺序（仅影响本用户的排序偏好，内容仍不可编辑）。
   const sharedGroups = (store.sharedGroups || [])
-    .map((g) => filterGroupForDisplay(g, true))
+    .map((g) => (editing ? { ...g, readonly: true } : filterGroupForDisplay(g, true)))
     .filter((g) => {
       if (store.isLogged) return true;
       return g.items.length > 0 || !!g.preset;
     });
 
-  return [...ownGroups, ...sharedGroups];
+  return mergeGroupsForDisplay(ownGroups, sharedGroups);
 });
 
 const paginationWheelLockUntil = ref(0);
@@ -2021,10 +2057,22 @@ const checkMove = () => {
 const onGroupDragEnd = (evt: any) => {
   const oldIndex = evt.oldIndex as number;
   const newIndex = evt.newIndex as number;
-  if (oldIndex !== newIndex) {
+  if (oldIndex === newIndex) return;
+  if (displayGroups.value === store.groups) {
+    // 无共享分组的快速路径：displayGroups 就是 store.groups 引用，索引一一对应
     store.reorderGroups(oldIndex, newIndex);
     store.markDirty();
+    return;
   }
+  // 混排路径：基于展示列表（自己的分组 + 只读共享分组）计算新顺序后拆分写回——
+  // 自己的分组按新顺序重排 groups，完整 id 顺序存入 groupOrder（本用户的展示偏好）。
+  const list = [...displayGroups.value];
+  if (oldIndex < 0 || oldIndex >= list.length || newIndex < 0 || newIndex >= list.length) return;
+  const [moved] = list.splice(oldIndex, 1);
+  if (!moved) return;
+  list.splice(newIndex, 0, moved);
+  store.applyMergedGroupOrder(list);
+  store.markDirty();
 };
 
 const getLayoutConfig = (group: NavGroup) => {
@@ -3114,7 +3162,7 @@ onUnmounted(() => {
               :class="{ 'opacity-0 hover:opacity-100': group.autoHideTitle }"
             >
               <div
-                v-if="isEditMode && !group.readonly"
+                v-if="isEditMode"
                 class="group-handle cursor-move text-white/50 hover:text-white p-1 select-none text-xl"
               >
                 ⋮⋮

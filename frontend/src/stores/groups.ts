@@ -7,6 +7,10 @@ export const useGroupsStore = defineStore("groups", () => {
   // 共享分组（多用户共同的书签分组）：后端从管理员数据派生的只读副本。
   // 仅用于渲染复用，绝不参与本用户的保存载荷。
   const sharedGroups = ref<NavGroup[]>([]);
+  // 分组混排顺序偏好：记录「自己的分组 + 只读共享分组」在当前用户视图中的
+  // 完整排列（仅存分组 id）。只影响本用户的展示顺序，随用户自己的数据文件
+  // 持久化，不会影响管理员与其他用户；空数组表示未自定义，按默认顺序展示。
+  const groupOrder = ref<string[]>([]);
   const items = computed(() => groups.value.flatMap((g) => g.items));
 
   const cleanInvalidGroups = () => {
@@ -86,9 +90,20 @@ export const useGroupsStore = defineStore("groups", () => {
     groups.value.splice(toIndex, 0, moved);
   };
 
+  // 按拖拽后的完整展示顺序（自己的分组 + 只读共享分组的混排列表）拆分写回：
+  //   - 自己的分组：按新顺序整体替换 groups 数组（保留原对象引用）；
+  //   - 完整 id 顺序（含共享分组）：写入 groupOrder 作为本用户的持久化偏好。
+  const applyMergedGroupOrder = (list: NavGroup[]) => {
+    const sharedIds = new Set((sharedGroups.value || []).map((g) => g.id));
+    const ownIds = new Set(groups.value.map((g) => g.id));
+    groups.value = list.filter((g) => !sharedIds.has(g.id) && ownIds.has(g.id));
+    groupOrder.value = list.map((g) => g.id);
+  };
+
   return {
     groups,
     sharedGroups,
+    groupOrder,
     items,
     cleanInvalidGroups,
     addGroup,
@@ -99,5 +114,6 @@ export const useGroupsStore = defineStore("groups", () => {
     updateItem,
     deleteItem,
     reorderGroups,
+    applyMergedGroupOrder,
   };
 });

@@ -135,6 +135,7 @@ export const useMainStore = defineStore("main", () => {
   // ---- Groups ----
   const groups = computed(() => groupsStore.groups);
   const sharedGroups = computed(() => groupsStore.sharedGroups);
+  const groupOrder = computed(() => groupsStore.groupOrder);
   const items = computed(() => groupsStore.items);
   const addGroup = groupsStore.addGroup;
   const deleteGroup = groupsStore.deleteGroup;
@@ -145,6 +146,7 @@ export const useMainStore = defineStore("main", () => {
   const deleteItem = groupsStore.deleteItem;
   const cleanInvalidGroups = groupsStore.cleanInvalidGroups;
   const reorderGroups = groupsStore.reorderGroups;
+  const applyMergedGroupOrder = groupsStore.applyMergedGroupOrder;
 
   // ---- Widgets ----
   const widgets = computed({
@@ -303,6 +305,7 @@ export const useMainStore = defineStore("main", () => {
     // Groups
     groups,
     sharedGroups,
+    groupOrder,
     items,
     addGroup,
     deleteGroup,
@@ -313,6 +316,7 @@ export const useMainStore = defineStore("main", () => {
     deleteItem,
     cleanInvalidGroups,
     reorderGroups,
+    applyMergedGroupOrder,
     // Widgets
     widgets,
     mergedWidgets,
