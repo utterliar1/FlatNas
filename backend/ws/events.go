@@ -152,6 +152,19 @@ func (b *WSBroadcaster) BroadcastBookmarks(username string, widgetID string, con
 	BroadcastBookmarksUpdated(b.Manager, username, widgetID, content)
 }
 
+// BroadcastSharedGroupsUpdated 通知全体在线用户共享分组（多用户共同的书签分组）已变更，
+// 促使其重新拉取自己的 /api/data（其中包含只读的 sharedGroups 副本）。
+// 共享分组对所有用户可见，故使用全员广播而非按用户广播。
+func (b *WSBroadcaster) BroadcastSharedGroupsUpdated() {
+	if b.Manager == nil {
+		return
+	}
+	replyMsg, _ := json.Marshal(map[string]interface{}{
+		"type": "shared_groups_updated",
+	})
+	b.Manager.Broadcast(replyMsg, "")
+}
+
 // BroadcastTodoUpdated REST API 保存 todo 后通过 WebSocket 广播
 func BroadcastTodoUpdated(manager *WSManager, username string, widgetID string, content interface{}) {
 	if manager == nil {

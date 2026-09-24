@@ -26,6 +26,7 @@ var socketServer *socketio.Server
 type getDataCacheEntry struct {
 	dataMod    time.Time
 	sysMod     time.Time
+	sharedMod  time.Time
 	response   map[string]interface{}
 	accessTime time.Time
 }
@@ -268,14 +269,15 @@ func latestModTime(a, b time.Time) time.Time {
 	return b
 }
 
-func buildGetDataETag(username, userFile string, isGuest bool, dataMod, sysMod time.Time, dataSize int64) string {
+func buildGetDataETag(username, userFile string, isGuest bool, dataMod, sysMod, sharedMod time.Time, dataSize int64) string {
 	payload := fmt.Sprintf(
-		"%s|%s|%t|%d|%d|%d",
+		"%s|%s|%t|%d|%d|%d|%d",
 		username,
 		userFile,
 		isGuest,
 		dataMod.UnixNano(),
 		sysMod.UnixNano(),
+		sharedMod.UnixNano(),
 		dataSize,
 	)
 	sum := sha256.Sum256([]byte(payload))
@@ -335,6 +337,9 @@ func GetData(c *gin.Context) {
 		sysMod = sysInfo.ModTime()
 	}
 
+	// 共享分组（多用户共同的书签分组）来自管理员数据文件，其修改时间同样参与缓存与 ETag 失效判断
+	sharedMod := sharedGroupsModTime()
+
 	userFile := filepath.Join(config.UsersDir, username+".json")
 	if username == "admin" && sysConfig.AuthMode == "single" {
 		userFile = filepath.Join(config.DataDir, "data.json")
@@ -351,7 +356,7 @@ func GetData(c *gin.Context) {
 	}
 	etag := ""
 	if userStatErr == nil {
-		etag = buildGetDataETag(username, userFile, isGuest, dataMod, sysMod, dataSize)
+		etag = buildGetDataETag(username, userFile, isGuest, dataMod, sysMod, sharedMod, dataSize)
 	}
 	setGetDataCacheHeaders(c, etag, dataMod, sysMod)
 	if requestHasMatchingETag(c, etag) {
@@ -369,7 +374,7 @@ func GetData(c *gin.Context) {
 		getDataCacheMu.RLock()
 		entry, ok := getDataCache[cacheKey]
 		getDataCacheMu.RUnlock()
-		if ok && entry.dataMod.Equal(dataMod) && entry.sysMod.Equal(sysMod) {
+		if ok && entry.dataMod.Equal(dataMod) && entry.sysMod.Equal(sysMod) && entry.sharedMod.Equal(sharedMod) {
 			getDataCacheMu.Lock()
 			entry.accessTime = time.Now()
 			getDataCache[cacheKey] = entry
@@ -396,7 +401,7 @@ func GetData(c *gin.Context) {
 			if refreshedInfo, statErr := os.Stat(userFile); statErr == nil {
 				dataMod = refreshedInfo.ModTime()
 				dataSize = refreshedInfo.Size()
-				etag = buildGetDataETag(username, userFile, isGuest, dataMod, sysMod, dataSize)
+				etag = buildGetDataETag(username, userFile, isGuest, dataMod, sysMod, sharedMod, dataSize)
 				setGetDataCacheHeaders(c, etag, dataMod, sysMod)
 			}
 		}
@@ -468,6 +473,14 @@ func GetData(c *gin.Context) {
 		userData["version"] = int64(0)
 	}
 
+	// 注入共享分组（多用户共同的书签分组）：仅对「非管理员且已登录」的请求注入，
+	// 作为独立顶层键 sharedGroups，前端只读渲染，绝不写入用户自己的数据文件。
+	if sharedGroupsInjectedFor(username, isGuest) {
+		userData["sharedGroups"] = loadSharedGroups()
+	} else {
+		delete(userData, "sharedGroups")
+	}
+
 	// Align memo widget data with memo files to avoid rollback on full refresh
 	if widgets, ok := userData["widgets"].([]interface{}); ok {
 		for _, w := range widgets {
@@ -500,6 +513,7 @@ func GetData(c *gin.Context) {
 		getDataCache[cacheKey] = getDataCacheEntry{
 			dataMod:    dataMod,
 			sysMod:     sysMod,
+			sharedMod:  sharedMod,
 			response:   userData,
 			accessTime: time.Now(),
 		}
@@ -1015,6 +1029,10 @@ func SaveData(c *gin.Context) {
 		delete(payload, "items")
 	}
 
+	// 共享分组是由管理员数据派生的只读视图，不属于任何用户可持久化的字段，
+	// 显式剔除以免被误写入用户自己的数据文件。
+	delete(payload, "sharedGroups")
+
 	// Single-user mode always persists as admin to avoid stale imported usernames leaking back.
 	if username == "admin" && sysConfig.AuthMode == "single" {
 		payload["username"] = "admin"
@@ -1052,6 +1070,10 @@ func SaveData(c *gin.Context) {
 	if b := ws.GetBroadcaster(); b != nil {
 		changedWidgets, deletedWidgets, structureChanged := computeWidgetDiff(existingData, payload)
 		ws.BroadcastDataUpdated(b.Manager, username, newVersion, changedWidgets, deletedWidgets, structureChanged)
+		// 管理员保存时若共享分组发生变化，向全体在线用户广播，促使其重新拉取只读副本。
+		if username == "admin" && sharedGroupsSignature(existingData) != sharedGroupsSignature(payload) {
+			b.BroadcastSharedGroupsUpdated()
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "version": newVersion})

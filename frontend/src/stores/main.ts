@@ -134,6 +134,7 @@ export const useMainStore = defineStore("main", () => {
 
   // ---- Groups ----
   const groups = computed(() => groupsStore.groups);
+  const sharedGroups = computed(() => groupsStore.sharedGroups);
   const items = computed(() => groupsStore.items);
   const addGroup = groupsStore.addGroup;
   const deleteGroup = groupsStore.deleteGroup;
@@ -301,6 +302,7 @@ export const useMainStore = defineStore("main", () => {
     updateCustomScripts,
     // Groups
     groups,
+    sharedGroups,
     items,
     addGroup,
     deleteGroup,

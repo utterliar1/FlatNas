@@ -31,6 +31,11 @@ export interface NavGroup {
   isPublic?: boolean;
   titleColor?: string;
   preset?: boolean;
+  // 多用户共同的书签分组：管理员把分组标记为 shared 即整组共享给所有用户。
+  // 由后端随管理员数据派生；管理员的自身分组会持久化该标记。
+  shared?: boolean;
+  // 只读标记：其他用户 / 访客拿到的共享分组副本，仅本地用于禁用编辑入口，不持久化。
+  readonly?: boolean;
   cardLayout?: "vertical" | "horizontal" | string;
   iconShape?:
   | "circle"

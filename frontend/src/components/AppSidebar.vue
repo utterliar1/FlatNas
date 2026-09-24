@@ -1504,8 +1504,65 @@ const toggle = () => {
             </div>
           </button>
         </div>
-        <div v-else class="flex flex-col items-center justify-center h-full opacity-40 gap-2">
+        <div
+          v-else-if="store.groups.length === 0 && store.sharedGroups.length === 0"
+          class="flex flex-col items-center justify-center h-full opacity-40 gap-2"
+        >
           <span class="text-xs">暂无分组</span>
+        </div>
+
+        <!-- 共享分组（多用户共同的书签分组）：只读、不参与拖拽 -->
+        <div
+          v-if="store.sharedGroups.length > 0"
+          class="space-y-1"
+          :class="{ 'flex flex-col items-center w-full': isCollapsed }"
+        >
+          <div
+            v-if="!isCollapsed"
+            class="text-[10px] font-bold uppercase tracking-wider text-black/40 px-2 pt-2 pb-0.5"
+          >
+            共享分组
+          </div>
+          <button
+            v-for="group in store.sharedGroups"
+            :key="group.id"
+            @click="scrollToGroup(group.id)"
+            title="共享分组（由管理员维护，只读）"
+            class="w-full flex items-center transition-all group relative text-left text-black bg-blue-500/10 backdrop-blur-md border border-blue-400/30 hover:bg-blue-500/20 hover:shadow-md hover:-translate-y-[1px] active:translate-y-0"
+            :class="[
+              isCollapsed ? 'justify-center w-10 h-10 p-0 rounded-xl' : 'p-2 rounded-lg gap-2',
+            ]"
+          >
+            <div
+              class="flex-shrink-0 flex items-center justify-center"
+              :class="[isCollapsed ? 'w-5 h-5' : 'w-5 h-5']"
+            >
+              <img
+                v-if="group.icon"
+                :src="store.getAssetUrl(group.icon)"
+                class="w-full h-full object-contain"
+                alt=""
+              />
+              <span v-else class="text-[10px] font-bold opacity-70 leading-none">{{
+                (group.title || '').substring(0, 2)
+              }}</span>
+            </div>
+            <span
+              class="font-medium whitespace-nowrap transition-all duration-300 origin-left flex-1 truncate text-sm"
+              :class="isCollapsed ? 'hidden' : 'opacity-100 w-auto'"
+            >
+              {{ group.title }}
+            </span>
+            <div
+              v-if="isCollapsed"
+              class="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-1.5 bg-black/80 text-white text-xs rounded-lg pointer-events-none whitespace-nowrap z-[60] flex items-center gap-2 shadow-lg transition-opacity duration-200 backdrop-blur-md border border-white/10 opacity-100"
+            >
+              {{ group.title }}
+              <div
+                class="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-black/80"
+              ></div>
+            </div>
+          </button>
         </div>
       </template>
     </div>

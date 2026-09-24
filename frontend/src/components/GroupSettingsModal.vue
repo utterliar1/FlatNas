@@ -20,6 +20,11 @@ const group = computed(() => {
 
 const close = () => emit("update:show", false);
 
+// 只有管理员，且处于多用户模式时，才可把分组设为「共享分组」（多用户共同的书签分组）
+const canShare = computed(
+  () => store.username === "admin" && store.systemConfig.authMode === "multi",
+);
+
 const updateGroup = (updates: Partial<NavGroup>) => {
   if (props.groupId) {
     store.updateGroup(props.groupId, updates);
@@ -196,6 +201,30 @@ const bgAlpha = computed({
                 公开
               </button>
             </div>
+          </div>
+
+          <!-- Shared Group Toggle (admin only, multi-user mode) -->
+          <div
+            v-if="canShare"
+            class="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100"
+          >
+            <div class="flex flex-col pr-3">
+              <span class="text-xs font-bold text-gray-700">共享给所有用户</span>
+              <span class="text-[10px] text-gray-400">
+                开启后该分组作为「共享分组」呈现给所有用户：登录用户可完整查看，未登录访客仅见公开条目。仅管理员可维护。
+              </span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                :checked="!!group.shared"
+                @change="(e) => updateGroup({ shared: (e.target as HTMLInputElement).checked })"
+                class="sr-only peer"
+              />
+              <div
+                class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"
+              ></div>
+            </label>
           </div>
 
           <!-- Auto Hide Title Toggle -->

@@ -49,6 +49,7 @@ export const useCacheStore = defineStore("cache", () => {
         : data.widgets;
       const cacheData = {
         groups: data.groups,
+        sharedGroups: data.sharedGroups,
         widgets: cacheWidgets,
         appConfig: stripForceNetworkMode(
           (data.appConfig || undefined) as Record<string, unknown> | undefined,
@@ -82,6 +83,7 @@ export const useCacheStore = defineStore("cache", () => {
       if (!isMatch) return false;
 
       if (cache.groups) groupsStore.groups = cache.groups;
+      if (Array.isArray(cache.sharedGroups)) groupsStore.sharedGroups = cache.sharedGroups;
       if (cache.widgets) {
         widgetsStore.applyServerWidgets(
           widgetsStore.normalizeIncomingWidgets(cache.widgets as WidgetConfig[], auth.isLogged),

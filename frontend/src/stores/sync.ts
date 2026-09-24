@@ -236,6 +236,7 @@ export const useSyncStore = defineStore("sync", () => {
   const buildCacheSnapshot = (data: Record<string, unknown>) => ({
     ...data,
     groups: groupsStore.groups,
+    sharedGroups: groupsStore.sharedGroups,
     widgets: widgetsStore.widgets,
     appConfig: configStore.appConfig,
     rssFeeds: rssFeeds.value,
@@ -284,6 +285,11 @@ export const useSyncStore = defineStore("sync", () => {
 
     if (data.groups) groupsStore.groups = data.groups as any;
     else groupsStore.groups = [];
+
+    // 共享分组（多用户共同的书签分组）：后端对非管理员用户注入的只读副本
+    groupsStore.sharedGroups = Array.isArray(data.sharedGroups)
+      ? (data.sharedGroups as any)
+      : [];
 
     const normalizedWidgets = widgetsStore.normalizeIncomingWidgets(data.widgets as any, auth.isLogged);
     widgetsStore.applyServerWidgets(normalizedWidgets, auth.isLogged, widgetsStore.layoutEditInProgress);
@@ -502,6 +508,11 @@ export const useSyncStore = defineStore("sync", () => {
         break;
       }
       case "network_heartbeat": networkStore.lastNetworkHeartbeatAt = Date.now(); networkStore.isNetworkSyncActive = true; break;
+      case "shared_groups_updated": {
+        // 共享分组（多用户共同的书签分组）已变更：全体用户重新拉取只读副本
+        fetchAndProcessData();
+        break;
+      }
       case "lucky:stun": luckyStunData.value = (msg.payload || {}) as LuckyStunData; break;
       case "ping": networkStore.lastPingAt = Date.now(); break;
     }

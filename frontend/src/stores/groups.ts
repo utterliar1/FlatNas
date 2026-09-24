@@ -4,6 +4,9 @@ import type { NavItem, NavGroup } from "@/types";
 
 export const useGroupsStore = defineStore("groups", () => {
   const groups = ref<NavGroup[]>([]);
+  // 共享分组（多用户共同的书签分组）：后端从管理员数据派生的只读副本。
+  // 仅用于渲染复用，绝不参与本用户的保存载荷。
+  const sharedGroups = ref<NavGroup[]>([]);
   const items = computed(() => groups.value.flatMap((g) => g.items));
 
   const cleanInvalidGroups = () => {
@@ -85,6 +88,7 @@ export const useGroupsStore = defineStore("groups", () => {
 
   return {
     groups,
+    sharedGroups,
     items,
     cleanInvalidGroups,
     addGroup,

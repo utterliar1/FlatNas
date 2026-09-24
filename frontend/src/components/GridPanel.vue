@@ -960,29 +960,43 @@ const handleLayoutUpdated = (newLayout: GridLayoutItem[]) => {
   });
 };
 
+const filterGroupForDisplay = (g: NavGroup, readonly: boolean): NavGroup => ({
+  ...g,
+  readonly,
+  items: g.items.filter((item) => {
+    const isMatch =
+      !searchText.value ||
+      item.title.toLowerCase().includes(searchText.value.toLowerCase()) ||
+      item.url.toLowerCase().includes(searchText.value.toLowerCase());
+    const isVisible = checkVisible(item);
+    return isMatch && isVisible;
+  }),
+});
+
 const displayGroups = computed(() => {
   // ✨ 性能优化：在编辑模式且无搜索时，直接返回 store.groups 引用
-  // 这样 VueDraggable 就能直接操作 store 中的数组，确保拖拽状态实时同步
+  // 这样 VueDraggable 就能直接操作 store 中的数组，确保拖拽状态实时同步。
+  // 共享分组是只读副本、不参与拖拽，故编辑模式下不并入。
   if (isEditMode.value && !searchText.value) {
     return store.groups;
   }
 
-  return store.groups
-    .map((g) => ({
-      ...g,
-      items: g.items.filter((item) => {
-        const isMatch =
-          !searchText.value ||
-          item.title.toLowerCase().includes(searchText.value.toLowerCase()) ||
-          item.url.toLowerCase().includes(searchText.value.toLowerCase());
-        const isVisible = checkVisible(item);
-        return isMatch && isVisible;
-      }),
-    }))
+  const ownGroups = store.groups
+    .map((g) => filterGroupForDisplay(g, false))
     .filter((g) => {
       if (store.isLogged) return true;
       return g.items.length > 0 || !!g.preset;
     });
+
+  // 多用户共同的书签分组：拼接在本人分组之后，统一以只读方式渲染
+  const sharedGroups = (store.sharedGroups || [])
+    .map((g) => filterGroupForDisplay(g, true))
+    .filter((g) => {
+      if (store.isLogged) return true;
+      return g.items.length > 0 || !!g.preset;
+    });
+
+  return [...ownGroups, ...sharedGroups];
 });
 
 const paginationWheelLockUntil = ref(0);
@@ -1708,8 +1722,15 @@ const contextMenuItem = ref<NavItem | null>(null);
 const contextMenuGroupId = ref<string | undefined>(undefined);
 let ignoreNextNativeContextMenu = false;
 
+// 共享分组（多用户共同的书签分组）为只读副本：不提供编辑/删除等上下文菜单
+const isGroupReadonly = (groupId?: string) => {
+  if (!groupId) return false;
+  return !!store.sharedGroups?.some((g) => g.id === groupId);
+};
+
 const openContextMenuAt = (x: number, y: number, item: NavItem, groupId?: string) => {
   if (!store.isLogged) return;
+  if (isGroupReadonly(groupId)) return;
   contextMenuItem.value = item;
   contextMenuGroupId.value = groupId;
 
@@ -3093,7 +3114,7 @@ onUnmounted(() => {
               :class="{ 'opacity-0 hover:opacity-100': group.autoHideTitle }"
             >
               <div
-                v-if="isEditMode"
+                v-if="isEditMode && !group.readonly"
                 class="group-handle cursor-move text-white/50 hover:text-white p-1 select-none text-xl"
               >
                 ⋮⋮
@@ -3112,7 +3133,7 @@ onUnmounted(() => {
 
               <div class="flex items-center gap-2">
                 <button
-                  v-if="store.isLogged"
+                  v-if="store.isLogged && !group.readonly"
                   @click="openAddModal(group.id)"
                   class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/30 text-white flex items-center justify-center transition-all shadow-sm border border-white/10"
                   title="添加卡片"
@@ -3134,7 +3155,7 @@ onUnmounted(() => {
                 </button>
 
                 <button
-                  v-if="store.isLogged"
+                  v-if="store.isLogged && !group.readonly"
                   @click.stop="toggleGroupSettings(group.id)"
                   class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/30 text-white flex items-center justify-center transition-all shadow-sm border border-white/10"
                   title="分组设置"
@@ -3162,7 +3183,7 @@ onUnmounted(() => {
                 </button>
 
                 <button
-                  v-if="store.isLogged && isEditMode"
+                  v-if="store.isLogged && isEditMode && !group.readonly"
                   @click="openGroupDeleteConfirm(group.id)"
                   class="w-7 h-7 rounded-full bg-white/10 hover:bg-red-500 hover:text-white text-white/50 flex items-center justify-center transition-all shadow-sm border border-white/10"
                   title="删除分组"
@@ -3188,16 +3209,38 @@ onUnmounted(() => {
               >
                 预设
               </span>
+
+              <span
+                v-if="group.shared || group.readonly"
+                class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1"
+                :title="group.readonly ? '共享分组（由管理员维护，只读）' : '此分组已共享给所有用户'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-3 w-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                共享
+              </span>
             </div>
 
             <VueDraggable
               :model-value="group.items"
               @update:model-value="(newItems: NavItem[]) => onGroupItemsChange(group.id, newItems)"
-              @end="() => store.markDirty()"
+              @end="() => !group.readonly && store.markDirty()"
               group="apps"
               :animation="200"
               :forceFallback="true"
-              :disabled="!isEditMode || !!searchText"
+              :disabled="!isEditMode || !!searchText || !!group.readonly"
               class="grid transition-all duration-300 min-h-[100px] rounded-xl"
               :class="
                 isEditMode ? 'bg-white/5 border-2 border-dashed border-white/20 p-2 md:p-4' : ''
