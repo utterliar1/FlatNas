@@ -191,8 +191,6 @@ export interface AppConfig {
 
 export interface SystemConfig {
   authMode: "single" | "multi";
-  enableDocker: boolean;
-  dockerHost?: string;
 }
 
 export interface WidgetConfig {

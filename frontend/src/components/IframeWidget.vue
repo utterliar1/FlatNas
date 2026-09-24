@@ -44,11 +44,7 @@ const rawTargetUrl = computed(() => {
   return props.isLanMode ? effectiveLan : effectiveWan;
 });
 
-const isBlocked = computed(() => {
-  const target = rawTargetUrl.value;
-  // Hardcode block for gitee repo to prevent browser blocking
-  return !!(target && target.includes("gitee.com/gjx0808/FlatNas"));
-});
+const isBlocked = computed(() => false);
 
 const currentUrl = computed(() => {
   if (isBlocked.value) {

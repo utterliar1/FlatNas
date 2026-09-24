@@ -24,7 +24,6 @@ export function createDefaultWidgetList(isLoggedIn: boolean): WidgetConfig[] {
       isPublic: true,
     },
     { id: "sidebar", type: "sidebar", enable: false, isPublic: true },
-    { id: "docker", type: "docker", enable: false, isPublic: true, colSpan: 1, rowSpan: 1 },
     {
       id: "file-transfer",
       type: "file-transfer",
@@ -68,7 +67,7 @@ export function createDefaultWidgetList(isLoggedIn: boolean): WidgetConfig[] {
   // Filter out login-only widgets for guests
   if (!isLoggedIn) {
     return base.filter((w) => {
-      const loginOnly = ["docker", "file-transfer", "system-status", "sidebar", "status-monitor"];
+      const loginOnly = ["file-transfer", "system-status", "sidebar", "status-monitor"];
       return !loginOnly.includes(w.id);
     });
   }
@@ -95,36 +94,10 @@ export function normalizeIncomingWidgets(
     memoW.type = "memo";
   }
 
-  // Normalize Docker widget
-  let dockerCandidate = nextWidgets.find((widget) => widget.id === "docker");
-  if (!dockerCandidate) {
-    dockerCandidate = nextWidgets.find((widget) => widget.type === "docker");
-  }
+  // Docker 管理功能已剥离：过滤掉历史数据中残留的 docker 组件
   const listWithoutDocker = nextWidgets.filter(
     (widget) => widget.id !== "docker" && widget.type !== "docker",
   );
-  let finalDockerWidget: WidgetConfig | undefined;
-  if (dockerCandidate) {
-    finalDockerWidget = dockerCandidate;
-    finalDockerWidget.id = "docker";
-    finalDockerWidget.type = "docker";
-    if (typeof finalDockerWidget.colSpan !== "number") finalDockerWidget.colSpan = 1;
-    if (typeof finalDockerWidget.rowSpan !== "number") finalDockerWidget.rowSpan = 1;
-    if (typeof finalDockerWidget.enable !== "boolean") finalDockerWidget.enable = false;
-    if (typeof finalDockerWidget.isPublic !== "boolean") finalDockerWidget.isPublic = true;
-  } else if (isLoggedIn) {
-    finalDockerWidget = {
-      id: "docker",
-      type: "docker",
-      enable: false,
-      isPublic: true,
-      colSpan: 1,
-      rowSpan: 1,
-    };
-  }
-  if (finalDockerWidget) {
-    listWithoutDocker.push(finalDockerWidget);
-  }
 
   // Normalize File Transfer widget (deduplicate)
   const fileTransferList = listWithoutDocker.filter((widget) => widget.type === "file-transfer");

@@ -79,9 +79,7 @@ type WallpaperConfig struct {
 }
 
 type SystemConfig struct {
-	AuthMode     string `json:"authMode"` // "single" or "multi"
-	EnableDocker bool   `json:"enableDocker"`
-	DockerHost   string `json:"dockerHost,omitempty"`
+	AuthMode string `json:"authMode"` // "single" or "multi"
 }
 
 type LoginRequest struct {

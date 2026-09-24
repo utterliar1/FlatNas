@@ -105,7 +105,6 @@ func main() {
 	config.Init()
 	handlers.InitWidgetCache()
 	handlers.InitGeocodingCache()
-	handlers.InitDocker()
 	handlers.StartIPFetcher()
 	handlers.StartDataWarmup()
 	handlers.StartThumbSync()
@@ -319,8 +318,6 @@ func main() {
 		api.GET("/rss/meta", handlers.GetRssMeta)
 		api.GET("/weather", handlers.GetWeather)                                                   // Added Weather
 		api.GET("/custom-scripts", middleware.OptionalAuthMiddleware(), handlers.GetCustomScripts) // Added Custom Scripts
-		api.GET("/docker-status", handlers.GetDockerStatus)                                        // Added Docker Status
-		api.GET("/docker/debug", handlers.GetDockerDebug)
 		api.GET("/config/proxy-status", handlers.GetProxyStatus)
 		api.GET("/widgets/:id", handlers.GetWidget) // Added Widget Data
 		api.GET("/memo/:id", middleware.AuthMiddleware(), handlers.GetMemo)
@@ -362,12 +359,6 @@ func main() {
 			authorized.POST("/default/save", handlers.SaveDefault)
 			authorized.POST("/reset", handlers.ResetData)
 			authorized.GET("/system/stats", handlers.GetSystemStats)
-			authorized.GET("/docker/containers", handlers.ListContainers)
-			authorized.GET("/docker/info", handlers.GetDockerInfo)
-			authorized.GET("/docker/export-logs", handlers.ExportDockerLogs)
-			authorized.GET("/docker/container/:id/inspect-lite", handlers.ContainerInspectLite)
-			authorized.POST("/docker/check-updates", handlers.TriggerUpdateCheck)
-			authorized.POST("/docker/container/:id/:action", handlers.ContainerAction)
 			authorized.POST("/custom-scripts", handlers.SaveCustomScripts)
 
 			// Wallpaper

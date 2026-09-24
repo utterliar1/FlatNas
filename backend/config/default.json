@@ -139,7 +139,6 @@
     "widgetAreaSize": 4
   },
   "authMode": "single",
-  "enableDocker": true,
   "groups": [
     {
       "autoHideTitle": true,
@@ -928,14 +927,6 @@
       "w": 0.5,
       "x": 4,
       "y": 1
-    },
-    {
-      "colSpan": 1,
-      "enable": false,
-      "id": "docker",
-      "isPublic": true,
-      "rowSpan": 1,
-      "type": "docker"
     }
   ]
 }

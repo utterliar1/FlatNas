@@ -27,7 +27,7 @@ func TestGetDataSupportsETagRevalidation(t *testing.T) {
 
 	systemFile := filepath.Join(dataDir, "system.json")
 	dataFile := filepath.Join(dataDir, "data.json")
-	if err := os.WriteFile(systemFile, []byte(`{"authMode":"single","enableDocker":true}`), 0644); err != nil {
+	if err := os.WriteFile(systemFile, []byte(`{"authMode":"single"}`), 0644); err != nil {
 		t.Fatalf("write system config: %v", err)
 	}
 	if err := os.WriteFile(dataFile, []byte(`{"groups":[],"widgets":[],"rssFeeds":[],"rssCategories":[],"version":1}`), 0644); err != nil {

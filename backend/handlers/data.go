@@ -1183,13 +1183,6 @@ func UpdateSystemConfig(c *gin.Context) {
 		sysConfig.AuthMode = v
 	}
 
-	if v, ok := payload["enableDocker"].(bool); ok {
-		sysConfig.EnableDocker = v
-	}
-	if v, ok := payload["dockerHost"].(string); ok {
-		sysConfig.DockerHost = v
-	}
-
 	if sysConfig.AuthMode != oldAuthMode {
 		if err := migrateAuthModeData(oldAuthMode, sysConfig.AuthMode); err != nil {
 			log.Printf("UpdateSystemConfig: data migration failed: %v", err)
@@ -1200,8 +1193,6 @@ func UpdateSystemConfig(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update system config"})
 		return
 	}
-
-	InitDocker()
 
 	c.JSON(http.StatusOK, sysConfig)
 }

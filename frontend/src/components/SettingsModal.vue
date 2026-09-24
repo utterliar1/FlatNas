@@ -8,7 +8,6 @@ import type { WidgetConfig, NavGroup, NavItem } from "@/types";
 import IconUploader from "./IconUploader.vue";
 import WallpaperLibrary from "./WallpaperLibrary.vue";
 import PasswordConfirmModal from "./PasswordConfirmModal.vue";
-import DockerWidget from "./DockerWidget.vue";
 import ProxyToggle from "./ProxyToggle.vue";
 import SystemStatusWidget from "./SystemStatusWidget.vue";
 import RssSettings from "./RssSettings.vue";
@@ -332,15 +331,13 @@ const handleNavWheel = (e: WheelEvent) => {
   }
 };
 
-const dockerWidget = computed(() => store.widgets.find((w) => w.type === "docker"));
 const systemStatusWidget = computed(() => store.widgets.find((w) => w.type === "system-status"));
 const musicWidget = computed(() => store.widgets.find((w) => w.type === "music"));
 const multiOpenWidgetTypes = ["iframe", "countdown", "countup", "amap-weather"];
-const dedicatedWidgetTypes = ["docker"];
+// Docker 管理功能已剥离，当前无专用类型
+const dedicatedWidgetTypes: string[] = [];
 const isSingleOpenWidget = (type: string) =>
   !multiOpenWidgetTypes.includes(type) && !dedicatedWidgetTypes.includes(type);
-const isDockerComponentCreated = computed(() => !!dockerWidget.value);
-const isDockerComponentEnabled = computed(() => !!dockerWidget.value && dockerWidget.value.enable);
 const sortedWidgets = computed(() => {
   const list = [...store.widgets];
   const playerIndex = list.findIndex((w) => w.type === "player");
@@ -353,7 +350,8 @@ const sortedWidgets = computed(() => {
   return list;
 });
 const singleOpenWidgets = computed(() =>
-  sortedWidgets.value.filter((w) => isSingleOpenWidget(w.type)),
+  // 过滤掉未知类型组件（含已剥离的 docker 等），不再显示"未知组件"占位卡片
+  sortedWidgets.value.filter((w) => isSingleOpenWidget(w.type) && !isUnknownWidget(w.type)),
 );
 const shouldShowSingleWidgetDiagnostic = computed(() => singleOpenWidgets.value.length <= 2);
 const singleWidgetDiagnosticTypes = computed(() =>
@@ -367,13 +365,9 @@ watch(activeTab, (val) => {
 
 const iconSrc = ref("/ICON.PNG");
 
-// Ensure Docker Widget Exists
 onMounted(async () => {
   if (import.meta.env.MODE === "test") return;
 
-  // 移除强制恢复逻辑，避免覆盖用户配置
-  // const hasDocker = store.widgets.some((w) => w.type === "docker");
-  // if (!hasDocker) { ... }
   updateHour();
   if (daylightTimer) window.clearInterval(daylightTimer);
   daylightTimer = window.setInterval(updateHour, 60 * 1000);
@@ -632,33 +626,6 @@ const hasAdminAccess = computed(
   () => store.isLogged && (store.systemConfig.authMode === "single" || store.username === "admin"),
 );
 const canManageUsers = computed(() => hasAdminAccess.value && store.systemConfig.authMode === "multi");
-const isDockerSystemEnabled = computed(() => Boolean(store.systemConfig.enableDocker));
-const isUpdatingDockerSystem = ref(false);
-
-const toggleDockerSystemEnabled = async (checked: boolean) => {
-  if (isUpdatingDockerSystem.value) return;
-  const current = Boolean(store.systemConfig.enableDocker);
-  if (current === checked) return;
-
-  isUpdatingDockerSystem.value = true;
-  try {
-    const success = await store.updateSystemConfig({ enableDocker: checked });
-    if (!success) {
-      alert(t('settings.messages.dockerSwitchFailed'));
-    }
-  } finally {
-    isUpdatingDockerSystem.value = false;
-  }
-};
-
-const toggleDockerMock = (checked: boolean) => {
-  const w = dockerWidget.value;
-  if (w) {
-    if (!w.data) w.data = {};
-    w.data.useMock = checked;
-    store.markDirty();
-  }
-};
 
 // Delete Confirmation Logic
 const showDeleteWidgetConfirm = ref(false);
@@ -770,77 +737,6 @@ const uploadMusic = async (event: Event) => {
   }
 };
 
-const formatDockerConnectionError = (error: string, socketPath?: string) => {
-  const lower = error.toLowerCase();
-  if (lower.includes("docker is disabled")) {
-    return "Docker 服务已关闭。\n请先打开“Docker 服务”总开关，再进行连接测试。";
-  }
-  if (lower.includes("docker not available")) {
-    return `Docker 未启用或未配置连接地址。\n容器部署请挂载 /var/run/docker.sock 并设置 dockerHost=unix:///var/run/docker.sock\nSocket: ${socketPath || "-"}`;
-  }
-  if (lower.includes("docker.sock") || lower.includes("unix:///var/run/docker.sock")) {
-    return `无法连接 Docker Socket，请确认宿主机 Docker 已启动，并在容器中挂载 /var/run/docker.sock\nSocket: ${socketPath || "-"}`;
-  }
-  return `连接失败: ${error}\nSocket: ${socketPath || "-"}`;
-};
-
-const checkDockerConnection = async () => {
-  if (!isDockerSystemEnabled.value) {
-    alert("Docker 服务当前已关闭。\n开启总开关后才会尝试连接 Docker Engine。");
-    return;
-  }
-  try {
-    const headers = store.getHeaders();
-    const res = await fetch("/api/docker/info", { headers });
-    const data = await res.json();
-    if (data.success && data.state === "ready") {
-      alert(
-        `连接成功!\n\nSocket: ${data.socketPath}\n版本: ${data.version.Version}\n系统: ${data.info.OSType} / ${data.info.Architecture}\n容器: ${data.info.Containers}\n名称: ${data.info.Name}`,
-      );
-    } else if (data.state === "disabled") {
-      alert("Docker 服务已关闭。\n请先打开“Docker 服务”总开关。");
-    } else {
-      alert(formatDockerConnectionError(data.error || "Docker 不可用", data.socketPath));
-    }
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    alert("网络错误: " + msg);
-  }
-};
-
-const isExportingDockerLogs = ref(false);
-const exportDockerLogs = async () => {
-  if (isExportingDockerLogs.value) return;
-  if (!isDockerSystemEnabled.value) {
-    alert("Docker 服务当前已关闭，已停止日志导出请求。");
-    return;
-  }
-  try {
-    isExportingDockerLogs.value = true;
-    const headers = store.getHeaders();
-    const res = await fetch("/api/docker/export-logs", { headers });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || String(res.status));
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const ts = new Date().toISOString().replace(/[:.]/g, "-");
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `docker-logs-${ts}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    alert(`${t('settings.messages.exportFailed')}: ${msg}`);
-  } finally {
-    isExportingDockerLogs.value = false;
-  }
-};
-
 // Password Confirm Logic
 const showPasswordConfirm = ref(false);
 const showMultiUserWarning = ref(false);
@@ -885,15 +781,6 @@ const handleChangePassword = () => {
     alert(t('settings.messages.passwordChanged'));
     newPasswordInput.value = "";
   }, t('settings.messages.confirmPassword'));
-};
-
-const onMobileDockerDisplayChange = (e: Event) => {
-  const checked = (e.target as HTMLInputElement | null)?.checked ?? false;
-  const w = dockerWidget.value;
-  if (w) {
-    w.hideOnMobile = !checked;
-    store.markDirty();
-  }
 };
 
 const handleUltrawideChange = (e: Event) => {
@@ -1212,7 +1099,6 @@ const isUnknownWidget = (type: string) => {
     "countdown",
     "countup",
     "amap-weather",
-    "docker",
     "system-status",
     "status-monitor",
     "file-transfer",
@@ -1287,26 +1173,6 @@ const addMusicWidget = () => {
     isPublic: true,
   });
   store.markDirty();
-};
-
-const enableDockerWidget = () => {
-  const def: WidgetConfig = {
-    id: "docker",
-    type: "docker",
-    enable: true,
-    isPublic: true,
-    colSpan: 1,
-    rowSpan: 1,
-    data: { useMock: false },
-  };
-  const exists = store.widgets.find((w) => w.type === "docker");
-  if (!exists) {
-    store.widgets.push(def);
-    store.markDirty();
-  } else {
-    exists.enable = true;
-    store.markDirty();
-  }
 };
 
 const toggleSystemStatusMock = (checked: boolean) => {
@@ -1952,15 +1818,15 @@ watch(activeTab, (val) => {
             {{ $t('settings.tabs.universalWindow') }}
           </button>
           <button
-            @click="activeTab = 'docker'"
+            @click="activeTab = 'system-status'"
             :class="
-              activeTab === 'docker'
+              activeTab === 'system-status'
                 ? 'selected-outline text-gray-900'
                 : 'border border-transparent text-gray-600 hover:bg-gray-50'
             "
             class="whitespace-nowrap md:whitespace-normal w-auto md:w-full shrink-0 text-left px-3 py-1.5 rounded-lg text-sm transition-colors"
           >
-            {{ $t('settings.tabs.docker') }}
+            {{ $t('settings.tabs.systemStatus') }}
           </button>
           <button
             @click="activeTab = 'account'"
@@ -2001,7 +1867,7 @@ watch(activeTab, (val) => {
             :class="
               activeTab === 'about'
                 ? 'selected-outline text-gray-900'
-                : 'border border-transparent text-red-500 hover:bg-red-50 font-medium'
+                : 'border border-transparent text-gray-600 hover:bg-gray-50'
             "
             class="whitespace-nowrap md:whitespace-normal w-auto md:w-full shrink-0 text-left px-3 py-1.5 rounded-lg text-sm transition-colors"
           >
@@ -2677,7 +2543,7 @@ watch(activeTab, (val) => {
                         w.type === 'music'
                           ? scrollToMusicSettings()
                           : w.type === 'system-status'
-                            ? (activeTab = 'docker')
+                            ? (activeTab = 'system-status')
                             : (editingOpacityId = w.id)
                       "
                       :title="
@@ -2841,84 +2707,9 @@ watch(activeTab, (val) => {
             </div>
           </div>
 
-          <div v-if="activeTab === 'docker'" class="space-y-4">
-            <div class="flex items-center justify-between mb-4 mr-8">
-              <h4 class="text-base font-bold text-gray-900 border-l-4 border-gray-900 pl-3">
-                Docker 管理 (内测中)
-              </h4>
-              <div
-                v-if="dockerWidget || isDockerSystemEnabled"
-                class="flex items-center gap-3 text-xs mr-[10px]"
-              >
-                <button
-                  @click="exportDockerLogs"
-                  :disabled="isExportingDockerLogs || !isDockerSystemEnabled"
-                  class="text-gray-900 px-3 py-1 rounded-lg transition-colors font-bold disabled:opacity-60 glass-chip selectable-outline"
-                >
-                  {{ isExportingDockerLogs ? "导出中" : "导出日志" }}
-                </button>
-                <button
-                  @click="checkDockerConnection"
-                  :disabled="!isDockerSystemEnabled || isUpdatingDockerSystem"
-                  class="text-gray-900 px-3 py-1 rounded-lg transition-colors font-bold disabled:opacity-50 glass-chip selectable-outline"
-                >
-                  测试连接
-                </button>
-              </div>
-            </div>
-
-            <div class="space-y-3 mb-6 pb-6 border-b border-gray-100">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-sm font-bold text-gray-900">{{ $t('settings.sections.dockerService') }}</div>
-                  <p class="mt-1 text-xs text-gray-500">
-                    {{ $t('settings.sections.dockerServiceDesc', { windowsSocket: 'npipe:////./pipe/docker_engine', linuxSocket: 'unix:///var/run/docker.sock' }) }}
-                  </p>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                  <input
-                    type="checkbox"
-                    :checked="isDockerSystemEnabled"
-                    :disabled="isUpdatingDockerSystem || !hasAdminAccess"
-                    :aria-label="$t('settings.extraSections.dockerServiceAriaLabel')"
-                    @change="(e) => toggleDockerSystemEnabled((e.target as HTMLInputElement).checked)"
-                    class="sr-only peer"
-                  />
-                  <div
-                    class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500 shrink-0"
-                  ></div>
-                  <span class="text-sm text-gray-700 ml-3 whitespace-nowrap">
-                    {{ isUpdatingDockerSystem ? $t('settings.sections.switching') : isDockerSystemEnabled ? $t('settings.sections.enabled') : $t('settings.sections.disabled') }}
-                  </span>
-                </label>
-              </div>
-
-              <div
-                class="rounded-xl border px-3 py-2 text-xs"
-                :class="
-                  isDockerSystemEnabled
-                    ? 'border-emerald-200 bg-emerald-50/70 text-emerald-700'
-                    : 'border-amber-200 bg-amber-50/70 text-amber-700'
-                "
-              >
-                <p>
-                  {{
-                    isDockerSystemEnabled
-                      ? $t('settings.sections.dockerEnabledDesc')
-                      : $t('settings.sections.dockerDisabledDesc')
-                  }}
-                </p>
-                <p class="mt-1 text-[11px] opacity-80">
-                  “Docker 服务”是系统级总开关，“显示 Docker 组件”只影响首页卡片显示，“模拟数据”只影响组件展示数据来源。
-                </p>
-                <p v-if="!hasAdminAccess" class="mt-1 text-[11px] opacity-80">
-                  {{ $t('settings.sections.dockerNote2') }}
-                </p>
-              </div>
-            </div>
-
+          <div v-if="activeTab === 'system-status'" class="space-y-4">
             <!-- Host Status Widget Section -->
-            <div class="space-y-3 mb-6 pb-6 border-b border-gray-100">
+            <div class="space-y-3">
               <div class="flex items-center justify-between">
                 <span class="text-sm font-bold text-gray-900">{{ $t('settings.sections.hostStatusWidget') }}</span>
                 <div class="flex items-center gap-4">
@@ -3004,183 +2795,6 @@ watch(activeTab, (val) => {
                   <SystemStatusWidget :widget="systemStatusWidget" />
                 </div>
               </div>
-            </div>
-
-            <div class="space-y-4">
-              <!-- 未启用时的提示 -->
-              <template v-if="!isDockerComponentCreated">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-bold text-gray-900">{{ $t('settings.sections.containerManagement') }}</span>
-                  <button
-                    @click="enableDockerWidget"
-                    class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors shadow-sm text-sm"
-                  >
-                    启用容器管理
-                  </button>
-                </div>
-              </template>
-
-              <!-- 已启用后的管理区 -->
-              <template v-else>
-                <!-- 主控制区 -->
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-bold text-gray-900">容器管理</span>
-                  <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-4 animate-fade-in">
-                      <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-700 font-medium">公开访问</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" v-model="dockerWidget.isPublic" class="sr-only peer" />
-                          <div
-                            class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"
-                          ></div>
-                        </label>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-700 font-medium">手机端显示</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" :checked="!dockerWidget.hideOnMobile" @change="onMobileDockerDisplayChange" class="sr-only peer" />
-                          <div
-                            class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"
-                          ></div>
-                        </label>
-                      </div>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" v-model="dockerWidget.enable" :aria-label="$t('settings.sections.containerManagementWidget')" class="sr-only peer" />
-                      <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
-                      <span class="text-sm text-gray-700 ml-3">{{ $t('settings.sections.containerManagementWidget') }}</span>
-                    </label>
-                  </div>
-                </div>
-
-                <!-- 功能配置区 -->
-                <div class="flex flex-wrap items-center gap-4 border-t border-gray-100 pt-3">
-                  <!-- 模拟数据 -->
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-500">{{ $t('settings.sections.mockData') }}</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        :checked="!!dockerWidget.data?.useMock"
-                        @change="(e) => toggleDockerMock((e.target as HTMLInputElement).checked)"
-                        class="sr-only peer"
-                      />
-                      <div
-                        class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"
-                      ></div>
-                    </label>
-                  </div>
-
-                  <!-- 自动升级 -->
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-500">{{ $t('settings.sections.autoUpdate') }}</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        :checked="!!dockerWidget.data?.autoUpdate"
-                        @change="
-                          (e) => {
-                            if (!dockerWidget.data) dockerWidget.data = {};
-                            dockerWidget.data.autoUpdate = (e.target as HTMLInputElement).checked;
-                            store.markDirty();
-                          }
-                        "
-                        class="sr-only peer"
-                      />
-                      <div
-                        class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"
-                      ></div>
-                    </label>
-                  </div>
-
-                  <!-- 升级配置 -->
-                  <div class="flex items-center gap-2">
-                    <span class="text-[10px] text-gray-500">{{ $t('settings.extraSections.keepVersions') }}</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="20"
-                      :disabled="!dockerWidget?.data?.autoUpdate"
-                      :value="dockerWidget?.data?.autoUpdateKeepImages ?? 2"
-                      @change="
-                        (e) => {
-                          if (!dockerWidget.data) dockerWidget.data = {};
-                          dockerWidget.data.autoUpdateKeepImages = Math.max(
-                            1,
-                            Math.min(20, Number((e.target as HTMLInputElement).value || 2)),
-                          );
-                          store.markDirty();
-                        }
-                      "
-                      class="w-16 px-2 py-1 border border-gray-200 rounded text-xs focus:border-gray-900 outline-none disabled:bg-gray-50 disabled:text-gray-400"
-                    />
-                    <span class="text-[10px] text-gray-500">{{ $t('settings.extraSections.unitCount') }}</span>
-                  </div>
-
-                  <div class="flex items-center gap-2">
-                    <span class="text-[10px] text-gray-500">{{ $t('settings.extraSections.diskThreshold') }}</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      :disabled="!dockerWidget?.data?.autoUpdate"
-                      :value="dockerWidget?.data?.autoUpdateMinFreeGB ?? 5"
-                      @change="
-                        (e) => {
-                          if (!dockerWidget.data) dockerWidget.data = {};
-                          dockerWidget.data.autoUpdateMinFreeGB = Math.max(
-                            0,
-                            Number((e.target as HTMLInputElement).value || 5),
-                          );
-                          store.markDirty();
-                        }
-                      "
-                      class="w-20 px-2 py-1 border border-gray-200 rounded text-xs focus:border-gray-900 outline-none disabled:bg-gray-50 disabled:text-gray-400"
-                    />
-                    <span class="text-[10px] text-gray-500">GB</span>
-                  </div>
-
-                  <!-- 内网主机 -->
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-700 font-medium">{{ $t('settings.extraSections.intranetHost') }}</span>
-                    <input
-                      :value="dockerWidget?.data?.lanHost"
-                      @change="
-                        (e) => {
-                          if (!dockerWidget.data) dockerWidget.data = {};
-                          dockerWidget.data.lanHost = (e.target as HTMLInputElement).value;
-                          store.markDirty();
-                        }
-                      "
-                      type="text"
-                      :placeholder="$t('settings.extraSections.placeholderIntranetHost')"
-                      class="px-2 py-1 border border-gray-200 rounded text-xs focus:border-gray-900 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <!-- 容器预览（始终可见） -->
-                <div class="border-t border-gray-100 pt-3">
-                  <div
-                    v-if="isDockerSystemEnabled"
-                    class="h-[500px]"
-                  >
-                    <DockerWidget :widget="dockerWidget" :compact="true" />
-                  </div>
-                  <div
-                    v-else
-                    class="h-[160px] rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 flex items-center justify-center text-center px-6"
-                  >
-                    <div class="text-sm text-gray-500 space-y-2">
-                      <p>{{ $t('settings.extraSections.dockerServiceClosed') }}</p>
-                      <p class="text-xs text-gray-400">
-                        {{ $t('settings.extraSections.dockerServiceClosedDesc') }}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </template>
             </div>
           </div>
 
@@ -3798,14 +3412,6 @@ watch(activeTab, (val) => {
                   >
                     打开握手页
                   </button>
-                  <a
-                    href="https://qdnas.icu/c/8/g/14"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors inline-block"
-                  >
-                    下载浏览器助手
-                  </a>
                 </div>
                 <p class="text-[11px] text-gray-500">
                   {{ $t('settings.extraSections.helperNotDetected') }}
@@ -4658,164 +4264,42 @@ document.querySelector('.card-item').addEventListener('click', () => {
             </div>
           </div>
           <div v-if="activeTab === 'about'" class="min-h-full flex flex-col p-8 -mt-4">
-            <div class="bg-white/60 border border-gray-100 rounded-xl p-4">
-              <h5 class="text-sm font-bold text-gray-900 mb-2">{{ $t('settings.about.thanks') }}</h5>
-              <div class="text-xs text-gray-600 leading-relaxed">
-                <div class="text-sm">
-                  <span class="font-medium text-gray-800">{{ $t('settings.about.feeders') }}：</span>
-                  <span class="font-bold text-base text-gray-900">你应爱</span>；小浣熊；*俊；*牛社区主理人；*a；*甜蜜主理人；*坤；T*t;*O；*陈等
+            <!-- 项目简介卡片 -->
+            <div class="bg-white/60 border border-gray-100 rounded-xl p-5 shadow-xs">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <h4 class="text-lg font-bold text-gray-900 tracking-tight">FlatNas</h4>
+                  <p class="text-xs text-gray-500 mt-1">
+                    {{ $t('settings.about.description') }}
+                  </p>
                 </div>
-                <div class="mt-2">
-                  <span class="font-medium text-gray-800">{{ $t('settings.about.specialThanks') }}：</span>
-                  Excel;徐大大;时也,命也;大星;友人A;汪仔饭;Assassin;多度;Wheezer;苍蝇炖粉条等
-                </div>
-              </div>
-            </div>
-            <div
-              class="mt-4 bg-white/60 border border-gray-100 rounded-xl p-4 flex flex-row items-center justify-center gap-6"
-            >
-              <div
-                class="text-lg font-bold text-gray-700"
-                style="writing-mode: vertical-rl; text-orientation: mixed"
-              >
-                {{ $t('settings.about.feedAuthor') }}
-              </div>
-              <div class="flex flex-row flex-wrap items-start justify-center gap-6">
-                <div class="flex flex-col items-center gap-2">
-                  <img
-                    src="/public/alipay.jpg"
-                    class="w-36 h-36 rounded-lg shadow-sm border border-gray-100 object-contain transition-all"
-                    alt="Alipay"
-                  />
-                  <span class="text-sm text-gray-500">{{ $t('settings.about.alipay') }}</span>
-                </div>
-                <div class="flex flex-col items-center gap-2">
-                  <img
-                    src="/public/wechat.jpg"
-                    class="w-36 h-36 rounded-lg shadow-sm border border-gray-100 object-contain transition-all"
-                    alt="WeChat"
-                  />
-                  <span class="text-sm text-gray-500">{{ $t('settings.about.wechat') }}</span>
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-mono font-medium rounded-full border border-gray-200">
+                    v{{ store.currentVersion }}
+                  </span>
                 </div>
               </div>
             </div>
 
+            <!-- 底部开源项目链接 -->
             <div class="mt-auto pt-4">
-              <div class="bg-white/60 border border-gray-100 rounded-xl p-4">
-                <div class="flex items-center justify-between gap-4">
-                  <div class="flex items-baseline gap-2">
-                    <span class="text-xs text-gray-500">{{ $t('settings.about.qqGroup') }}</span>
-                    <span class="text-lg text-gray-700 font-mono">613835409</span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-lg text-gray-400 font-mono">v{{ store.currentVersion }}</span>
-                  </div>
-                </div>
-
-                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                  <div class="text-xs text-gray-500">
-                    {{ $t('settings.about.officialSite') }}：
-                    <a
-                      href="https://flatnas.top/"
-                      target="_blank"
-                      class="text-gray-600 underline hover:text-gray-900"
-                    >
-                      https://flatnas.top/
-                    </a>
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    {{ $t('settings.about.wiki') }}：
-                    <a
-                      href="http://qdnas.icu/"
-                      target="_blank"
-                      class="text-gray-600 underline hover:text-gray-900"
-                    >
-                      http://qdnas.icu/
-                    </a>
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    {{ $t('settings.about.iconLibrary') }}：
-                    <a
-                      href="https://nasicon.top/"
-                      target="_blank"
-                      class="text-gray-600 underline hover:text-gray-900"
-                    >
-                      https://nasicon.top/
-                    </a>
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    {{ $t('settings.about.iconLibrary2') }}：
-                    <a
-                      href="https://2.nasicon.top/"
-                      target="_blank"
-                      class="text-gray-600 underline hover:text-gray-900"
-                    >
-                      https://2.nasicon.top/
-                    </a>
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    {{ $t('settings.about.iconLibrary3') }}：
-                    <a
-                      href="https://4.nasicon.top/"
-                      target="_blank"
-                      class="text-gray-600 underline hover:text-gray-900"
-                    >
-                      https://4.nasicon.top/
-                    </a>
-                  </div>
-                </div>
-
-                <div class="mt-4 flex items-center justify-end gap-6">
+              <div class="bg-white/60 border border-gray-100 rounded-xl p-4 flex items-center justify-between">
+                <span class="text-xs text-gray-500">FlatNas 仪表盘系统</span>
+                <div class="flex items-center gap-4">
                   <a
-                    href="https://github.com/Garry-QD/FlatNas"
+                    href="https://github.com/utterliar1/FlatNas"
                     target="_blank"
-                    class="text-gray-700 hover:text-gray-900 hover:opacity-80 transition-opacity"
+                    class="text-gray-600 hover:text-gray-900 transition-colors"
                     title="GitHub"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
                       fill="currentColor"
-                      class="w-6 h-6"
+                      class="w-5 h-5"
                     >
                       <path
                         d="M12 .296c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.332-1.754-1.332-1.754-1.09-.744.084-.729.084-.729 1.205.084 1.84 1.236 1.84 1.236 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.604-2.665-.305-5.467-1.335-5.467-5.932 0-1.31.465-2.38 1.235-3.22-.135-.304-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23a11.52 11.52 0 013.003-.405c1.02.006 2.045.138 3.003.405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.872.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.922.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.296c0-6.627-5.373-12-12-12"
-                      />
-                    </svg>
-                  </a>
-                  <a
-                    href="https://gitee.com/gjx0808/FlatNas"
-                    target="_blank"
-                    class="text-gray-700 hover:text-gray-900 hover:opacity-80 transition-opacity"
-                    title="Gitee"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      class="w-6 h-6"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        clip-rule="evenodd"
-                        d="M11.984 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.811 17.914l-.943-.896c-.342-.325-.92-.332-1.19-.026l-2.72 3.067a.772.772 0 0 1-1.05.09l-6.55-5.314a.775.775 0 0 1 .1-1.267l6.894-4.003a.775.775 0 0 1  1.03.22l2.214 3.285a.775.775 0 0 0 1.19.12l1.024-.967a.775.775 0 0 0 .08-1.02l-3.65-5.504a.775.775 0 0 0-1.17-.14l-8.78 7.32a.775.775 0 0 0-.15 1.08l7.87 6.38a.775.775 0 0 0 1.05-.09l3.58-4.034a.775.775 0 0 0 .02-1.08z"
-                      />
-                    </svg>
-                  </a>
-                  <a
-                    href="https://hub.docker.com/r/qdnas/flatnas"
-                    target="_blank"
-                    class="text-blue-600 hover:text-blue-700 hover:opacity-80 transition-opacity"
-                    title="Docker"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      class="w-6 h-6"
-                    >
-                      <path
-                        d="M13.84 10.74H16v2.14h-2.16v-2.14zm-2.38 0h2.16v2.14h-2.16v-2.14zm-2.38 0h2.16v2.14H9.08v-2.14zm-2.38 0h2.16v2.14H6.7v-2.14zm2.38-2.32h2.16v2.14H9.08V8.42zm2.38 0h2.16v2.14h-2.16V8.42zm-2.38-2.32h2.16v2.14H9.08V6.1zM22.45 11.09c-.2-.14-.66-.28-1.2-.2a3.22 3.22 0 00-1.52.72 4.86 4.86 0 00-.98-1.6l-.22-.2-.2.22a4.42 4.42 0 00-.9 1.46 8.92 8.92 0 00-.56 2.1H1.53a.25.25 0 00-.24.28 8.47 8.47 0 001.14 3.24c1.22 1.86 3.22 2.8 5.98 2.8 5.98 0 10.4-2.76 12.16-7.56.66.04 2.08-.02 2.42-1.3.02-.06.18-.72-.54-1.06z"
                       />
                     </svg>
                   </a>
