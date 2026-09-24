@@ -74,7 +74,6 @@ const ClockWidget = loadAsync(() => import("./ClockWidget.vue"));
 const AppSidebar = loadAsync(() => import("./AppSidebar.vue"));
 const CountdownWidget = loadAsync(() => import("./CountdownWidget.vue"));
 const CountUpWidget = loadAsync(() => import("./CountUpWidget.vue"));
-const SystemStatusWidget = loadAsync(() => import("./SystemStatusWidget.vue"));
 const CustomCssWidget = loadAsync(() => import("./CustomCssWidget.vue"));
 const AmapWeatherWidget = loadAsync(() => import("./AmapWeatherWidget.vue"));
 const FileTransferWidget = loadAsync(() => import("./FileTransferWidget.vue"));
@@ -103,7 +102,6 @@ const gridWidgetTypes = new Set([
   "clockweather",
   "amap-weather",
   "rss",
-  "system-status",
   "custom-css",
   "file-transfer",
 ]);
@@ -3054,7 +3052,6 @@ onUnmounted(() => {
             <ClockWeatherWidget v-else-if="widget.type === 'clockweather'" :widget="widget" />
             <AmapWeatherWidget v-else-if="widget.type === 'amap-weather'" :widget="widget" />
             <RssWidget v-else-if="widget.type === 'rss'" :widget="widget" />
-            <SystemStatusWidget v-else-if="widget.type === 'system-status'" :widget="widget" />
             <CustomCssWidget v-else-if="widget.type === 'custom-css'" :widget="widget" />
             <FileTransferWidget v-else-if="widget.type === 'file-transfer'" :widget="widget" />
           </GridItem>

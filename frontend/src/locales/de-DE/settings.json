@@ -8,8 +8,7 @@
     "network": "Netzwerkerkennung",
     "luckyStun": "Offenes Zentrum",
     "about": "Über",
-    "language": "Sprache / Language",
-    "systemStatus": "Systemstatus"
+    "language": "Sprache / Language"
   },
   "sections": {
     "basicInfo": "Grundinformationen",
@@ -156,13 +155,8 @@
     "switching": "Wird umgeschaltet",
     "enabled": "Aktiviert",
     "disabled": "Deaktiviert",
-    "hostStatusWidget": "Host-Status-Widget",
     "publicAccessLabel": "Öffentlicher Zugriff",
     "mobileDisplay": "Mobile Anzeige",
-    "useMockData": "Mock-Daten verwenden",
-    "containerManagement": "Container-Verwaltung",
-    "enableContainerManagement": "Container-Verwaltung aktivieren",
-    "containerManagementWidget": "Container-Verwaltungs-Widget",
     "mockData": "Mock-Daten",
     "autoUpdate": "Automatisches Update",
     "unknownWidget": "Unbekanntes Widget ({type})",
@@ -249,7 +243,6 @@
     "socket": "Socket",
     "version": "Version",
     "system": "System",
-    "containers": "Container",
     "name": "Name",
     "defaultGroupTitle": "Standardgruppe",
     "presetDesc": {
@@ -555,7 +548,6 @@
     "musicVolume": "Lautstärke",
     "collapseFiles": "Dateien einklappen",
     "fileManagement": "Dateiverwaltung",
-    "containerPreview": "Container-Vorschau (immer sichtbar)",
     "styleVarContrast": "Kontrast: ",
     "styleVarVisual": "Visuelle Regression: ",
     "styleVarName": "Variable",
@@ -648,7 +640,6 @@
     "modalCancel": "取消",
     "modalDelete": "删除",
     "modalConfirm": "确定",
-    "containerWidgetAriaLabel": "容器管理组件",
     "note": "注",
     "statusLabel": "状态",
     "amapApiKey": "高德 API Key"
@@ -1133,11 +1124,6 @@
     "retry": "Erneut versuchen",
     "timeout": "Laden zeitüberschritten, bitte erneut versuchen",
     "failed": "Laden fehlgeschlagen"
-  },
-  "systemStatusWidget": {
-    "title": "Systemstatus",
-    "uptime": "Laufzeit: {days} Tage",
-    "loading": "Laden..."
   },
   "memoWidget": {
     "newMemo": "Neue Notiz",

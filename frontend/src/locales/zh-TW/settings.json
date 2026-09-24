@@ -8,8 +8,7 @@
     "network": "網路判定",
     "luckyStun": "開放中心",
     "about": "關於",
-    "language": "語言 / Language",
-    "systemStatus": "系統狀態"
+    "language": "語言 / Language"
   },
   "sections": {
     "basicInfo": "基本資訊",
@@ -156,13 +155,8 @@
     "switching": "切換中",
     "enabled": "已啟用",
     "disabled": "已關閉",
-    "hostStatusWidget": "宿主機狀態元件",
     "publicAccessLabel": "公開存取",
     "mobileDisplay": "手機端顯示",
-    "useMockData": "使用模擬資料",
-    "containerManagement": "容器管理",
-    "enableContainerManagement": "啟用容器管理",
-    "containerManagementWidget": "容器管理元件",
     "mockData": "模擬資料",
     "autoUpdate": "自動升級",
     "unknownWidget": "未知元件 ({type})",
@@ -249,7 +243,6 @@
     "socket": "Socket",
     "version": "版本",
     "system": "系統",
-    "containers": "容器",
     "name": "名稱",
     "defaultGroupTitle": "預設分組",
     "presetDesc": {
@@ -555,7 +548,6 @@
     "musicVolume": "音量",
     "collapseFiles": "收起檔案",
     "fileManagement": "檔案管理",
-    "containerPreview": "容器預覽（始終可見）",
     "styleVarContrast": "對比度：",
     "styleVarVisual": "視覺回歸：",
     "styleVarName": "變數",
@@ -648,7 +640,6 @@
     "modalCancel": "取消",
     "modalDelete": "删除",
     "modalConfirm": "确定",
-    "containerWidgetAriaLabel": "容器管理组件",
     "note": "注",
     "statusLabel": "状态",
     "amapApiKey": "高德 API Key"
@@ -1133,11 +1124,6 @@
     "retry": "重試",
     "timeout": "載入超時，請重試",
     "failed": "載入失敗"
-  },
-  "systemStatusWidget": {
-    "title": "系統狀態",
-    "uptime": "運行: {days} 天",
-    "loading": "載入中..."
   },
   "memoWidget": {
     "newMemo": "新建備忘",

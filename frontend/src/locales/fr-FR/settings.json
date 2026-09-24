@@ -8,8 +8,7 @@
     "network": "Détection réseau",
     "luckyStun": "Centre ouvert",
     "about": "À propos",
-    "language": "Langue / Language",
-    "systemStatus": "État du système"
+    "language": "Langue / Language"
   },
   "sections": {
     "basicInfo": "Informations de base",
@@ -156,13 +155,8 @@
     "switching": "Basculement",
     "enabled": "Activé",
     "disabled": "Désactivé",
-    "hostStatusWidget": "Widget d'état de l'hôte",
     "publicAccessLabel": "Accès public",
     "mobileDisplay": "Affichage mobile",
-    "useMockData": "Utiliser des données simulées",
-    "containerManagement": "Gestion des conteneurs",
-    "enableContainerManagement": "Activer la gestion des conteneurs",
-    "containerManagementWidget": "Widget de gestion des conteneurs",
     "mockData": "Données simulées",
     "autoUpdate": "Mise à jour automatique",
     "unknownWidget": "Widget inconnu ({type})",
@@ -249,7 +243,6 @@
     "socket": "Socket",
     "version": "Version",
     "system": "Système",
-    "containers": "Conteneurs",
     "name": "Nom",
     "defaultGroupTitle": "Groupe par défaut",
     "presetDesc": {
@@ -555,7 +548,6 @@
     "musicVolume": "Volume",
     "collapseFiles": "Réduire les fichiers",
     "fileManagement": "Gestion des fichiers",
-    "containerPreview": "Aperçu du conteneur (toujours visible)",
     "styleVarContrast": "Contraste : ",
     "styleVarVisual": "Régression visuelle : ",
     "styleVarName": "Variable",
@@ -648,7 +640,6 @@
     "modalCancel": "取消",
     "modalDelete": "删除",
     "modalConfirm": "确定",
-    "containerWidgetAriaLabel": "容器管理组件",
     "note": "注",
     "statusLabel": "状态",
     "amapApiKey": "高德 API Key"
@@ -1133,11 +1124,6 @@
     "retry": "Réessayer",
     "timeout": "Délai d'attente dépassé, veuillez réessayer",
     "failed": "Échec du chargement"
-  },
-  "systemStatusWidget": {
-    "title": "État du système",
-    "uptime": "Durée de fonctionnement : {days} jours",
-    "loading": "Chargement..."
   },
   "memoWidget": {
     "newMemo": "Nouveau mémo",

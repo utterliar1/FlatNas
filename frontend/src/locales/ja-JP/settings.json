@@ -8,8 +8,7 @@
     "network": "ネットワーク判定",
     "luckyStun": "オープンセンター",
     "about": "バージョン情報",
-    "language": "言語 / Language",
-    "systemStatus": "システム状態"
+    "language": "言語 / Language"
   },
   "sections": {
     "basicInfo": "基本情報",
@@ -156,13 +155,8 @@
     "switching": "切り替え中",
     "enabled": "有効",
     "disabled": "無効",
-    "hostStatusWidget": "ホストステータスウィジェット",
     "publicAccessLabel": "公開アクセス",
     "mobileDisplay": "モバイル表示",
-    "useMockData": "モックデータを使用",
-    "containerManagement": "コンテナ管理",
-    "enableContainerManagement": "コンテナ管理を有効化",
-    "containerManagementWidget": "コンテナ管理ウィジェット",
     "mockData": "モックデータ",
     "autoUpdate": "自動アップデート",
     "unknownWidget": "不明なウィジェット ({type})",
@@ -249,7 +243,6 @@
     "socket": "Socket",
     "version": "バージョン",
     "system": "システム",
-    "containers": "コンテナ",
     "name": "名前",
     "defaultGroupTitle": "デフォルトグループ",
     "presetDesc": {
@@ -555,7 +548,6 @@
     "musicVolume": "音量",
     "collapseFiles": "ファイルを折りたたむ",
     "fileManagement": "ファイル管理",
-    "containerPreview": "コンテナプレビュー（常に表示）",
     "styleVarContrast": "コントラスト：",
     "styleVarVisual": "ビジュアル回帰：",
     "styleVarName": "変数",
@@ -648,7 +640,6 @@
     "modalCancel": "取消",
     "modalDelete": "删除",
     "modalConfirm": "确定",
-    "containerWidgetAriaLabel": "容器管理组件",
     "note": "注",
     "statusLabel": "状态",
     "amapApiKey": "高德 API Key"
@@ -1133,11 +1124,6 @@
     "retry": "再試行",
     "timeout": "タイムアウト、再試行してください",
     "failed": "読み込み失敗"
-  },
-  "systemStatusWidget": {
-    "title": "システムステータス",
-    "uptime": "稼働: {days}日",
-    "loading": "読み込み中..."
   },
   "memoWidget": {
     "newMemo": "新規メモ",

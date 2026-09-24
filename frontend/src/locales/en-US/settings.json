@@ -8,8 +8,7 @@
     "network": "Network",
     "luckyStun": "Open Center",
     "about": "About",
-    "language": "Language",
-    "systemStatus": "System Status"
+    "language": "Language"
   },
   "sections": {
     "basicInfo": "Basic Info",
@@ -156,13 +155,8 @@
     "switching": "Switching",
     "enabled": "Enabled",
     "disabled": "Disabled",
-    "hostStatusWidget": "Host Status Widget",
     "publicAccessLabel": "Public Access",
     "mobileDisplay": "Mobile Display",
-    "useMockData": "Use Mock Data",
-    "containerManagement": "Container Management",
-    "enableContainerManagement": "Enable Container Management",
-    "containerManagementWidget": "Container Management Widget",
     "mockData": "Mock Data",
     "autoUpdate": "Auto Update",
     "unknownWidget": "Unknown Widget ({type})",
@@ -249,7 +243,6 @@
     "socket": "Socket",
     "version": "Version",
     "system": "System",
-    "containers": "Containers",
     "name": "Name",
     "defaultGroupTitle": "Default Group",
     "presetDesc": {
@@ -555,7 +548,6 @@
     "musicVolume": "Volume",
     "collapseFiles": "Collapse files",
     "fileManagement": "File management",
-    "containerPreview": "Container preview (always visible)",
     "styleVarContrast": "Contrast: ",
     "styleVarVisual": "Visual regression: ",
     "styleVarName": "Variable",
@@ -648,7 +640,6 @@
     "modalCancel": "Cancel",
     "modalDelete": "Delete",
     "modalConfirm": "OK",
-    "containerWidgetAriaLabel": "Container management widget",
     "note": "Note",
     "statusLabel": "Status",
     "amapApiKey": "Amap API Key"
@@ -1133,11 +1124,6 @@
     "retry": "Retry",
     "timeout": "Load timed out, please retry",
     "failed": "Load failed"
-  },
-  "systemStatusWidget": {
-    "title": "System Status",
-    "uptime": "Uptime: {days} days",
-    "loading": "Loading..."
   },
   "memoWidget": {
     "newMemo": "New Memo",

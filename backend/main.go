@@ -358,7 +358,6 @@ func main() {
 			authorized.POST("/data/import", handlers.ImportData)           // Added ImportData
 			authorized.POST("/default/save", handlers.SaveDefault)
 			authorized.POST("/reset", handlers.ResetData)
-			authorized.GET("/system/stats", handlers.GetSystemStats)
 			authorized.POST("/custom-scripts", handlers.SaveCustomScripts)
 
 			// Wallpaper

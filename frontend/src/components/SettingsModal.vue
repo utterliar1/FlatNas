@@ -9,7 +9,6 @@ import IconUploader from "./IconUploader.vue";
 import WallpaperLibrary from "./WallpaperLibrary.vue";
 import PasswordConfirmModal from "./PasswordConfirmModal.vue";
 import ProxyToggle from "./ProxyToggle.vue";
-import SystemStatusWidget from "./SystemStatusWidget.vue";
 import RssSettings from "./RssSettings.vue";
 import SearchSettings from "./SearchSettings.vue";
 import ScriptManager from "./ScriptManager.vue";
@@ -331,10 +330,9 @@ const handleNavWheel = (e: WheelEvent) => {
   }
 };
 
-const systemStatusWidget = computed(() => store.widgets.find((w) => w.type === "system-status"));
 const musicWidget = computed(() => store.widgets.find((w) => w.type === "music"));
 const multiOpenWidgetTypes = ["iframe", "countdown", "countup", "amap-weather"];
-// Docker 管理功能已剥离，当前无专用类型
+// Docker 管理、宿主机状态均已剥离，当前无专用类型
 const dedicatedWidgetTypes: string[] = [];
 const isSingleOpenWidget = (type: string) =>
   !multiOpenWidgetTypes.includes(type) && !dedicatedWidgetTypes.includes(type);
@@ -1099,7 +1097,6 @@ const isUnknownWidget = (type: string) => {
     "countdown",
     "countup",
     "amap-weather",
-    "system-status",
     "status-monitor",
     "file-transfer",
     "music",
@@ -1173,44 +1170,6 @@ const addMusicWidget = () => {
     isPublic: true,
   });
   store.markDirty();
-};
-
-const toggleSystemStatusMock = (checked: boolean) => {
-  const w = systemStatusWidget.value;
-  if (w) {
-    if (!w.data) w.data = {};
-    w.data.useMock = checked;
-    store.markDirty();
-  }
-};
-
-const enableSystemStatusWidget = () => {
-  const def: WidgetConfig = {
-    id: "system-status",
-    type: "system-status",
-    enable: true,
-    isPublic: true,
-    colSpan: 1,
-    rowSpan: 1,
-    data: { useMock: false },
-  };
-  const exists = store.widgets.find((w) => w.type === "system-status");
-  if (!exists) {
-    store.widgets.push(def);
-    store.markDirty();
-  } else {
-    exists.enable = true;
-    store.markDirty();
-  }
-};
-
-const onMobileSystemStatusDisplayChange = (e: Event) => {
-  const checked = (e.target as HTMLInputElement | null)?.checked ?? false;
-  const w = systemStatusWidget.value;
-  if (w) {
-    w.hideOnMobile = !checked;
-    store.markDirty();
-  }
 };
 
 const handleExport = async () => {
@@ -1816,17 +1775,6 @@ watch(activeTab, (val) => {
             class="whitespace-nowrap md:whitespace-normal w-auto md:w-full shrink-0 text-left px-3 py-1.5 rounded-lg text-sm transition-colors"
           >
             {{ $t('settings.tabs.universalWindow') }}
-          </button>
-          <button
-            @click="activeTab = 'system-status'"
-            :class="
-              activeTab === 'system-status'
-                ? 'selected-outline text-gray-900'
-                : 'border border-transparent text-gray-600 hover:bg-gray-50'
-            "
-            class="whitespace-nowrap md:whitespace-normal w-auto md:w-full shrink-0 text-left px-3 py-1.5 rounded-lg text-sm transition-colors"
-          >
-            {{ $t('settings.tabs.systemStatus') }}
           </button>
           <button
             @click="activeTab = 'account'"
@@ -2540,14 +2488,10 @@ watch(activeTab, (val) => {
                     <div
                       class="flex flex-col items-center gap-1.5 scale-100 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors w-full py-1"
                       @click="
-                        w.type === 'music'
-                          ? scrollToMusicSettings()
-                          : w.type === 'system-status'
-                            ? (activeTab = 'system-status')
-                            : (editingOpacityId = w.id)
+                        w.type === 'music' ? scrollToMusicSettings() : (editingOpacityId = w.id)
                       "
                       :title="
-                        w.type === 'music' || w.type === 'system-status'
+                        w.type === 'music'
                           ? $t('settings.sections.clickToSettings')
                           : $t('settings.sections.clickToStyle')
                       "
@@ -2707,96 +2651,6 @@ watch(activeTab, (val) => {
             </div>
           </div>
 
-          <div v-if="activeTab === 'system-status'" class="space-y-4">
-            <!-- Host Status Widget Section -->
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-bold text-gray-900">{{ $t('settings.sections.hostStatusWidget') }}</span>
-                <div class="flex items-center gap-4">
-                  <div
-                    v-if="systemStatusWidget && systemStatusWidget.enable"
-                    class="flex items-center gap-2 animate-fade-in"
-                  >
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs text-gray-700 font-medium">{{ $t('settings.sections.publicAccessLabel') }}</span>
-                      <label class="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          v-model="systemStatusWidget.isPublic"
-                          class="sr-only peer"
-                        />
-                        <div
-                          class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"
-                        ></div>
-                      </label>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs text-gray-700 font-medium">{{ $t('settings.sections.mobileDisplay') }}</span>
-                      <label class="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          :checked="!systemStatusWidget.hideOnMobile"
-                          @change="onMobileSystemStatusDisplayChange"
-                          class="sr-only peer"
-                        />
-                        <div
-                          class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"
-                        ></div>
-                      </label>
-                    </div>
-                  </div>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      :checked="systemStatusWidget?.enable"
-                      :aria-label="$t('settings.sections.enabled')"
-                      @change="
-                        (e) => {
-                          if ((e.target as HTMLInputElement).checked) enableSystemStatusWidget();
-                          else if (systemStatusWidget) {
-                            systemStatusWidget.enable = false;
-                            store.markDirty();
-                          }
-                        }
-                      "
-                      class="sr-only peer"
-                    />
-                    <div
-                      class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"
-                    ></div>
-                    <span class="text-sm text-gray-700 ml-3">{{ $t('settings.sections.enabled') }}</span>
-                  </label>
-                </div>
-              </div>
-
-              <div
-                v-if="systemStatusWidget && systemStatusWidget.enable"
-                class="animate-fade-in space-y-3"
-              >
-                <div class="flex flex-wrap items-center gap-4 border-t border-gray-100 pt-3">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-500">{{ $t('settings.sections.useMockData') }}</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        :checked="!!systemStatusWidget.data?.useMock"
-                        @change="
-                          (e) => toggleSystemStatusMock((e.target as HTMLInputElement).checked)
-                        "
-                        class="sr-only peer"
-                      />
-                      <div
-                        class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"
-                      ></div>
-                    </label>
-                  </div>
-                </div>
-                <div class="h-40 w-full max-w-sm">
-                  <SystemStatusWidget :widget="systemStatusWidget" />
-                </div>
-              </div>
-            </div>
-          </div>
 
           <div v-if="activeTab === 'universal-window'" class="flatnas-handshake-signal space-y-4">
             <!-- Universal Window Widget Section -->

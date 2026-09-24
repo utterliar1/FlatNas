@@ -8,8 +8,7 @@
     "network": "Detección de red",
     "luckyStun": "Centro abierto",
     "about": "Acerca de",
-    "language": "Idioma / Language",
-    "systemStatus": "Estado del sistema"
+    "language": "Idioma / Language"
   },
   "sections": {
     "basicInfo": "Información básica",
@@ -156,13 +155,8 @@
     "switching": "Cambiando",
     "enabled": "Habilitado",
     "disabled": "Deshabilitado",
-    "hostStatusWidget": "Widget de estado del host",
     "publicAccessLabel": "Acceso público",
     "mobileDisplay": "Visualización móvil",
-    "useMockData": "Usar datos simulados",
-    "containerManagement": "Gestión de contenedores",
-    "enableContainerManagement": "Habilitar gestión de contenedores",
-    "containerManagementWidget": "Widget de gestión de contenedores",
     "mockData": "Datos simulados",
     "autoUpdate": "Actualización automática",
     "unknownWidget": "Widget desconocido ({type})",
@@ -249,7 +243,6 @@
     "socket": "Socket",
     "version": "Versión",
     "system": "Sistema",
-    "containers": "Contenedores",
     "name": "Nombre",
     "defaultGroupTitle": "Grupo predeterminado",
     "presetDesc": {
@@ -555,7 +548,6 @@
     "musicVolume": "Volumen",
     "collapseFiles": "Colapsar archivos",
     "fileManagement": "Gestión de archivos",
-    "containerPreview": "Vista previa del contenedor (siempre visible)",
     "styleVarContrast": "Contraste: ",
     "styleVarVisual": "Regresión visual: ",
     "styleVarName": "Variable",
@@ -648,7 +640,6 @@
     "modalCancel": "取消",
     "modalDelete": "删除",
     "modalConfirm": "确定",
-    "containerWidgetAriaLabel": "容器管理组件",
     "note": "注",
     "statusLabel": "状态",
     "amapApiKey": "高德 API Key"
@@ -1133,11 +1124,6 @@
     "retry": "Reintentar",
     "timeout": "Tiempo de espera agotado, reintente",
     "failed": "Error de carga"
-  },
-  "systemStatusWidget": {
-    "title": "Estado del sistema",
-    "uptime": "Tiempo activo: {days} días",
-    "loading": "Cargando..."
   },
   "memoWidget": {
     "newMemo": "Nuevo memo",

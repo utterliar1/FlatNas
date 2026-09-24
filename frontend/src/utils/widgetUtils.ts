@@ -32,15 +32,6 @@ export function createDefaultWidgetList(isLoggedIn: boolean): WidgetConfig[] {
       rowSpan: 2,
       isPublic: true,
     },
-    {
-      id: "system-status",
-      type: "system-status",
-      enable: false,
-      isPublic: true,
-      colSpan: 1,
-      rowSpan: 1,
-      data: { useMock: false },
-    },
     { id: "memo", type: "memo", enable: true, colSpan: 1, rowSpan: 1, isPublic: true },
     { id: "todo", type: "todo", enable: true, colSpan: 1, rowSpan: 1, isPublic: true },
     {
@@ -67,7 +58,7 @@ export function createDefaultWidgetList(isLoggedIn: boolean): WidgetConfig[] {
   // Filter out login-only widgets for guests
   if (!isLoggedIn) {
     return base.filter((w) => {
-      const loginOnly = ["file-transfer", "system-status", "sidebar", "status-monitor"];
+      const loginOnly = ["file-transfer", "sidebar", "status-monitor"];
       return !loginOnly.includes(w.id);
     });
   }
@@ -94,17 +85,21 @@ export function normalizeIncomingWidgets(
     memoW.type = "memo";
   }
 
-  // Docker 管理功能已剥离：过滤掉历史数据中残留的 docker 组件
-  const listWithoutDocker = nextWidgets.filter(
-    (widget) => widget.id !== "docker" && widget.type !== "docker",
+  // 已剥离的功能组件：Docker 管理、宿主机状态。
+  // 宿主机状态读取的是容器所在宿主（爱快路由器）的 CPU/内存/磁盘指标，本机部署场景下无意义。
+  // 这里过滤掉历史数据中残留的对应组件，避免渲染成"未知组件"占位卡片。
+  const REMOVED_WIDGET_TYPES = ["docker", "system-status"];
+  const listFilteredByRemoved = nextWidgets.filter(
+    (widget) =>
+      !REMOVED_WIDGET_TYPES.includes(widget.id) && !REMOVED_WIDGET_TYPES.includes(widget.type),
   );
 
   // Normalize File Transfer widget (deduplicate)
-  const fileTransferList = listWithoutDocker.filter((widget) => widget.type === "file-transfer");
+  const fileTransferList = listFilteredByRemoved.filter((widget) => widget.type === "file-transfer");
   if (fileTransferList.length > 1) {
     const keep =
       fileTransferList.find((widget) => widget.id === "file-transfer") || fileTransferList[0]!;
-    const filtered = listWithoutDocker.filter(
+    const filtered = listFilteredByRemoved.filter(
       (widget) => widget.type !== "file-transfer" || widget === keep,
     );
     if (
@@ -118,15 +113,15 @@ export function normalizeIncomingWidgets(
   } else if (
     fileTransferList.length === 1 &&
     fileTransferList[0]!.id !== "file-transfer" &&
-    !listWithoutDocker.some(
+    !listFilteredByRemoved.some(
       (widget) => widget.id === "file-transfer" && widget.type !== "file-transfer",
     )
   ) {
     fileTransferList[0]!.id = "file-transfer";
     nextWidgets.length = 0;
-    nextWidgets.push(...listWithoutDocker);
+    nextWidgets.push(...listFilteredByRemoved);
   } else if (fileTransferList.length === 0 && isLoggedIn) {
-    listWithoutDocker.push({
+    listFilteredByRemoved.push({
       id: "file-transfer",
       type: "file-transfer",
       enable: true,
@@ -135,10 +130,10 @@ export function normalizeIncomingWidgets(
       isPublic: true,
     });
     nextWidgets.length = 0;
-    nextWidgets.push(...listWithoutDocker);
+    nextWidgets.push(...listFilteredByRemoved);
   } else {
     nextWidgets.length = 0;
-    nextWidgets.push(...listWithoutDocker);
+    nextWidgets.push(...listFilteredByRemoved);
   }
 
   // Keep normalization and "restore defaults" aligned to the same source of truth.
