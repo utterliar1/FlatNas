@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import { onClickOutside } from "@vueuse/core";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: string;
@@ -41,9 +44,11 @@ const toggle = () => {
       class="flex items-center gap-1 text-xs font-bold text-gray-600 hover:bg-gray-100 px-2 py-1.5 rounded-lg transition-colors border border-transparent hover:border-gray-200"
       :class="{ 'opacity-50 cursor-not-allowed': disabled, 'bg-gray-50 border-gray-200': isOpen }"
       :disabled="disabled"
-      title="切换分组"
+      :title="t('settings.groupSelector.switchGroup')"
     >
-      <span class="max-w-[100px] truncate">{{ currentGroup?.title || "选择分组" }}</span>
+      <span class="max-w-[100px] truncate">{{
+        currentGroup?.title || t("settings.groupSelector.selectGroup")
+      }}</span>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         class="w-3 h-3 transition-transform duration-200 text-gray-400"

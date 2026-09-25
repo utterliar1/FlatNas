@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   show: boolean;
@@ -39,7 +42,8 @@ const confirm = async () => {
       close();
     }
   } catch (e: unknown) {
-    errorMsg.value = (e instanceof Error ? e.message : null) || "密码错误，请重试";
+    errorMsg.value =
+      (e instanceof Error ? e.message : null) || t("settings.passwordConfirm.wrongPassword");
     password.value = "";
     inputRef.value?.focus();
   }
@@ -55,7 +59,9 @@ const confirm = async () => {
   >
     <div class="bg-white rounded-xl shadow-2xl w-full overflow-hidden border border-gray-100">
       <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-        <h3 class="font-bold text-gray-800">{{ title || "请输入密码确认操作" }}</h3>
+        <h3 class="font-bold text-gray-800">
+          {{ title || t("settings.passwordConfirm.defaultTitle") }}
+        </h3>
         <button @click="close" class="text-gray-400 hover:text-gray-600 leading-none text-xl">
           &times;
         </button>
@@ -67,7 +73,7 @@ const confirm = async () => {
             ref="inputRef"
             v-model="password"
             type="password"
-            placeholder="请输入管理员密码"
+            :placeholder="t('settings.passwordConfirm.placeholder')"
             class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-center text-lg tracking-widest"
             @keyup.enter="confirm"
           />
@@ -79,13 +85,13 @@ const confirm = async () => {
             @click="close"
             class="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-lg font-bold hover:bg-gray-200 transition-all"
           >
-            取消
+            {{ t("settings.passwordConfirm.cancel") }}
           </button>
           <button
             @click="confirm"
             class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 transition-all shadow-md"
           >
-            确认
+            {{ t("settings.passwordConfirm.confirm") }}
           </button>
         </div>
       </div>

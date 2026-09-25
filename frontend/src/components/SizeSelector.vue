@@ -7,7 +7,7 @@
     @pointerdown.stop
   >
     <div class="mb-2 text-xs font-bold text-gray-500 flex justify-between items-center">
-      <span>调整尺寸</span>
+      <span>{{ t("settings.sizeSelector.adjustSize") }}</span>
       <span class="text-blue-600">{{ formatSize(currentCols) }} x {{ formatSize(currentRows) }}</span>
     </div>
     <div class="grid grid-cols-8 gap-1.5" @mouseleave="hoverIndex = null">
@@ -21,13 +21,16 @@
       ></div>
     </div>
     <div class="mt-2 text-[10px] text-gray-400 text-center">
-      点击选择网格大小
+      {{ t("settings.sizeSelector.clickToSelect") }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   currentCol?: number

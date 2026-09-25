@@ -271,7 +271,9 @@
     "network": {
       "applyDefault": "套用預設規則",
       "reset": "重設為預設"
-    }
+    },
+    "copiedHandshake": "握手連結已複製",
+    "copiedWebhook": "回呼位址已複製"
   },
   "widgetTypes": {
     "clock": "時鐘",
@@ -653,7 +655,13 @@
     "tooltipDegraded": "WebSocket 斷開，HTTP 通道可用",
     "tooltipOffline": "網路不可用",
     "tooltipQueue": "{count} 條離線資料待同步",
-    "wsConnecting": "WebSocket 連線中..."
+    "wsConnecting": "WebSocket 連線中...",
+    "httpSync": "HTTP 同步",
+    "guest": "訪客",
+    "connecting": "連線中",
+    "tooltipHttpSync": "WebSocket 無法使用，HTTP 輪詢同步中（15 秒間隔）",
+    "tooltipGuest": "訪客模式 · 資料已載入",
+    "badgeQueue": "{count} 筆待同步"
   },
   "conflictModal": {
     "versionConflict": "版本衝突",
@@ -750,7 +758,9 @@
     "importSuccess": "成功匯入 {count} 個書籤！",
     "importNone": "未找到可匯入的書籤",
     "importFailed": "匯入失敗，請檢查檔案格式",
-    "groupNotFound": "未找到選中的分組"
+    "groupNotFound": "未找到選中的分組",
+    "sharedGroups": "共享分組",
+    "sharedGroupsHint": "共享分組（由管理員維護，唯讀）"
   },
   "groupSettings": {
     "title": "分組設定",
@@ -906,7 +916,9 @@
     "enterUsername": "請輸入使用者名稱",
     "enterPassword": "請輸入密碼",
     "registerSuccess": "註冊成功，請登入",
-    "operationFailed": "操作失敗！"
+    "operationFailed": "操作失敗！",
+    "submitLogin": "登入",
+    "submitRegister": "註冊"
   },
   "passwordConfirm": {
     "defaultTitle": "請輸入密碼確認操作",
@@ -1227,5 +1239,38 @@
   "iconSelectionModal": {
     "title": "選擇圖示",
     "loading": "載入中..."
+  },
+  "accessCode": {
+    "titleManage": "管理訪問碼",
+    "titleUnlocked": "已解鎖",
+    "titleSetup": "設定訪問碼",
+    "titleUnlock": "訪問驗證",
+    "manageHint": "修改下方輸入框可更新訪問碼；如需徹底關閉保護，請使用「清除訪問碼」。",
+    "unlockedHint": "隱藏分組目前可見。重新上鎖後需再次輸入訪問碼。",
+    "setupHint": "設定全域訪問碼後，標記為「訪問碼保護」的分組將被隱藏，輸入訪問碼才能顯示。",
+    "newPlaceholder": "新訪問碼（至少 4 位）",
+    "setupPlaceholder": "訪問碼（至少 4 位）",
+    "codePlaceholder": "訪問碼",
+    "confirmPlaceholder": "再次輸入以確認",
+    "ttlLabel": "解鎖有效期",
+    "ttlSession": "工作階段內（關閉瀏覽器即上鎖）",
+    "ttl1h": "1 小時",
+    "ttl12h": "12 小時",
+    "ttl24h": "24 小時",
+    "ttl7d": "7 天",
+    "saveNew": "儲存新訪問碼",
+    "save": "儲存訪問碼",
+    "clear": "清除訪問碼",
+    "back": "返回",
+    "relock": "重新上鎖",
+    "errEnterCode": "請輸入訪問碼",
+    "errWrongCode": "訪問碼不正確",
+    "errNetwork": "網路錯誤，請重試",
+    "errTooShort": "訪問碼至少 4 位",
+    "errMismatch": "兩次輸入不一致",
+    "errUpdateFailed": "修改失敗（需要管理員身分）",
+    "errSetupFailed": "設定失敗（需要管理員身分）",
+    "errClearFailed": "清除失敗（需要管理員身分）",
+    "confirmClear": "確定要清除訪問碼嗎？清除後所有受保護分組將不再隱藏。"
   }
 }

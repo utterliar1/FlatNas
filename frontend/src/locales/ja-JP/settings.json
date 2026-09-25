@@ -271,7 +271,9 @@
     "network": {
       "applyDefault": "デフォルトルールを適用",
       "reset": "デフォルトにリセット"
-    }
+    },
+    "copiedHandshake": "ハンドシェイクリンクをコピーしました",
+    "copiedWebhook": "コールバック URL をコピーしました"
   },
   "widgetTypes": {
     "clock": "時計",
@@ -653,7 +655,13 @@
     "tooltipDegraded": "WebSocket切断中、HTTPチャネル利用可能",
     "tooltipOffline": "ネットワーク利用不可",
     "tooltipQueue": "{count}件のオフラインデータが同期待ち",
-    "wsConnecting": "WebSocket接続中..."
+    "wsConnecting": "WebSocket接続中...",
+    "httpSync": "HTTP 同期",
+    "guest": "ゲスト",
+    "connecting": "接続中",
+    "tooltipHttpSync": "WebSocket が利用できません。HTTP ポーリングで同期中（15 秒間隔）",
+    "tooltipGuest": "ゲストモード · データ読み込み済み",
+    "badgeQueue": "{count} 件未同期"
   },
   "conflictModal": {
     "versionConflict": "バージョン競合",
@@ -750,7 +758,9 @@
     "importSuccess": "{count}件のブックマークを正常にインポートしました！",
     "importNone": "インポート可能なブックマークが見つかりません",
     "importFailed": "インポートに失敗しました。ファイル形式を確認してください。",
-    "groupNotFound": "選択したグループが見つかりません"
+    "groupNotFound": "選択したグループが見つかりません",
+    "sharedGroups": "共有グループ",
+    "sharedGroupsHint": "共有グループ（管理者が管理・読み取り専用）"
   },
   "groupSettings": {
     "title": "グループ設定",
@@ -906,7 +916,9 @@
     "enterUsername": "ユーザー名を入力してください",
     "enterPassword": "パスワードを入力してください",
     "registerSuccess": "登録成功、ログインしてください",
-    "operationFailed": "操作失敗！"
+    "operationFailed": "操作失敗！",
+    "submitLogin": "ログイン",
+    "submitRegister": "登録"
   },
   "passwordConfirm": {
     "defaultTitle": "確認のためパスワードを入力してください",
@@ -1227,5 +1239,38 @@
   "iconSelectionModal": {
     "title": "アイコン選択",
     "loading": "読み込み中..."
+  },
+  "accessCode": {
+    "titleManage": "アクセスコードの管理",
+    "titleUnlocked": "ロック解除済み",
+    "titleSetup": "アクセスコードの設定",
+    "titleUnlock": "アクセス認証",
+    "manageHint": "下の入力欄を変更するとアクセスコードを更新できます。保護を完全に解除するには「アクセスコードを削除」を使用してください。",
+    "unlockedHint": "非表示グループが現在表示されています。再度ロックすると、アクセスコードの再入力が必要です。",
+    "setupHint": "グローバルアクセスコードを設定すると、「アクセスコード保護」に設定されたグループは非表示になり、コードを入力するまで表示されません。",
+    "newPlaceholder": "新しいアクセスコード（4 文字以上）",
+    "setupPlaceholder": "アクセスコード（4 文字以上）",
+    "codePlaceholder": "アクセスコード",
+    "confirmPlaceholder": "確認のため再入力",
+    "ttlLabel": "ロック解除の有効期間",
+    "ttlSession": "セッション内（ブラウザを閉じるとロック）",
+    "ttl1h": "1 時間",
+    "ttl12h": "12 時間",
+    "ttl24h": "24 時間",
+    "ttl7d": "7 日間",
+    "saveNew": "新しいアクセスコードを保存",
+    "save": "アクセスコードを保存",
+    "clear": "アクセスコードを削除",
+    "back": "戻る",
+    "relock": "再ロック",
+    "errEnterCode": "アクセスコードを入力してください",
+    "errWrongCode": "アクセスコードが正しくありません",
+    "errNetwork": "ネットワークエラーです。再試行してください",
+    "errTooShort": "アクセスコードは 4 文字以上必要です",
+    "errMismatch": "入力が一致しません",
+    "errUpdateFailed": "更新に失敗しました（管理者権限が必要です）",
+    "errSetupFailed": "設定に失敗しました（管理者権限が必要です）",
+    "errClearFailed": "削除に失敗しました（管理者権限が必要です）",
+    "confirmClear": "アクセスコードを削除しますか？削除すると、保護されたグループはすべて非表示ではなくなります。"
   }
 }

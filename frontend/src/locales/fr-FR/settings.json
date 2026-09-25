@@ -271,7 +271,9 @@
     "network": {
       "applyDefault": "Appliquer les règles par défaut",
       "reset": "Réinitialiser par défaut"
-    }
+    },
+    "copiedHandshake": "Lien de handshake copié",
+    "copiedWebhook": "URL de rappel copiée"
   },
   "widgetTypes": {
     "clock": "Horloge",
@@ -653,7 +655,13 @@
     "tooltipDegraded": "WebSocket déconnecté, canal HTTP disponible",
     "tooltipOffline": "Réseau indisponible",
     "tooltipQueue": "{count} éléments hors ligne en attente de synchronisation",
-    "wsConnecting": "WebSocket en cours de connexion..."
+    "wsConnecting": "WebSocket en cours de connexion...",
+    "httpSync": "Synchro HTTP",
+    "guest": "Invité",
+    "connecting": "Connexion",
+    "tooltipHttpSync": "WebSocket indisponible, synchronisation par sondage HTTP (intervalle de 15 s)",
+    "tooltipGuest": "Mode invité · données chargées",
+    "badgeQueue": "{count} en attente"
   },
   "conflictModal": {
     "versionConflict": "Conflit de version",
@@ -750,7 +758,9 @@
     "importSuccess": "{count} signets importés avec succès !",
     "importNone": "Aucun signet à importer",
     "importFailed": "Importation échouée, veuillez vérifier le format du fichier",
-    "groupNotFound": "Groupe sélectionné introuvable"
+    "groupNotFound": "Groupe sélectionné introuvable",
+    "sharedGroups": "Groupes partagés",
+    "sharedGroupsHint": "Groupes partagés (gérés par l'administrateur, lecture seule)"
   },
   "groupSettings": {
     "title": "Paramètres du groupe",
@@ -906,7 +916,9 @@
     "enterUsername": "Veuillez entrer le nom d'utilisateur",
     "enterPassword": "Veuillez entrer le mot de passe",
     "registerSuccess": "Inscription réussie, veuillez vous connecter",
-    "operationFailed": "Échec de l'opération !"
+    "operationFailed": "Échec de l'opération !",
+    "submitLogin": "Connexion",
+    "submitRegister": "S'inscrire"
   },
   "passwordConfirm": {
     "defaultTitle": "Veuillez entrer le mot de passe pour confirmer",
@@ -1227,5 +1239,38 @@
   "iconSelectionModal": {
     "title": "Sélectionner une icône",
     "loading": "Chargement..."
+  },
+  "accessCode": {
+    "titleManage": "Gérer le code d'accès",
+    "titleUnlocked": "Déverrouillé",
+    "titleSetup": "Définir le code d'accès",
+    "titleUnlock": "Vérification d'accès",
+    "manageHint": "Modifiez le champ ci-dessous pour mettre à jour le code d'accès. Pour désactiver complètement la protection, utilisez « Effacer le code d'accès ».",
+    "unlockedHint": "Les groupes masqués sont actuellement visibles. Après un nouveau verrouillage, le code d'accès sera requis.",
+    "setupHint": "Une fois un code d'accès global défini, les groupes marqués « protégés par code d'accès » seront masqués jusqu'à la saisie du code.",
+    "newPlaceholder": "Nouveau code d'accès (min. 4 caractères)",
+    "setupPlaceholder": "Code d'accès (min. 4 caractères)",
+    "codePlaceholder": "Code d'accès",
+    "confirmPlaceholder": "Saisir à nouveau pour confirmer",
+    "ttlLabel": "Durée de déverrouillage",
+    "ttlSession": "Session uniquement (verrouillage à la fermeture du navigateur)",
+    "ttl1h": "1 heure",
+    "ttl12h": "12 heures",
+    "ttl24h": "24 heures",
+    "ttl7d": "7 jours",
+    "saveNew": "Enregistrer le nouveau code",
+    "save": "Enregistrer le code d'accès",
+    "clear": "Effacer le code d'accès",
+    "back": "Retour",
+    "relock": "Verrouiller à nouveau",
+    "errEnterCode": "Veuillez saisir le code d'accès",
+    "errWrongCode": "Code d'accès incorrect",
+    "errNetwork": "Erreur réseau, veuillez réessayer",
+    "errTooShort": "Le code d'accès doit comporter au moins 4 caractères",
+    "errMismatch": "Les deux saisies ne correspondent pas",
+    "errUpdateFailed": "Échec de la mise à jour (droits administrateur requis)",
+    "errSetupFailed": "Échec de la configuration (droits administrateur requis)",
+    "errClearFailed": "Échec de l'effacement (droits administrateur requis)",
+    "confirmClear": "Effacer le code d'accès ? Tous les groupes protégés ne seront plus masqués."
   }
 }

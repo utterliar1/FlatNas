@@ -271,7 +271,9 @@
     "network": {
       "applyDefault": "Aplicar reglas predeterminadas",
       "reset": "Restablecer a predeterminado"
-    }
+    },
+    "copiedHandshake": "Enlace de handshake copiado",
+    "copiedWebhook": "URL de callback copiada"
   },
   "widgetTypes": {
     "clock": "Reloj",
@@ -653,7 +655,13 @@
     "tooltipDegraded": "WebSocket desconectado, canal HTTP disponible",
     "tooltipOffline": "Red no disponible",
     "tooltipQueue": "{count} elementos sin conexión pendientes de sincronización",
-    "wsConnecting": "WebSocket conectando..."
+    "wsConnecting": "WebSocket conectando...",
+    "httpSync": "Sincronización HTTP",
+    "guest": "Invitado",
+    "connecting": "Conectando",
+    "tooltipHttpSync": "WebSocket no disponible, sincronizando por sondeo HTTP (intervalo de 15 s)",
+    "tooltipGuest": "Modo invitado · datos cargados",
+    "badgeQueue": "{count} pendientes"
   },
   "conflictModal": {
     "versionConflict": "Conflicto de versión",
@@ -750,7 +758,9 @@
     "importSuccess": "¡{count} marcadores importados con éxito!",
     "importNone": "No se encontraron marcadores para importar",
     "importFailed": "Importación fallida, verifique el formato del archivo",
-    "groupNotFound": "Grupo seleccionado no encontrado"
+    "groupNotFound": "Grupo seleccionado no encontrado",
+    "sharedGroups": "Grupos compartidos",
+    "sharedGroupsHint": "Grupos compartidos (gestionados por el administrador, solo lectura)"
   },
   "groupSettings": {
     "title": "Configuración del grupo",
@@ -906,7 +916,9 @@
     "enterUsername": "Ingrese nombre de usuario",
     "enterPassword": "Ingrese contraseña",
     "registerSuccess": "Registro exitoso, inicie sesión",
-    "operationFailed": "¡Operación fallida!"
+    "operationFailed": "¡Operación fallida!",
+    "submitLogin": "Iniciar sesión",
+    "submitRegister": "Registrarse"
   },
   "passwordConfirm": {
     "defaultTitle": "Ingrese contraseña para confirmar",
@@ -1227,5 +1239,38 @@
   "iconSelectionModal": {
     "title": "Seleccionar icono",
     "loading": "Cargando..."
+  },
+  "accessCode": {
+    "titleManage": "Gestionar código de acceso",
+    "titleUnlocked": "Desbloqueado",
+    "titleSetup": "Establecer código de acceso",
+    "titleUnlock": "Verificación de acceso",
+    "manageHint": "Modifique el campo inferior para actualizar el código de acceso. Para desactivar la protección por completo, use «Borrar código de acceso».",
+    "unlockedHint": "Los grupos ocultos son visibles actualmente. Tras volver a bloquear, se requerirá el código de acceso.",
+    "setupHint": "Una vez establecido un código de acceso global, los grupos marcados como «protegidos por código de acceso» se ocultarán hasta introducir el código.",
+    "newPlaceholder": "Nuevo código de acceso (mín. 4 caracteres)",
+    "setupPlaceholder": "Código de acceso (mín. 4 caracteres)",
+    "codePlaceholder": "Código de acceso",
+    "confirmPlaceholder": "Vuelva a introducirlo para confirmar",
+    "ttlLabel": "Duración del desbloqueo",
+    "ttlSession": "Solo sesión (se bloquea al cerrar el navegador)",
+    "ttl1h": "1 hora",
+    "ttl12h": "12 horas",
+    "ttl24h": "24 horas",
+    "ttl7d": "7 días",
+    "saveNew": "Guardar nuevo código",
+    "save": "Guardar código de acceso",
+    "clear": "Borrar código de acceso",
+    "back": "Volver",
+    "relock": "Bloquear de nuevo",
+    "errEnterCode": "Introduzca el código de acceso",
+    "errWrongCode": "Código de acceso incorrecto",
+    "errNetwork": "Error de red, inténtelo de nuevo",
+    "errTooShort": "El código de acceso debe tener al menos 4 caracteres",
+    "errMismatch": "Las dos entradas no coinciden",
+    "errUpdateFailed": "Error al actualizar (se requieren permisos de administrador)",
+    "errSetupFailed": "Error al configurar (se requieren permisos de administrador)",
+    "errClearFailed": "Error al borrar (se requieren permisos de administrador)",
+    "confirmClear": "¿Borrar el código de acceso? Todos los grupos protegidos dejarán de estar ocultos."
   }
 }

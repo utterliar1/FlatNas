@@ -271,7 +271,9 @@
     "network": {
       "applyDefault": "应用默认规则",
       "reset": "重置为默认"
-    }
+    },
+    "copiedHandshake": "握手链接已复制",
+    "copiedWebhook": "回调地址已复制"
   },
   "widgetTypes": {
     "clock": "时钟",
@@ -653,7 +655,13 @@
     "tooltipDegraded": "WebSocket 断开，HTTP 通道可用",
     "tooltipOffline": "网络不可用",
     "tooltipQueue": "{count} 条离线数据待同步",
-    "wsConnecting": "WebSocket 连接中..."
+    "wsConnecting": "WebSocket 连接中...",
+    "httpSync": "HTTP 同步",
+    "guest": "访客",
+    "connecting": "连接中",
+    "tooltipHttpSync": "WebSocket 不可用，HTTP 轮询同步中（15s 间隔）",
+    "tooltipGuest": "访客模式 · 数据已加载",
+    "badgeQueue": "{count} 条待同步"
   },
   "conflictModal": {
     "versionConflict": "版本冲突 (Version Conflict)",
@@ -750,7 +758,9 @@
     "importSuccess": "成功导入 {count} 个书签！",
     "importNone": "未找到可导入的书签",
     "importFailed": "导入失败，请检查文件格式",
-    "groupNotFound": "未找到选中的分组"
+    "groupNotFound": "未找到选中的分组",
+    "sharedGroups": "共享分组",
+    "sharedGroupsHint": "共享分组（由管理员维护，只读）"
   },
   "groupSettings": {
     "title": "分组设置",
@@ -906,7 +916,9 @@
     "enterUsername": "请输入用户名",
     "enterPassword": "请输入密码",
     "registerSuccess": "注册成功，请登录",
-    "operationFailed": "操作失败！"
+    "operationFailed": "操作失败！",
+    "submitLogin": "登录",
+    "submitRegister": "注册"
   },
   "passwordConfirm": {
     "defaultTitle": "请输入密码确认操作",
@@ -1227,5 +1239,38 @@
   "iconSelectionModal": {
     "title": "选择图标",
     "loading": "加载中..."
+  },
+  "accessCode": {
+    "titleManage": "管理访问码",
+    "titleUnlocked": "已解锁",
+    "titleSetup": "设置访问码",
+    "titleUnlock": "访问验证",
+    "manageHint": "修改下方输入框可更新访问码；如需彻底关闭保护，请使用「清除访问码」。",
+    "unlockedHint": "隐藏分组当前可见。重新上锁后需再次输入访问码。",
+    "setupHint": "设置全局访问码后，标记为「访问码保护」的分组将被隐藏，输入访问码才能显示。",
+    "newPlaceholder": "新访问码（至少 4 位）",
+    "setupPlaceholder": "访问码（至少 4 位）",
+    "codePlaceholder": "访问码",
+    "confirmPlaceholder": "再次输入以确认",
+    "ttlLabel": "解锁有效期",
+    "ttlSession": "会话内（关闭浏览器即上锁）",
+    "ttl1h": "1 小时",
+    "ttl12h": "12 小时",
+    "ttl24h": "24 小时",
+    "ttl7d": "7 天",
+    "saveNew": "保存新访问码",
+    "save": "保存访问码",
+    "clear": "清除访问码",
+    "back": "返回",
+    "relock": "重新上锁",
+    "errEnterCode": "请输入访问码",
+    "errWrongCode": "访问码不正确",
+    "errNetwork": "网络错误，请重试",
+    "errTooShort": "访问码至少 4 位",
+    "errMismatch": "两次输入不一致",
+    "errUpdateFailed": "修改失败（需要管理员身份）",
+    "errSetupFailed": "设置失败（需要管理员身份）",
+    "errClearFailed": "清除失败（需要管理员身份）",
+    "confirmClear": "确定要清除访问码吗？清除后所有受保护分组将不再隐藏。"
   }
 }

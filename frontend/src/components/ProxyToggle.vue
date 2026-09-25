@@ -1,6 +1,8 @@
 <template>
   <div v-if="isProxyAvailable" class="flex items-center gap-2">
-    <span class="text-[10px] text-gray-400 font-medium">代理</span>
+    <span class="text-[10px] text-gray-400 font-medium">{{
+      t("settings.proxyToggle.proxy")
+    }}</span>
     <label class="relative inline-flex items-center cursor-pointer">
       <input
         type="checkbox"
@@ -17,6 +19,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 defineProps<{
   modelValue: boolean;

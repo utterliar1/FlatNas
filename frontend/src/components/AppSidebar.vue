@@ -3,6 +3,7 @@ defineOptions({
   name: "AppSidebar",
 });
 import { computed, onMounted, onUnmounted, ref, nextTick, toRef } from "vue";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import { useDevice } from "../composables/useDevice";
 import type { BookmarkCategory, BookmarkItem } from "@/types";
@@ -19,6 +20,13 @@ const props = defineProps<{
 
 const emit = defineEmits(["update:collapsed"]);
 const store = useMainStore();
+const { t } = useI18n();
+
+// ⚠️ 这是「数据标识」不是 UI 文案，禁止 i18n：
+// 「默认收藏」会被写入用户数据（widget.data[].title）并持久化到服务端。
+// 历史数据里它已固定为中文，若改用 t(...) 就会随语言切换而失配——
+// find() 找不到既有默认分类，导致导入的书签被塞进一个重复的新分类。
+const DEFAULT_BOOKMARK_CATEGORY = "默认收藏";
 const { isMobile } = useDevice(toRef(store.appConfig, "deviceMode"));
 const isHovered = ref(false);
 const isCollapsed = computed(() => {
@@ -281,7 +289,7 @@ onUnmounted(() => {
 });
 
 const bookmarkGroups = computed(() => {
-  return bookmarks.value.filter((c) => c.title !== "默认收藏");
+  return bookmarks.value.filter((c) => c.title !== DEFAULT_BOOKMARK_CATEGORY);
 });
 
 const draggableBookmarkGroups = computed({
@@ -290,7 +298,7 @@ const draggableBookmarkGroups = computed({
     const widget = store.widgets.find((w) => w.type === "bookmarks");
     if (widget) {
       const currentData = (widget.data as BookmarkCategory[]) || [];
-      const defaultCat = currentData.find((c) => c.title === "默认收藏");
+      const defaultCat = currentData.find((c) => c.title === DEFAULT_BOOKMARK_CATEGORY);
 
       // Reconstruct data: New Sorted Groups + Default Category (if any)
       const newData = [...newGroups] as BookmarkCategory[];
@@ -304,7 +312,7 @@ const draggableBookmarkGroups = computed({
 });
 
 const ungroupedCategory = computed(() => {
-  return bookmarks.value.find((c) => c.title === "默认收藏");
+  return bookmarks.value.find((c) => c.title === DEFAULT_BOOKMARK_CATEGORY);
 });
 
 const handleImportClick = () => {
@@ -360,12 +368,12 @@ const handleFileUpload = (event: Event) => {
           // 2. 独立书签添加到“默认收藏”
           if (links.length > 0) {
             let defaultCat = (widget.data as BookmarkCategory[]).find(
-              (c) => c.title === "默认收藏",
+              (c) => c.title === DEFAULT_BOOKMARK_CATEGORY,
             );
             if (!defaultCat) {
               defaultCat = {
                 id: genId() + "_default",
-                title: "默认收藏",
+                title: DEFAULT_BOOKMARK_CATEGORY,
                 collapsed: false,
                 children: [],
               };
@@ -378,13 +386,13 @@ const handleFileUpload = (event: Event) => {
         // Save store
         store.markDirty();
 
-        alert(`成功导入 ${newItems.length} 个书签！`);
+        alert(t("settings.sidebar.importSuccess", { count: newItems.length }));
       } else {
-        alert("未找到可导入的书签");
+        alert(t("settings.sidebar.importNone"));
       }
     } catch (error) {
       console.error("Import failed", error);
-      alert("导入失败，请检查文件格式");
+      alert(t("settings.sidebar.importFailed"));
     }
   };
   reader.readAsText(file);
@@ -586,7 +594,7 @@ const openEditModal = (item: BookmarkItem | BookmarkCategory) => {
     editingBookmarkIcon.value = item.icon || "";
     selectedCategoryForEdit.value =
       findLinkParentCategoryId(item.id, bookmarks.value || []) ||
-      bookmarks.value?.find((c) => c.title === "默认收藏")?.id ||
+      bookmarks.value?.find((c) => c.title === DEFAULT_BOOKMARK_CATEGORY)?.id ||
       "";
   } else {
     editingItemType.value = "category";
@@ -710,11 +718,11 @@ const confirmAddBookmark = async () => {
   const categories = widget.data as BookmarkCategory[];
 
   if (!selectedCategoryForAdd.value) {
-    targetCategory = categories.find((c) => c.title === "默认收藏");
+    targetCategory = categories.find((c) => c.title === DEFAULT_BOOKMARK_CATEGORY);
     if (!targetCategory) {
       targetCategory = {
         id: genId(),
-        title: "默认收藏",
+        title: DEFAULT_BOOKMARK_CATEGORY,
         collapsed: false,
         children: [],
       };
@@ -725,7 +733,7 @@ const confirmAddBookmark = async () => {
   }
 
   if (!targetCategory) {
-    alert("未找到选中的分组");
+    alert(t("settings.sidebar.groupNotFound"));
     return;
   }
 
@@ -875,9 +883,17 @@ const toggle = () => {
         v-if="!isCollapsed"
         @click="toggleViewMode"
         class="font-bold text-lg truncate hover:opacity-70 transition-opacity flex items-center gap-1 text-black"
-        :title="viewMode === 'bookmarks' ? '切换到分组导航' : '切换到书签'"
+        :title="
+                viewMode === 'bookmarks'
+                  ? t('settings.sidebar.switchToGroups')
+                  : t('settings.sidebar.switchToBookmarks')
+              "
       >
-        {{ viewMode === "bookmarks" ? "收藏夹" : "导航" }}
+        {{
+                viewMode === "bookmarks"
+                  ? t("settings.sidebar.bookmarks")
+                  : t("settings.sidebar.navigation")
+              }}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -903,7 +919,11 @@ const toggle = () => {
               ? 'hover:bg-white/25 hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:bg-white/15 text-black bg-white/10 border-white/15 cursor-pointer'
               : 'text-gray-400 bg-gray-200/20 border-gray-200/10 cursor-not-allowed opacity-50'
           ]"
-          :title="store.isLogged ? '编辑模式' : '无编辑权限'"
+          :title="
+                store.isLogged
+                  ? t('settings.sidebar.editMode')
+                  : t('settings.sidebar.noEditPermission')
+              "
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -929,7 +949,7 @@ const toggle = () => {
               ? 'text-blue-500 bg-blue-50/10 border-blue-500/30'
               : 'text-black bg-white/10 border-white/15',
           ]"
-          title="隐藏侧边栏"
+          :title="t('settings.sidebar.hideSidebar')"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -955,7 +975,7 @@ const toggle = () => {
           v-if="store.isLogged && !isCollapsed && viewMode === 'bookmarks'"
           @click="handleImportClick"
           class="p-1.5 rounded-xl transition-all group relative bg-white/10 backdrop-blur-[8px] border border-white/15 hover:bg-white/25 hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:bg-white/15 text-black"
-          title="导入书签"
+          :title="t('settings.sidebar.importBookmarks')"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -981,7 +1001,7 @@ const toggle = () => {
               ? 'w-12 h-12 flex justify-center items-center rounded-full text-white bg-white/20 border-white/30 shadow-lg'
               : 'rounded-xl text-black bg-white/10 border-white/15',
           ]"
-          title="Ctrl+B 切换侧边栏"
+          :title="t('settings.sidebar.sidebarShortcut')"
         >
           <svg
             v-if="isCollapsed"
@@ -1022,7 +1042,11 @@ const toggle = () => {
         class="text-[10px] font-bold opacity-60 text-black leading-tight tracking-wider vertical-lr select-none"
         style="writing-mode: vertical-lr; text-orientation: mixed"
       >
-        {{ viewMode === "bookmarks" ? "收藏夹" : "导航" }}
+        {{
+                viewMode === "bookmarks"
+                  ? t("settings.sidebar.bookmarks")
+                  : t("settings.sidebar.navigation")
+              }}
       </div>
     </div>
 
@@ -1194,7 +1218,7 @@ const toggle = () => {
                     ? 'opacity-100 text-black'
                     : 'text-black/30 hover:text-black',
                 ]"
-                title="置顶"
+                :title="t('settings.sidebar.pin')"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 rotate-45">
                   <path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" />
@@ -1218,7 +1242,7 @@ const toggle = () => {
               d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
             />
           </svg>
-          <span class="text-xs">暂无书签</span>
+          <span class="text-xs">{{ t("settings.sidebar.noBookmarks") }}</span>
         </div>
 
         <!-- Mobile Backdrop for Flyout -->
@@ -1376,7 +1400,7 @@ const toggle = () => {
                         ? 'opacity-100 text-black'
                         : 'text-black/30 hover:text-black',
                     ]"
-                    title="置顶"
+                    :title="t('settings.sidebar.pin')"
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 rotate-45">
                       <path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" />
@@ -1389,7 +1413,7 @@ const toggle = () => {
                 v-if="currentFolder && currentFolder.children.length === 0"
                 class="flex flex-col items-center justify-center py-8 opacity-40 gap-2"
               >
-                <span class="text-xs">暂无内容</span>
+                <span class="text-xs">{{ t("settings.sidebar.noContent") }}</span>
               </div>
             </VueDraggable>
           </div>
@@ -1398,21 +1422,21 @@ const toggle = () => {
             <button
               @click="goHome"
               class="flex-1 p-2 rounded-lg transition-colors group flex items-center justify-center border border-dashed hover:bg-black/5 border-black/20 text-inherit text-xs"
-              title="首页"
+              :title="t('settings.sidebar.home')"
             >
-              首页
+              {{ t("settings.sidebar.home") }}
             </button>
             <button
               @click="openAddCategoryModal(currentFolder)"
               class="flex-1 p-2 rounded-lg transition-colors group flex items-center justify-center border border-dashed hover:bg-black/5 border-black/20 text-inherit text-xs"
             >
-              添加分组
+              {{ t("settings.sidebar.addGroup") }}
             </button>
             <button
               @click="openAddModal"
               class="flex-1 p-2 rounded-lg transition-colors group flex items-center justify-center border border-dashed hover:bg-black/5 border-black/20 text-inherit text-xs"
             >
-              添加书签
+              {{ t("settings.sidebar.addBookmark") }}
             </button>
           </div>
         </div>
@@ -1471,7 +1495,7 @@ const toggle = () => {
             <div
               v-if="!isCollapsed"
               class="drag-handle cursor-move p-1 text-black/30 hover:text-black/80 transition-colors select-none text-xs font-bold"
-              title="拖动排序"
+              :title="t('settings.sidebar.dragToSort')"
             >
               ::
             </div>
@@ -1538,7 +1562,7 @@ const toggle = () => {
           v-else-if="store.groups.length === 0 && store.sharedGroups.length === 0"
           class="flex flex-col items-center justify-center h-full opacity-40 gap-2"
         >
-          <span class="text-xs">暂无分组</span>
+          <span class="text-xs">{{ t("settings.sidebar.noGroups") }}</span>
         </div>
 
         <!-- 共享分组（多用户共同的书签分组）：只读、不参与拖拽 -->
@@ -1551,13 +1575,13 @@ const toggle = () => {
             v-if="!isCollapsed"
             class="text-[10px] font-bold uppercase tracking-wider text-black/40 px-2 pt-2 pb-0.5"
           >
-            共享分组
+            {{ t("settings.sidebar.sharedGroups") }}
           </div>
           <button
             v-for="group in store.sharedGroups"
             :key="group.id"
             @click="scrollToGroup(group.id)"
-            title="共享分组（由管理员维护，只读）"
+            :title="t('settings.sidebar.sharedGroupsHint')"
             class="w-full flex items-center transition-all group relative text-left text-black bg-blue-500/10 backdrop-blur-md border border-blue-400/30 hover:bg-blue-500/20 hover:shadow-md hover:-translate-y-[1px] active:translate-y-0"
             :class="[
               isCollapsed ? 'justify-center w-10 h-10 p-0 rounded-xl' : 'p-2 rounded-lg gap-2',
@@ -1604,23 +1628,23 @@ const toggle = () => {
       <button
         @click="goHome"
         class="py-2 rounded-lg transition-colors group relative flex-1 flex items-center justify-center border border-dashed hover:bg-white/25 border-black/20 text-black"
-        title="首页"
+        :title="t('settings.sidebar.home')"
       >
-        <span class="text-xs font-medium">首页</span>
+        <span class="text-xs font-medium">{{ t("settings.sidebar.home") }}</span>
       </button>
       <button
         @click="openAddCategoryModal(null)"
         class="py-2 rounded-lg transition-colors group relative flex-1 flex items-center justify-center border border-dashed hover:bg-white/25 border-black/20 text-black"
-        title="添加分组"
+        :title="t('settings.sidebar.addGroup')"
       >
-        <span class="text-xs font-medium">添加分组</span>
+        <span class="text-xs font-medium">{{ t("settings.sidebar.addGroup") }}</span>
       </button>
       <button
         @click="openAddModal"
         class="py-2 rounded-lg transition-colors group relative flex-1 flex items-center justify-center border border-dashed hover:bg-white/25 border-black/20 text-black"
-        title="添加书签"
+        :title="t('settings.sidebar.addBookmark')"
       >
-        <span class="text-xs font-medium">添加书签</span>
+        <span class="text-xs font-medium">{{ t("settings.sidebar.addBookmark") }}</span>
       </button>
     </div>
 
@@ -1645,19 +1669,19 @@ const toggle = () => {
               class="font-bold text-sm"
               :class="store.appConfig.background ? 'text-black' : 'text-gray-800'"
             >
-              添加书签
+              {{ t("settings.sidebar.addBookmark") }}
             </h3>
             <div class="space-y-3">
               <div>
                 <label
                   class="text-xs opacity-70 mb-1 block"
                   :class="store.appConfig.background ? 'text-black' : 'text-gray-600'"
-                  >网址</label
+                  >{{ t("settings.sidebar.bookmarkUrl") }}</label
                 >
                 <input
                   ref="addInputRef"
                   v-model="newBookmarkUrl"
-                  placeholder="请输入网址 (https://...)"
+                  :placeholder="t('settings.sidebar.urlPlaceholder')"
                   class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none transition-colors"
                   :class="
                     store.appConfig.background
@@ -1672,7 +1696,7 @@ const toggle = () => {
                 <label
                   class="text-xs opacity-70 mb-1 block"
                   :class="store.appConfig.background ? 'text-black' : 'text-gray-600'"
-                  >分组</label
+                  >{{ t("settings.sidebar.bookmarkGroup") }}</label
                 >
                 <select
                   v-model="selectedCategoryForAdd"
@@ -1683,7 +1707,7 @@ const toggle = () => {
                       : 'bg-gray-50 border-gray-200 text-gray-900 focus:bg-white focus:border-blue-500'
                   "
                 >
-                  <option value="">默认 (未分组)</option>
+                  <option value="">{{ t("settings.sidebar.defaultGroup") }}</option>
                   <option
                     v-for="cat in allBookmarkCategories"
                     :key="cat.id"
@@ -1705,13 +1729,13 @@ const toggle = () => {
                     : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                 "
               >
-                取消
+                {{ t("settings.sidebar.cancel") }}
               </button>
               <button
                 @click="confirmAddBookmark"
                 class="px-3 py-1.5 text-xs rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm"
               >
-                添加
+                {{ t("settings.sidebar.add") }}
               </button>
             </div>
       </div>
@@ -1736,7 +1760,11 @@ const toggle = () => {
               class="font-bold text-sm"
               :class="store.appConfig.background ? 'text-black' : 'text-gray-800'"
             >
-              {{ editingItemType === "category" ? "编辑分组" : "编辑书签" }}
+              {{
+                editingItemType === "category"
+                  ? t("settings.sidebar.editGroup")
+                  : t("settings.sidebar.editBookmark")
+              }}
             </h3>
 
             <div class="space-y-2">
@@ -1744,7 +1772,7 @@ const toggle = () => {
                 <label
                   class="text-xs opacity-70 mb-1 block"
                   :class="store.appConfig.background ? 'text-black' : 'text-gray-600'"
-                  >标题</label
+                  >{{ t("settings.sidebar.editTitle") }}</label
                 >
                 <input
                   ref="editInputRef"
@@ -1763,7 +1791,7 @@ const toggle = () => {
                   <label
                     class="text-xs opacity-70 mb-1 block"
                     :class="store.appConfig.background ? 'text-black' : 'text-gray-600'"
-                    >分组</label
+                    >{{ t("settings.sidebar.bookmarkGroup") }}</label
                   >
                   <select
                     v-model="selectedCategoryForEdit"
@@ -1788,7 +1816,7 @@ const toggle = () => {
                   <label
                     class="text-xs opacity-70 mb-1 block"
                     :class="store.appConfig.background ? 'text-black' : 'text-gray-600'"
-                    >链接</label
+                    >{{ t("settings.sidebar.editLink") }}</label
                   >
                   <input
                     v-model="editingBookmarkUrl"
@@ -1805,7 +1833,7 @@ const toggle = () => {
                   <label
                     class="text-xs opacity-70 mb-1 block"
                     :class="store.appConfig.background ? 'text-black' : 'text-gray-600'"
-                    >图标 URL (可选)</label
+                    >{{ t("settings.sidebar.iconUrl") }}</label
                   >
                   <div class="flex gap-2">
                     <div
@@ -1844,13 +1872,13 @@ const toggle = () => {
                     : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                 "
               >
-                取消
+                {{ t("settings.sidebar.cancel") }}
               </button>
               <button
                 @click="confirmEditBookmark"
                 class="px-3 py-1.5 text-xs rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm"
               >
-                保存
+                {{ t("settings.sidebar.save") }}
               </button>
             </div>
       </div>
@@ -1875,12 +1903,12 @@ const toggle = () => {
               class="font-bold text-sm"
               :class="store.appConfig.background ? 'text-black' : 'text-gray-800'"
             >
-              添加分组
+              {{ t("settings.sidebar.addGroup") }}
             </h3>
             <input
               ref="addCategoryInputRef"
               v-model="newCategoryTitle"
-              placeholder="请输入分组名称"
+              :placeholder="t('settings.sidebar.groupNamePlaceholder')"
               class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none transition-colors"
               :class="
                 store.appConfig.background
@@ -1899,13 +1927,13 @@ const toggle = () => {
                     : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                 "
               >
-                取消
+                {{ t("settings.sidebar.cancel") }}
               </button>
               <button
                 @click="confirmAddCategory"
                 class="px-3 py-1.5 text-xs rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm"
               >
-                添加
+                {{ t("settings.sidebar.add") }}
               </button>
             </div>
       </div>
@@ -1937,7 +1965,7 @@ const toggle = () => {
               d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
             />
           </svg>
-          编辑
+          {{ t("common.common.edit") }}
         </button>
         <button
           @click="handleContextDelete"
@@ -1957,7 +1985,7 @@ const toggle = () => {
               d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
             />
           </svg>
-          删除
+          {{ t("common.common.delete") }}
         </button>
     </OverlayMotion>
 
@@ -1967,7 +1995,7 @@ const toggle = () => {
         v-if="isMobile"
         @click="toggle"
         class="fixed bottom-6 left-6 z-[60] p-1.5 transition-all group backdrop-blur-[8px] border hover:bg-white/25 hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:bg-white/15 w-12 h-12 flex justify-center items-center rounded-full text-white bg-white/20 border-white/30 shadow-lg"
-        :title="isCollapsed ? '展开侧边栏' : '收起侧边栏'"
+        :title="isCollapsed ? t('settings.sidebar.expandSidebar') : t('settings.sidebar.collapseSidebar')"
       >
         <svg
           v-if="!isCollapsed"

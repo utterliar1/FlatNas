@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, VueWrapper } from '@vue/test-utils';
 import GridPanel from '../GridPanel.vue';
 import { createTestingPinia } from '@pinia/testing';
+import { createAppI18n } from '@/plugins/i18n';
 
 // Mock dependencies
 vi.mock('vue-draggable-plus', () => ({
@@ -73,6 +74,8 @@ describe('GridPanel Context Menu', () => {
     wrapper = mount(GridPanel, {
       global: {
         plugins: [
+          // 组件已接入 useI18n()，挂载时必须提供 i18n 实例
+          createAppI18n(),
           createTestingPinia({
             createSpy: () => vi.fn().mockResolvedValue(undefined),
             // 注意：main store 的 widgets / groups / isLogged 都是 computed 转发

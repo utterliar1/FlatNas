@@ -2,10 +2,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { createTestingPinia } from '@pinia/testing';
+import { createAppI18n } from '@/plugins/i18n';
 import GroupSelector from '../GroupSelector.vue';
 
 describe('GroupSelector', () => {
   let wrapper: VueWrapper;
+  // 组件已接入 useI18n()，挂载时必须提供 i18n 实例。
+  // 这里复用生产的 createAppI18n()（默认 zh-CN），顺带验证语言包本身可用。
+  const i18n = createAppI18n();
 
   beforeEach(() => {
     wrapper = mount(GroupSelector, {
@@ -14,6 +18,7 @@ describe('GroupSelector', () => {
       },
       global: {
         plugins: [
+          i18n,
           createTestingPinia({
             createSpy: vi.fn,
             // 注意：main store 的 groups 是 computed(() => groupsStore.groups)，

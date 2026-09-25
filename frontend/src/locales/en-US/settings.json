@@ -271,7 +271,9 @@
     "network": {
       "applyDefault": "Apply default rules",
       "reset": "Reset to default"
-    }
+    },
+    "copiedHandshake": "Handshake link copied",
+    "copiedWebhook": "Webhook URL copied"
   },
   "widgetTypes": {
     "clock": "Clock",
@@ -653,7 +655,13 @@
     "tooltipDegraded": "WebSocket disconnected, HTTP channel available",
     "tooltipOffline": "Network unavailable",
     "tooltipQueue": "{count} offline items pending sync",
-    "wsConnecting": "WebSocket connecting..."
+    "wsConnecting": "WebSocket connecting...",
+    "httpSync": "HTTP Sync",
+    "guest": "Guest",
+    "connecting": "Connecting",
+    "tooltipHttpSync": "WebSocket unavailable, syncing via HTTP polling (15s interval)",
+    "tooltipGuest": "Guest mode · data loaded",
+    "badgeQueue": "{count} pending"
   },
   "conflictModal": {
     "versionConflict": "Version Conflict",
@@ -750,7 +758,9 @@
     "importSuccess": "Successfully imported {count} bookmarks!",
     "importNone": "No bookmarks found to import",
     "importFailed": "Import failed, please check file format",
-    "groupNotFound": "Selected group not found"
+    "groupNotFound": "Selected group not found",
+    "sharedGroups": "Shared Groups",
+    "sharedGroupsHint": "Shared groups (maintained by admin, read-only)"
   },
   "groupSettings": {
     "title": "Group Settings",
@@ -906,7 +916,9 @@
     "enterUsername": "Please enter username",
     "enterPassword": "Please enter password",
     "registerSuccess": "Registration successful, please log in",
-    "operationFailed": "Operation failed!"
+    "operationFailed": "Operation failed!",
+    "submitLogin": "Login",
+    "submitRegister": "Register"
   },
   "passwordConfirm": {
     "defaultTitle": "Please enter password to confirm",
@@ -1227,5 +1239,38 @@
   "iconSelectionModal": {
     "title": "Select Icon",
     "loading": "Loading..."
+  },
+  "accessCode": {
+    "titleManage": "Manage Access Code",
+    "titleUnlocked": "Unlocked",
+    "titleSetup": "Set Access Code",
+    "titleUnlock": "Access Verification",
+    "manageHint": "Edit the field below to update the access code. To disable protection entirely, use \"Clear Access Code\".",
+    "unlockedHint": "Hidden groups are currently visible. After locking again, the access code will be required.",
+    "setupHint": "Once a global access code is set, groups marked as \"access-code protected\" will be hidden until the code is entered.",
+    "newPlaceholder": "New access code (min. 4 characters)",
+    "setupPlaceholder": "Access code (min. 4 characters)",
+    "codePlaceholder": "Access code",
+    "confirmPlaceholder": "Re-enter to confirm",
+    "ttlLabel": "Unlock duration",
+    "ttlSession": "Session only (locks when browser closes)",
+    "ttl1h": "1 hour",
+    "ttl12h": "12 hours",
+    "ttl24h": "24 hours",
+    "ttl7d": "7 days",
+    "saveNew": "Save new access code",
+    "save": "Save access code",
+    "clear": "Clear access code",
+    "back": "Back",
+    "relock": "Lock again",
+    "errEnterCode": "Please enter the access code",
+    "errWrongCode": "Incorrect access code",
+    "errNetwork": "Network error, please retry",
+    "errTooShort": "Access code must be at least 4 characters",
+    "errMismatch": "The two entries do not match",
+    "errUpdateFailed": "Update failed (admin privileges required)",
+    "errSetupFailed": "Setup failed (admin privileges required)",
+    "errClearFailed": "Clear failed (admin privileges required)",
+    "confirmClear": "Clear the access code? All protected groups will no longer be hidden."
   }
 }

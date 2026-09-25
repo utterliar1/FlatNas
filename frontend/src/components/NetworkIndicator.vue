@@ -2,7 +2,11 @@
   <div class="network-indicator" :class="statusClass" :title="statusTooltip">
     <div class="indicator-dot" />
     <span class="indicator-text">{{ statusLabel }}</span>
-    <span v-if="offlineQueueCount > 0" class="indicator-badge" :title="`${offlineQueueCount} 条待同步`">
+    <span
+      v-if="offlineQueueCount > 0"
+      class="indicator-badge"
+      :title="t('settings.networkIndicator.badgeQueue', { count: offlineQueueCount })"
+    >
       {{ offlineQueueCount }}
     </span>
   </div>
@@ -10,7 +14,10 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "@/stores/main";
+
+const { t } = useI18n();
 
 const store = useMainStore();
 const offlineQueueCount = computed(() => store.offlineQueueCount);
@@ -42,25 +49,26 @@ const statusClass = computed(() => ({
 }));
 
 const statusLabel = computed(() => {
-  if (store.offlineQueueCount > 0) return "队列中";
-  if (store.isConnected) return "在线";
+  if (store.offlineQueueCount > 0) return t("settings.networkIndicator.queueing");
+  if (store.isConnected) return t("settings.networkIndicator.online");
   const wsStatus = store.status;
   const wsConnectingOrOpen = wsStatus === "CONNECTING" || wsStatus === "OPEN";
-  if (isHttpPollingActive.value) return "HTTP 同步";
-  if (!store.isLogged) return "访客";
-  if (wsConnectingOrOpen) return "连接中";
-  return "离线";
+  if (isHttpPollingActive.value) return t("settings.networkIndicator.httpSync");
+  if (!store.isLogged) return t("settings.networkIndicator.guest");
+  if (wsConnectingOrOpen) return t("settings.networkIndicator.connecting");
+  return t("settings.networkIndicator.offline");
 });
 
 const statusTooltip = computed(() => {
-  if (store.offlineQueueCount > 0) return `${store.offlineQueueCount} 条离线数据待同步`;
-  if (store.isConnected) return "WebSocket 已连接";
+  if (store.offlineQueueCount > 0)
+    return t("settings.networkIndicator.tooltipQueue", { count: store.offlineQueueCount });
+  if (store.isConnected) return t("settings.networkIndicator.tooltipOnline");
   const wsStatus = store.status;
   const wsConnectingOrOpen = wsStatus === "CONNECTING" || wsStatus === "OPEN";
-  if (isHttpPollingActive.value) return "WebSocket 不可用，HTTP 轮询同步中（15s 间隔）";
-  if (!store.isLogged) return "访客模式 · 数据已加载";
-  if (wsConnectingOrOpen) return "WebSocket 连接中...";
-  return "网络不可用";
+  if (isHttpPollingActive.value) return t("settings.networkIndicator.tooltipHttpSync");
+  if (!store.isLogged) return t("settings.networkIndicator.tooltipGuest");
+  if (wsConnectingOrOpen) return t("settings.networkIndicator.wsConnecting");
+  return t("settings.networkIndicator.tooltipOffline");
 });
 </script>
 

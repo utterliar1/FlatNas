@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
+
+const { t } = useI18n();
 
 // 访问码弹窗：由「连点页面标题 3 次」触发的隐蔽入口。
 //  - 未解锁：输入全局访问码解锁（后端校验并种会话 Cookie）；
@@ -32,13 +35,14 @@ const canManage = computed(() => isAdmin.value && codeSet.value);
 const manageMode = ref(false);
 
 // 解锁有效期选项（小时；0 = 会话内，关闭浏览器即上锁）
-const TTL_OPTIONS = [
-  { value: 0, label: "会话内（关闭浏览器即上锁）" },
-  { value: 1, label: "1 小时" },
-  { value: 12, label: "12 小时" },
-  { value: 24, label: "24 小时" },
-  { value: 168, label: "7 天" },
-];
+// 用 computed 包一层，切换语言时 label 才会跟着重新求值
+const TTL_OPTIONS = computed(() => [
+  { value: 0, label: t("settings.accessCode.ttlSession") },
+  { value: 1, label: t("settings.accessCode.ttl1h") },
+  { value: 12, label: t("settings.accessCode.ttl12h") },
+  { value: 24, label: t("settings.accessCode.ttl24h") },
+  { value: 168, label: t("settings.accessCode.ttl7d") },
+]);
 const unlockTTL = ref<number>(0);
 const ttlSaving = ref(false);
 
@@ -73,7 +77,7 @@ const showError = (msg: string) => {
 const handleUnlock = async () => {
   if (busy.value) return;
   if (!code.value.trim()) {
-    showError("请输入访问码");
+    showError(t("settings.accessCode.errEnterCode"));
     return;
   }
   busy.value = true;
@@ -90,10 +94,10 @@ const handleUnlock = async () => {
       close();
     } else {
       const data = await res.json().catch(() => ({}));
-      showError(data.error || "访问码不正确");
+      showError(data.error || t("settings.accessCode.errWrongCode"));
     }
   } catch {
-    showError("网络错误，请重试");
+    showError(t("settings.accessCode.errNetwork"));
   } finally {
     busy.value = false;
   }
@@ -122,7 +126,7 @@ const handleTTLChange = async () => {
     if (ok) {
       emit("changed");
     } else {
-      showError("修改失败（需要管理员身份）");
+      showError(t("settings.accessCode.errUpdateFailed"));
     }
   } finally {
     ttlSaving.value = false;
@@ -133,15 +137,15 @@ const handleSetup = async () => {
   if (busy.value) return;
   const c = code.value.trim();
   if (!c) {
-    showError("请输入访问码");
+    showError(t("settings.accessCode.errEnterCode"));
     return;
   }
   if (c.length < 4) {
-    showError("访问码至少 4 位");
+    showError(t("settings.accessCode.errTooShort"));
     return;
   }
   if (c !== confirmCode.value.trim()) {
-    showError("两次输入不一致");
+    showError(t("settings.accessCode.errMismatch"));
     return;
   }
   busy.value = true;
@@ -151,7 +155,7 @@ const handleSetup = async () => {
       emit("changed");
       close();
     } else {
-      showError("设置失败（需要管理员身份）");
+      showError(t("settings.accessCode.errSetupFailed"));
     }
   } finally {
     busy.value = false;
@@ -161,7 +165,7 @@ const handleSetup = async () => {
 // 清除全局访问码（关闭保护）：所有「访问码保护」分组将恢复为普通可见分组。
 const handleClearCode = async () => {
   if (busy.value) return;
-  if (!confirm("确定要清除访问码吗？清除后所有受保护分组将不再隐藏。")) return;
+  if (!confirm(t("settings.accessCode.confirmClear"))) return;
   busy.value = true;
   try {
     const ok = await store.updateSystemConfig({ accessCode: "" });
@@ -170,7 +174,7 @@ const handleClearCode = async () => {
       manageMode.value = false;
       close();
     } else {
-      showError("清除失败（需要管理员身份）");
+      showError(t("settings.accessCode.errClearFailed"));
     }
   } finally {
     busy.value = false;
@@ -212,12 +216,12 @@ const handleClearCode = async () => {
         <div class="text-sm font-bold text-gray-700">
           {{
             manageMode
-              ? "管理访问码"
+              ? t("settings.accessCode.titleManage")
               : unlocked
-                ? "已解锁"
+                ? t("settings.accessCode.titleUnlocked")
                 : setupMode
-                  ? "设置访问码"
-                  : "访问验证"
+                  ? t("settings.accessCode.titleSetup")
+                  : t("settings.accessCode.titleUnlock")
           }}
         </div>
       </div>
@@ -227,13 +231,13 @@ const handleClearCode = async () => {
         <!-- 管理员管理访问码（修改 / 清除） -->
         <template v-if="manageMode">
           <p class="text-[11px] text-gray-400 text-center leading-relaxed">
-            修改下方输入框可更新访问码；如需彻底关闭保护，请使用「清除访问码」。
+            {{ t("settings.accessCode.manageHint") }}
           </p>
           <input
             v-model="code"
             type="password"
             autocomplete="off"
-            placeholder="新访问码（至少 4 位）"
+            :placeholder="t('settings.accessCode.newPlaceholder')"
             class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 text-center tracking-widest"
             @keyup.enter="handleSetup"
           />
@@ -241,12 +245,14 @@ const handleClearCode = async () => {
             v-model="confirmCode"
             type="password"
             autocomplete="off"
-            placeholder="再次输入以确认"
+            :placeholder="t('settings.accessCode.confirmPlaceholder')"
             class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 text-center tracking-widest"
             @keyup.enter="handleSetup"
           />
           <div class="space-y-1">
-            <label class="block text-[11px] text-gray-500 px-1">解锁有效期</label>
+            <label class="block text-[11px] text-gray-500 px-1">{{
+              t("settings.accessCode.ttlLabel")
+            }}</label>
             <select
               v-model.number="unlockTTL"
               class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 bg-white"
@@ -261,30 +267,32 @@ const handleClearCode = async () => {
             :disabled="busy"
             class="w-full py-2 rounded-xl text-sm font-bold text-white bg-gray-800 hover:bg-black transition-colors disabled:opacity-50"
           >
-            保存新访问码
+            {{ t("settings.accessCode.saveNew") }}
           </button>
           <button
             @click="handleClearCode"
             :disabled="busy"
             class="w-full py-2 rounded-xl text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
           >
-            清除访问码
+            {{ t("settings.accessCode.clear") }}
           </button>
           <button
             @click="manageMode = false"
             class="w-full text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
           >
-            返回
+            {{ t("settings.accessCode.back") }}
           </button>
         </template>
 
         <!-- 已解锁：提供重新上锁 -->
         <template v-if="!manageMode && unlocked">
           <p class="text-[11px] text-gray-400 text-center leading-relaxed">
-            隐藏分组当前可见。重新上锁后需再次输入访问码。
+            {{ t("settings.accessCode.unlockedHint") }}
           </p>
           <div v-if="isAdmin" class="space-y-1">
-            <label class="block text-[11px] text-gray-500 px-1">解锁有效期</label>
+            <label class="block text-[11px] text-gray-500 px-1">{{
+              t("settings.accessCode.ttlLabel")
+            }}</label>
             <select
               v-model.number="unlockTTL"
               :disabled="ttlSaving"
@@ -301,20 +309,20 @@ const handleClearCode = async () => {
             :disabled="busy"
             class="w-full py-2 rounded-xl text-sm font-bold text-white bg-gray-800 hover:bg-black transition-colors disabled:opacity-50"
           >
-            重新上锁
+            {{ t("settings.accessCode.relock") }}
           </button>
         </template>
 
         <!-- 管理员首次设置 -->
         <template v-else-if="!manageMode && setupMode">
           <p class="text-[11px] text-gray-400 text-center leading-relaxed">
-            设置全局访问码后，标记为「访问码保护」的分组将被隐藏，输入访问码才能显示。
+            {{ t("settings.accessCode.setupHint") }}
           </p>
           <input
             v-model="code"
             type="password"
             autocomplete="off"
-            placeholder="访问码（至少 4 位）"
+            :placeholder="t('settings.accessCode.setupPlaceholder')"
             class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 text-center tracking-widest"
             @keyup.enter="handleSetup"
           />
@@ -322,12 +330,14 @@ const handleClearCode = async () => {
             v-model="confirmCode"
             type="password"
             autocomplete="off"
-            placeholder="再次输入以确认"
+            :placeholder="t('settings.accessCode.confirmPlaceholder')"
             class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 text-center tracking-widest"
             @keyup.enter="handleSetup"
           />
           <div class="space-y-1">
-            <label class="block text-[11px] text-gray-500 px-1">解锁有效期</label>
+            <label class="block text-[11px] text-gray-500 px-1">{{
+              t("settings.accessCode.ttlLabel")
+            }}</label>
             <select
               v-model.number="unlockTTL"
               class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 bg-white"
@@ -342,7 +352,7 @@ const handleClearCode = async () => {
             :disabled="busy"
             class="w-full py-2 rounded-xl text-sm font-bold text-white bg-gray-800 hover:bg-black transition-colors disabled:opacity-50"
           >
-            保存访问码
+            {{ t("settings.accessCode.save") }}
           </button>
         </template>
 
@@ -352,7 +362,7 @@ const handleClearCode = async () => {
             v-model="code"
             type="password"
             autocomplete="off"
-            placeholder="访问码"
+            :placeholder="t('settings.accessCode.codePlaceholder')"
             class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 text-center tracking-widest"
             @keyup.enter="handleUnlock"
           />
@@ -361,7 +371,7 @@ const handleClearCode = async () => {
             :disabled="busy"
             class="w-full py-2 rounded-xl text-sm font-bold text-white bg-gray-800 hover:bg-black transition-colors disabled:opacity-50"
           >
-            确认
+            {{ t("common.common.confirm") }}
           </button>
         </template>
 
@@ -370,7 +380,7 @@ const handleClearCode = async () => {
           @click="manageMode = true"
           class="w-full text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
         >
-          管理访问码
+          {{ t("settings.accessCode.titleManage") }}
         </button>
 
         <p v-if="error" class="text-[11px] text-red-500 text-center">{{ error }}</p>

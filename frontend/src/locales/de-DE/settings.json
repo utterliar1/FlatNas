@@ -271,7 +271,9 @@
     "network": {
       "applyDefault": "Standardregeln anwenden",
       "reset": "Auf Standard zurücksetzen"
-    }
+    },
+    "copiedHandshake": "Handshake-Link kopiert",
+    "copiedWebhook": "Callback-URL kopiert"
   },
   "widgetTypes": {
     "clock": "Uhr",
@@ -653,7 +655,13 @@
     "tooltipDegraded": "WebSocket getrennt, HTTP-Kanal verfügbar",
     "tooltipOffline": "Netzwerk nicht verfügbar",
     "tooltipQueue": "{count} Offline-Elemente warten auf Synchronisierung",
-    "wsConnecting": "WebSocket verbindet..."
+    "wsConnecting": "WebSocket verbindet...",
+    "httpSync": "HTTP-Synchronisierung",
+    "guest": "Gast",
+    "connecting": "Verbinden",
+    "tooltipHttpSync": "WebSocket nicht verfügbar, Synchronisierung per HTTP-Polling (15s-Intervall)",
+    "tooltipGuest": "Gastmodus · Daten geladen",
+    "badgeQueue": "{count} ausstehend"
   },
   "conflictModal": {
     "versionConflict": "Versionskonflikt",
@@ -750,7 +758,9 @@
     "importSuccess": "{count} Lesezeichen erfolgreich importiert!",
     "importNone": "Keine importierbaren Lesezeichen gefunden",
     "importFailed": "Import fehlgeschlagen, bitte Dateiformat prüfen",
-    "groupNotFound": "Ausgewählte Gruppe nicht gefunden"
+    "groupNotFound": "Ausgewählte Gruppe nicht gefunden",
+    "sharedGroups": "Gemeinsame Gruppen",
+    "sharedGroupsHint": "Gemeinsame Gruppen (vom Administrator verwaltet, schreibgeschützt)"
   },
   "groupSettings": {
     "title": "Gruppeneinstellungen",
@@ -906,7 +916,9 @@
     "enterUsername": "Bitte Benutzernamen eingeben",
     "enterPassword": "Bitte Passwort eingeben",
     "registerSuccess": "Registrierung erfolgreich, bitte anmelden",
-    "operationFailed": "Operation fehlgeschlagen!"
+    "operationFailed": "Operation fehlgeschlagen!",
+    "submitLogin": "Anmelden",
+    "submitRegister": "Registrieren"
   },
   "passwordConfirm": {
     "defaultTitle": "Bitte Passwort zur Bestätigung eingeben",
@@ -1227,5 +1239,38 @@
   "iconSelectionModal": {
     "title": "Icon auswählen",
     "loading": "Laden..."
+  },
+  "accessCode": {
+    "titleManage": "Zugangscode verwalten",
+    "titleUnlocked": "Entsperrt",
+    "titleSetup": "Zugangscode festlegen",
+    "titleUnlock": "Zugriffsprüfung",
+    "manageHint": "Ändern Sie das Feld unten, um den Zugangscode zu aktualisieren. Um den Schutz vollständig zu deaktivieren, verwenden Sie „Zugangscode löschen\".",
+    "unlockedHint": "Versteckte Gruppen sind derzeit sichtbar. Nach dem erneuten Sperren ist der Zugangscode erneut erforderlich.",
+    "setupHint": "Nach dem Festlegen eines globalen Zugangscodes werden als „Zugangscode-geschützt\" markierte Gruppen ausgeblendet, bis der Code eingegeben wird.",
+    "newPlaceholder": "Neuer Zugangscode (mind. 4 Zeichen)",
+    "setupPlaceholder": "Zugangscode (mind. 4 Zeichen)",
+    "codePlaceholder": "Zugangscode",
+    "confirmPlaceholder": "Zur Bestätigung erneut eingeben",
+    "ttlLabel": "Entsperrdauer",
+    "ttlSession": "Nur Sitzung (sperrt beim Schließen des Browsers)",
+    "ttl1h": "1 Stunde",
+    "ttl12h": "12 Stunden",
+    "ttl24h": "24 Stunden",
+    "ttl7d": "7 Tage",
+    "saveNew": "Neuen Zugangscode speichern",
+    "save": "Zugangscode speichern",
+    "clear": "Zugangscode löschen",
+    "back": "Zurück",
+    "relock": "Erneut sperren",
+    "errEnterCode": "Bitte Zugangscode eingeben",
+    "errWrongCode": "Falscher Zugangscode",
+    "errNetwork": "Netzwerkfehler, bitte erneut versuchen",
+    "errTooShort": "Der Zugangscode muss mindestens 4 Zeichen lang sein",
+    "errMismatch": "Die Eingaben stimmen nicht überein",
+    "errUpdateFailed": "Aktualisierung fehlgeschlagen (Administratorrechte erforderlich)",
+    "errSetupFailed": "Einrichtung fehlgeschlagen (Administratorrechte erforderlich)",
+    "errClearFailed": "Löschen fehlgeschlagen (Administratorrechte erforderlich)",
+    "confirmClear": "Zugangscode löschen? Alle geschützten Gruppen werden danach nicht mehr ausgeblendet."
   }
 }
