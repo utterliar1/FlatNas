@@ -122,6 +122,9 @@ backend/debug_weather.go.bak
 # ----------------------
 frontend/dist/
 
+# Vite 加载 vite.config.ts 时产生的临时 bundle（进程被中断时会残留）
+frontend/vite.config.ts.timestamp-*.mjs
+
 # 构建前对 server/public 的整体挪移暂存目录（避免批量删除保护，仅本地保留）
 server/.public_prev/
 
