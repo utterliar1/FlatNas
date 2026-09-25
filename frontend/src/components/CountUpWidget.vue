@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
 
+const { t } = useI18n();
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
 
@@ -13,7 +15,7 @@ const initData = () => {
   if (w && !w.data) {
     w.data = {
       startTime: new Date().toISOString().slice(0, 16), // Default to now
-      title: "正计时",
+      title: "正计时", // 数据标识：持久化，禁止 i18n
       style: "card",
       isRunning: false,
       totalPauseDuration: 0,
@@ -47,7 +49,7 @@ const formData = ref({
 const openConfig = () => {
   const data = props.widget.data || {
     startTime: new Date().toISOString().slice(0, 16),
-    title: "正计时",
+    title: "正计时", // 数据标识：持久化，禁止 i18n
     style: "card",
     displayFormat: "d-hms",
   };
@@ -81,9 +83,9 @@ const saveConfig = async () => {
 
 // Timer Logic
 const timeDisplay = ref({
-  full: "0天 00时00分00秒",
-  datePart: "0天",
-  timePart: "00时00分00秒",
+  full: t("settings.countupWidget.fmtFullZero"),
+  datePart: t("settings.countupWidget.fmtDayZero"),
+  timePart: t("settings.countupWidget.fmtHmsZero"),
   days: 0,
   hours: 0,
   minutes: 0,
@@ -198,33 +200,51 @@ const calculate = () => {
       : "d-hms";
 
   if (fmt === "d-only") {
-    datePart = `${dayStr}天`;
+    datePart = t("settings.countupWidget.fmtDay", { n: dayStr });
     timePart = "";
     fullStr = datePart;
   } else if (fmt === "ym-only") {
-    datePart = `${calendarParts.years}年${calendarParts.months}月`;
+    datePart = t("settings.countupWidget.fmtYearMonth", {
+      y: calendarParts.years,
+      m: calendarParts.months,
+    });
     timePart = "";
     fullStr = datePart;
   } else if (fmt === "ymd-only") {
-    datePart = `${calendarParts.years}年${calendarParts.months}月${calendarParts.days}日`;
+    datePart = t("settings.countupWidget.fmtYmd", {
+      y: calendarParts.years,
+      m: calendarParts.months,
+      d: calendarParts.days,
+    });
     timePart = "";
     fullStr = datePart;
   } else if (fmt === "mdhms") {
     const totalMonths = calendarParts.years * 12 + calendarParts.months;
-    datePart = `${totalMonths}月${calendarParts.days}日`;
-    timePart = `${formatNum(calendarParts.hours)}时${formatNum(calendarParts.minutes)}分${formatNum(
-      calendarParts.seconds,
-    )}秒`;
+    datePart = t("settings.countupWidget.fmtMonthDay", {
+      m: totalMonths,
+      d: calendarParts.days,
+    });
+    timePart = t("settings.countupWidget.fmtHms", {
+      h: formatNum(calendarParts.hours),
+      m: formatNum(calendarParts.minutes),
+      s: formatNum(calendarParts.seconds),
+    });
     fullStr = `${datePart} ${timePart}`;
   } else if (fmt === "ymdhms") {
-    datePart = `${calendarParts.years}年${calendarParts.months}月${calendarParts.days}日`;
-    timePart = `${formatNum(calendarParts.hours)}时${formatNum(calendarParts.minutes)}分${formatNum(
-      calendarParts.seconds,
-    )}秒`;
+    datePart = t("settings.countupWidget.fmtYmd", {
+      y: calendarParts.years,
+      m: calendarParts.months,
+      d: calendarParts.days,
+    });
+    timePart = t("settings.countupWidget.fmtHms", {
+      h: formatNum(calendarParts.hours),
+      m: formatNum(calendarParts.minutes),
+      s: formatNum(calendarParts.seconds),
+    });
     fullStr = `${datePart} ${timePart}`;
   } else {
-    datePart = `${dayStr}天`;
-    timePart = `${h}时${m}分${s}秒`;
+    datePart = t("settings.countupWidget.fmtDay", { n: dayStr });
+    timePart = t("settings.countupWidget.fmtHms", { h, m, s });
     fullStr = `${datePart} ${timePart}`;
   }
 
@@ -287,11 +307,11 @@ onUnmounted(() => {
 });
 
 // Styles
-const styles = [
-  { label: "卡片风格", value: "card" },
-  { label: "极简文字", value: "simple" },
-  { label: "霓虹光效", value: "neon" },
-];
+const styles = computed(() => [
+  { label: t("settings.countupWidget.styleCard"), value: "card" },
+  { label: t("settings.countupWidget.styleSimple"), value: "simple" },
+  { label: t("settings.countupWidget.styleNeon"), value: "neon" },
+]);
 
 const isSmall = computed(
   () => (props.widget.colSpan ?? 1) <= 1 && (props.widget.rowSpan ?? 1) <= 1,
@@ -320,7 +340,7 @@ const isSmall = computed(
     >
         <div class="bg-white text-gray-800 rounded-xl shadow-2xl w-full overflow-hidden flex flex-col">
           <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-            <div class="font-bold text-lg">正计时设置</div>
+            <div class="font-bold text-lg">{{ t('settings.countupWidget.configTitle') }}</div>
             <button @click="saveConfig" class="text-gray-400 hover:text-gray-600">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -339,17 +359,17 @@ const isSmall = computed(
           <div class="p-5 flex flex-col gap-4">
             <div>
               <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5"
-                >标题</label
+                >{{ t('settings.countupWidget.titleLabel') }}</label
               >
               <input
                 v-model="formData.title"
                 class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                placeholder="例如：工作时长"
+                :placeholder="t('settings.countupWidget.titlePlaceholder')"
               />
             </div>
             <div>
               <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5"
-                >开始时间</label
+                >{{ t('settings.countupWidget.startTime') }}</label
               >
               <input
                 type="datetime-local"
@@ -360,23 +380,23 @@ const isSmall = computed(
             </div>
             <div>
               <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5"
-                >显示格式</label
+                >{{ t('settings.countupWidget.formatLabel') }}</label
               >
               <select
                 v-model="formData.displayFormat"
                 class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all bg-white"
               >
-                <option value="d-hms">按天时分秒</option>
-                <option value="d-only">只显示天数</option>
-                <option value="mdhms">按月日时分秒</option>
-                <option value="ym-only">只显示年月</option>
-                <option value="ymdhms">按年月日时分秒</option>
-                <option value="ymd-only">只显示年月日</option>
+                <option value="d-hms">{{ t('settings.countupWidget.formatDHMS') }}</option>
+                <option value="d-only">{{ t('settings.countupWidget.formatDOnly') }}</option>
+                <option value="mdhms">{{ t('settings.countupWidget.formatMDHMS') }}</option>
+                <option value="ym-only">{{ t('settings.countupWidget.formatYMOnly') }}</option>
+                <option value="ymdhms">{{ t('settings.countupWidget.formatYMDHMS') }}</option>
+                <option value="ymd-only">{{ t('settings.countupWidget.formatYMDOnly') }}</option>
               </select>
             </div>
             <div>
               <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5"
-                >风格</label
+                >{{ t('settings.countupWidget.styleLabel') }}</label
               >
               <div class="grid grid-cols-3 gap-2">
                 <button
@@ -402,7 +422,7 @@ const isSmall = computed(
               class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
               :class="{ 'opacity-60 cursor-not-allowed': store.isSaving }"
             >
-              {{ store.isSaving ? '保存中...' : '保存设置' }}
+              {{ store.isSaving ? t('settings.countupWidget.saving') : t('settings.countupWidget.saveBtn') }}
             </button>
           </div>
         </div>
@@ -414,7 +434,7 @@ const isSmall = computed(
       <button
         @click.stop="openConfig"
         class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-black/10 active:scale-95 z-20"
-        title="设置"
+        :title="t('settings.countupWidget.settings')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -432,7 +452,7 @@ const isSmall = computed(
 
       <!-- Title -->
       <div class="text-xs font-medium opacity-80 mb-1 uppercase tracking-wider truncate max-w-full">
-        {{ widget.data?.title || "正计时" }}
+        {{ widget.data?.title || t('settings.countupWidget.title') }}
       </div>
 
       <!-- Time Display -->
@@ -475,7 +495,7 @@ const isSmall = computed(
         <button
           @click.stop="toggleTimer"
           class="p-1.5 rounded-full hover:bg-black/20 transition-colors active:scale-95"
-          :title="widget.data?.isRunning ? '暂停' : '开始'"
+          :title="widget.data?.isRunning ? t('settings.countupWidget.pause') : t('settings.countupWidget.start')"
         >
           <svg
             v-if="!widget.data?.isRunning"
@@ -507,7 +527,7 @@ const isSmall = computed(
         <button
           @click.stop="resetTimer"
           class="p-1.5 rounded-full hover:bg-black/20 transition-colors active:scale-95"
-          title="重置"
+          :title="t('settings.countupWidget.reset')"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

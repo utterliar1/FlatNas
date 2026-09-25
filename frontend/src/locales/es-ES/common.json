@@ -143,7 +143,12 @@
     "confirmDelete": "¿Está seguro de eliminar el grupo \"{name}\" y todo su contenido?",
     "confirmReset": "¿Está seguro de restablecer todos los ajustes de este grupo a los valores globales predeterminados?",
     "save": "Guardar cambios",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "sharedToAll": "Compartir con todos los usuarios",
+    "sharedToAllDesc": "Al activarlo, este grupo aparece como «grupo compartido» para todos los usuarios: los usuarios conectados lo ven completo y los invitados solo los elementos públicos. Solo el administrador puede mantenerlo.",
+    "accessCodeProtect": "Protección con código de acceso (ocultar grupo)",
+    "accessCodeProtectDescOn": "Al activarlo, este grupo se oculta. Pulsa el título de la página 3 veces e introduce el código de acceso para desbloquearlo y mostrarlo.",
+    "accessCodeProtectDescOff": "Aún no hay código de acceso global: el administrador debe pulsar el título de la página 3 veces para configurarlo."
   },
   "edit": {
     "addBookmark": "Agregar nuevo elemento",

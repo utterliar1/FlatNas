@@ -114,6 +114,12 @@ const WIRED_COMPONENTS = [
   "SizeSelector.vue",
   "NetworkIndicator.vue",
   "IconShape.vue",
+  // 批次 3：主面板 / 弹窗 / 自定义组件 / 正计时
+  "GridPanel.vue",
+  "EditModal.vue",
+  "GroupSettingsModal.vue",
+  "CustomCssWidget.vue",
+  "CountUpWidget.vue",
 ];
 
 describe("已接线组件的模板不应残留硬编码中文", () => {

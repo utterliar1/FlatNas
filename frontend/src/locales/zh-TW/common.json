@@ -143,7 +143,12 @@
     "confirmDelete": "確定要刪除分組「{name}」及其所有內容嗎？",
     "confirmReset": "確定要重設此分組的所有設定，恢復為全域預設嗎？",
     "save": "儲存變更",
-    "cancel": "取消"
+    "cancel": "取消",
+    "sharedToAll": "共享給所有使用者",
+    "sharedToAllDesc": "開啟後該分組作為「共享分組」呈現給所有使用者：登入使用者可完整檢視，未登入訪客僅見公開項目。僅管理員可維護。",
+    "accessCodeProtect": "訪問碼保護（隱藏分組）",
+    "accessCodeProtectDescOn": "開啟後該分組被隱藏，需連點頁面標題 3 次並輸入訪問碼解鎖後才顯示。",
+    "accessCodeProtectDescOff": "尚未設定全域訪問碼：請由管理員連點頁面標題 3 次進行設定。"
   },
   "edit": {
     "addBookmark": "新增項目",

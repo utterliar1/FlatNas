@@ -143,7 +143,12 @@
     "confirmDelete": "Gruppe \"{name}\" und alle Inhalte wirklich löschen?",
     "confirmReset": "Alle Einstellungen dieser Gruppe auf globale Standards zurücksetzen?",
     "save": "Änderungen speichern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "sharedToAll": "Für alle Benutzer freigeben",
+    "sharedToAllDesc": "Wenn aktiviert, erscheint diese Gruppe als „Freigegebene Gruppe“ für alle Benutzer: Angemeldete Benutzer sehen sie vollständig, Gäste nur öffentliche Einträge. Nur Admins können sie pflegen.",
+    "accessCodeProtect": "Zugangscode-Schutz (Gruppe ausblenden)",
+    "accessCodeProtectDescOn": "Wenn aktiviert, wird diese Gruppe ausgeblendet. Klicke dreimal auf den Seitentitel und gib den Zugangscode ein, um sie zu entsperren und einzublenden.",
+    "accessCodeProtectDescOff": "Noch kein globaler Zugangscode festgelegt: Der Admin sollte den Seitentitel 3-mal antippen, um einen festzulegen."
   },
   "edit": {
     "addBookmark": "Neues Element hinzufügen",

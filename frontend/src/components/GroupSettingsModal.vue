@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import type { NavGroup } from "../types";
 import IconShape from "./IconShape.vue";
@@ -13,6 +14,7 @@ const props = defineProps<{
 
 const emit = defineEmits(["update:show"]);
 const store = useMainStore();
+const { t } = useI18n();
 
 const group = computed(() => {
   return store.groups.find((g) => g.id === props.groupId);
@@ -33,7 +35,7 @@ const updateGroup = (updates: Partial<NavGroup>) => {
 
 const handleDeleteGroup = () => {
   if (!group.value) return;
-  if (confirm(`确定要删除分组 "${group.value.title}" 及其所有内容吗？`)) {
+  if (confirm(t("common.groups.confirmDelete", { name: group.value.title }))) {
     store.deleteGroup(group.value.id, true);
     close();
   }
@@ -41,7 +43,7 @@ const handleDeleteGroup = () => {
 
 const handleReset = () => {
   if (!group.value) return;
-  if (confirm("确定要重置此分组的所有设置，恢复为全局默认吗？")) {
+  if (confirm(t("common.groups.confirmReset"))) {
     // Keep title and id, reset others
     const { id } = group.value;
     // We need to remove the optional properties from the group object in the store
@@ -152,7 +154,7 @@ const bgAlpha = computed({
       <div
         class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
       >
-        <h3 class="text-lg font-bold text-gray-800">分组设置</h3>
+        <h3 class="text-lg font-bold text-gray-800">{{ t("common.groups.title") }}</h3>
         <button @click="close" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">
           &times;
         </button>
@@ -162,7 +164,7 @@ const bgAlpha = computed({
       <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
         <!-- Group Title -->
         <div>
-          <label class="block text-sm font-bold text-gray-600 mb-2">分组标题</label>
+          <label class="block text-sm font-bold text-gray-600 mb-2">{{ t("common.groups.groupTitle") }}</label>
           <div class="flex gap-3 mb-3">
             <input
               :value="group.title"
@@ -175,7 +177,7 @@ const bgAlpha = computed({
               :value="group.titleColor || store.appConfig.titleColor || '#374151'"
               @input="(e) => updateGroup({ titleColor: (e.target as HTMLInputElement).value })"
               class="w-10 h-10 rounded cursor-pointer border-0 p-0"
-              title="标题颜色"
+              :title="t('common.groups.titleColor')"
             />
           </div>
 
@@ -184,21 +186,21 @@ const bgAlpha = computed({
             class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100"
           >
             <div class="flex flex-col">
-              <span class="text-xs font-bold text-gray-700">公开此分组（一次性执行）</span>
-              <span class="text-[10px] text-gray-400">允许未登录访客查看此分组内容</span>
+              <span class="text-xs font-bold text-gray-700">{{ t("common.groups.publicGroup") }}</span>
+              <span class="text-[10px] text-gray-400">{{ t("common.groups.publicGroupDesc") }}</span>
             </div>
             <div class="flex gap-2">
               <button
                 @click="handleBatchUnpublish"
                 class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-bold rounded-lg shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
               >
-                不公开
+                {{ t("common.groups.notPublic") }}
               </button>
               <button
                 @click="handleBatchPublish"
                 class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-bold rounded-lg shadow-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
               >
-                公开
+                {{ t("common.groups.isPublic") }}
               </button>
             </div>
           </div>
@@ -209,9 +211,9 @@ const bgAlpha = computed({
             class="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100"
           >
             <div class="flex flex-col pr-3">
-              <span class="text-xs font-bold text-gray-700">共享给所有用户</span>
+              <span class="text-xs font-bold text-gray-700">{{ t("common.groups.sharedToAll") }}</span>
               <span class="text-[10px] text-gray-400">
-                开启后该分组作为「共享分组」呈现给所有用户：登录用户可完整查看，未登录访客仅见公开条目。仅管理员可维护。
+                {{ t("common.groups.sharedToAllDesc") }}
               </span>
             </div>
             <label class="relative inline-flex items-center cursor-pointer shrink-0">
@@ -232,12 +234,12 @@ const bgAlpha = computed({
             class="flex items-center justify-between bg-amber-50 p-3 rounded-lg border border-amber-100"
           >
             <div class="flex flex-col pr-3">
-              <span class="text-xs font-bold text-gray-700">访问码保护（隐藏分组）</span>
+              <span class="text-xs font-bold text-gray-700">{{ t("common.groups.accessCodeProtect") }}</span>
               <span class="text-[10px] text-gray-400">
                 {{
                   store.systemConfig.hasAccessCode
-                    ? "开启后该分组被隐藏，需连点页面标题 3 次并输入访问码解锁后才显示。"
-                    : "尚未设置全局访问码：请由管理员连点页面标题 3 次进行设置。"
+                    ? t("common.groups.accessCodeProtectDescOn")
+                    : t("common.groups.accessCodeProtectDescOff")
                 }}
               </span>
             </div>
@@ -261,8 +263,8 @@ const bgAlpha = computed({
             class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100"
           >
             <div class="flex flex-col">
-              <span class="text-xs font-bold text-gray-700">自动隐藏标题</span>
-              <span class="text-[10px] text-gray-400">鼠标悬停时才显示组名和操作按钮</span>
+              <span class="text-xs font-bold text-gray-700">{{ t("common.groups.autoHideTitle") }}</span>
+              <span class="text-[10px] text-gray-400">{{ t("common.groups.autoHideTitleDesc") }}</span>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input
@@ -285,18 +287,18 @@ const bgAlpha = computed({
         <!-- Layout & Spacing -->
         <div>
           <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span>📐 布局与间距</span>
+            <span>📐 {{ t("common.groups.layoutSpacing") }}</span>
             <span
               v-if="group.cardLayout || group.gridGap"
               class="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full"
-              >已自定义</span
+              >{{ t("common.groups.customized") }}</span
             >
           </h4>
 
           <div class="space-y-4">
             <!-- Card Layout -->
             <div>
-              <label class="text-xs font-bold text-gray-500 mb-2 block">卡片布局</label>
+              <label class="text-xs font-bold text-gray-500 mb-2 block">{{ t("common.groups.cardLayout") }}</label>
               <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
                 <button
                   @click="updateGroup({ cardLayout: 'vertical' })"
@@ -307,7 +309,7 @@ const bgAlpha = computed({
                       : 'text-gray-500 hover:text-gray-700'
                   "
                 >
-                  <span class="text-base">📱</span> 垂直
+                  <span class="text-base">📱</span> {{ t("common.groups.vertical") }}
                 </button>
                 <button
                   @click="updateGroup({ cardLayout: 'horizontal' })"
@@ -318,7 +320,7 @@ const bgAlpha = computed({
                       : 'text-gray-500 hover:text-gray-700'
                   "
                 >
-                  <span class="text-base">💳</span> 水平
+                  <span class="text-base">💳</span> {{ t("common.groups.horizontal") }}
                 </button>
               </div>
             </div>
@@ -326,7 +328,7 @@ const bgAlpha = computed({
             <!-- Grid Gap -->
             <div>
               <div class="flex justify-between mb-2">
-                <label class="text-xs font-bold text-gray-500">卡片间距</label>
+                <label class="text-xs font-bold text-gray-500">{{ t("common.groups.cardGap") }}</label>
                 <span class="text-xs font-mono text-blue-600 bg-blue-50 px-1.5 rounded"
                   >{{ group.gridGap ?? store.appConfig.gridGap }}px</span
                 >
@@ -347,7 +349,7 @@ const bgAlpha = computed({
             <!-- Card Size -->
             <div>
               <div class="flex justify-between mb-2">
-                <label class="text-xs font-bold text-gray-500">卡片大小</label>
+                <label class="text-xs font-bold text-gray-500">{{ t("common.groups.cardSize") }}</label>
                 <span class="text-xs font-mono text-blue-600 bg-blue-50 px-1.5 rounded"
                   >{{ group.cardSize ?? store.appConfig.cardSize ?? 120 }}px</span
                 >
@@ -368,7 +370,7 @@ const bgAlpha = computed({
             <!-- Icon Size -->
             <div>
               <div class="flex justify-between mb-2">
-                <label class="text-xs font-bold text-gray-500">图标大小</label>
+                <label class="text-xs font-bold text-gray-500">{{ t("common.groups.iconSize") }}</label>
                 <span class="text-xs font-mono text-blue-600 bg-blue-50 px-1.5 rounded"
                   >{{ group.iconSize ?? store.appConfig.iconSize ?? 48 }}px</span
                 >
@@ -393,11 +395,11 @@ const bgAlpha = computed({
         <!-- Card Style -->
         <div>
           <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span>🎨 卡片样式</span>
+            <span>🎨 {{ t("common.groups.cardStyle") }}</span>
             <span
               v-if="group.cardBgColor || group.showCardBackground !== undefined || group.iconShape"
               class="text-[10px] px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full"
-              >已自定义</span
+              >{{ t("common.groups.customized") }}</span
             >
           </h4>
 
@@ -405,13 +407,13 @@ const bgAlpha = computed({
             <!-- Background Toggle & Color & Title Color -->
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-xs font-bold text-gray-600">卡片外观</div>
-                <div class="text-[10px] text-gray-400">背景色 / 字体颜色</div>
+                <div class="text-xs font-bold text-gray-600">{{ t("common.groups.cardAppearance") }}</div>
+                <div class="text-[10px] text-gray-400">{{ t("common.groups.appearanceDesc") }}</div>
               </div>
               <div class="flex items-center gap-3">
                 <!-- Card Title Color -->
-                <div class="flex flex-col items-center gap-1" title="卡片标题颜色">
-                  <span class="text-[10px] text-gray-400">文字</span>
+                <div class="flex flex-col items-center gap-1" :title="t('settings.groupSettings.cardTitleColorTooltip')">
+                  <span class="text-[10px] text-gray-400">{{ t("settings.groupSettings.textColor") }}</span>
                   <input
                     type="color"
                     :value="group.cardTitleColor || store.appConfig.cardTitleColor || '#111827'"
@@ -425,8 +427,8 @@ const bgAlpha = computed({
                 <div class="w-px h-8 bg-gray-200 mx-1"></div>
 
                 <!-- Card Background Color -->
-                <div class="flex flex-col items-center gap-1" title="卡片背景颜色">
-                  <span class="text-[10px] text-gray-400">背景</span>
+                <div class="flex flex-col items-center gap-1" :title="t('settings.groupSettings.cardBgColorTooltip')">
+                  <span class="text-[10px] text-gray-400">{{ t("settings.groupSettings.bgColor") }}</span>
                   <input
                     v-if="group.showCardBackground ?? store.appConfig.showCardBackground"
                     type="color"
@@ -441,7 +443,7 @@ const bgAlpha = computed({
                   v-if="group.showCardBackground ?? store.appConfig.showCardBackground"
                 >
                   <span class="text-[10px] text-gray-400"
-                    >透明度 {{ Math.round(bgAlpha * 100) }}%</span
+                    >{{ t("settings.groupSettings.opacity", { percent: Math.round(bgAlpha * 100) }) }}</span
                   >
                   <input
                     type="range"
@@ -455,7 +457,7 @@ const bgAlpha = computed({
 
                 <!-- Show Background Toggle -->
                 <div class="flex flex-col items-center gap-1">
-                  <span class="text-[10px] text-gray-400">显示</span>
+                  <span class="text-[10px] text-gray-400">{{ t("settings.groupSettings.show") }}</span>
                   <label class="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -479,8 +481,8 @@ const bgAlpha = computed({
             <!-- Group Card Background Image -->
             <div class="border-t border-gray-100 pt-4">
               <label class="text-xs font-bold text-gray-500 mb-2 block">
-                卡片背景图
-                <span class="text-[10px] font-normal text-gray-400">(应用到组内所有卡片)</span>
+                {{ t("common.groups.cardBgImage") }}
+                <span class="text-[10px] font-normal text-gray-400">({{ t("common.groups.cardBgImageDesc") }})</span>
               </label>
               <div class="space-y-3">
                 <div class="flex items-center gap-2">
@@ -490,14 +492,14 @@ const bgAlpha = computed({
                       (e) => updateGroup({ backgroundImage: (e.target as HTMLInputElement).value })
                     "
                     type="text"
-                    placeholder="背景图 URL..."
+                    :placeholder="t('common.groups.bgImageUrlPlaceholder')"
                     class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"
                   />
                   <button
                     v-if="group.backgroundImage"
                     @click="updateGroup({ backgroundImage: '' })"
                     class="text-gray-400 hover:text-red-500 px-2"
-                    title="清除背景"
+                    :title="t('common.groups.clearBackground')"
                   >
                     ✕
                   </button>
@@ -523,7 +525,7 @@ const bgAlpha = computed({
                 >
                   <div>
                     <label class="block text-[10px] text-gray-400 mb-1 flex justify-between">
-                      <span>模糊半径</span>
+                      <span>{{ t("common.groups.blurRadius") }}</span>
                       <span>{{ group.backgroundBlur ?? 6 }}px</span>
                     </label>
                     <input
@@ -543,7 +545,7 @@ const bgAlpha = computed({
                   </div>
                   <div>
                     <label class="block text-[10px] text-gray-400 mb-1 flex justify-between">
-                      <span>遮罩浓度</span>
+                      <span>{{ t("common.groups.maskOpacity") }}</span>
                       <span>{{ Math.round((group.backgroundMask ?? 0.3) * 100) }}%</span>
                     </label>
                     <input
@@ -567,23 +569,23 @@ const bgAlpha = computed({
 
             <!-- Icon Shape -->
             <div>
-              <label class="text-xs font-bold text-gray-500 mb-2 block">图标形状</label>
+              <label class="text-xs font-bold text-gray-500 mb-2 block">{{ t("common.groups.iconShape") }}</label>
               <div class="flex gap-3 items-center">
                 <select
                   :value="group.iconShape || store.appConfig.iconShape"
                   @change="(e) => updateGroup({ iconShape: (e.target as HTMLInputElement).value })"
                   class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"
                 >
-                  <option value="none">无形状</option>
-                  <option value="hidden">不使用图标</option>
-                  <option value="rounded">圆角矩形</option>
-                  <option value="square">方形</option>
-                  <option value="circle">圆形</option>
-                  <option value="leaf">叶形</option>
-                  <option value="diamond">菱形</option>
-                  <option value="pentagon">五角形</option>
-                  <option value="hexagon">六边形</option>
-                  <option value="octagon">八边形</option>
+                  <option value="none">{{ t("common.groups.iconShapeOptions.none") }}</option>
+                  <option value="hidden">{{ t("common.groups.iconShapeOptions.hidden") }}</option>
+                  <option value="rounded">{{ t("common.groups.iconShapeOptions.rounded") }}</option>
+                  <option value="square">{{ t("common.groups.iconShapeOptions.square") }}</option>
+                  <option value="circle">{{ t("common.groups.iconShapeOptions.circle") }}</option>
+                  <option value="leaf">{{ t("common.groups.iconShapeOptions.leaf") }}</option>
+                  <option value="diamond">{{ t("common.groups.iconShapeOptions.diamond") }}</option>
+                  <option value="pentagon">{{ t("common.groups.iconShapeOptions.pentagon") }}</option>
+                  <option value="hexagon">{{ t("common.groups.iconShapeOptions.hexagon") }}</option>
+                  <option value="octagon">{{ t("common.groups.iconShapeOptions.octagon") }}</option>
                 </select>
                 <div class="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg">
                   <IconShape
@@ -606,14 +608,14 @@ const bgAlpha = computed({
             @click="handleReset"
             class="w-full py-2.5 rounded-xl text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
           >
-            <span>🔄</span> 恢复默认设置
+            <span>🔄</span> {{ t("common.groups.restoreDefault") }}
           </button>
 
           <button
             @click="handleDeleteGroup"
             class="w-full py-2.5 rounded-xl text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
           >
-            <span>🗑️</span> 删除此分组
+            <span>🗑️</span> {{ t("common.groups.deleteGroup") }}
           </button>
         </div>
       </div>

@@ -143,7 +143,12 @@
     "confirmDelete": "Voulez-vous vraiment supprimer le groupe « {name} » et tout son contenu ?",
     "confirmReset": "Voulez-vous vraiment réinitialiser tous les paramètres de ce groupe aux valeurs par défaut ?",
     "save": "Enregistrer les modifications",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "sharedToAll": "Partager avec tous les utilisateurs",
+    "sharedToAllDesc": "Une fois activé, ce groupe apparaît comme « groupe partagé » pour tous les utilisateurs : les utilisateurs connectés le voient en entier, les invités uniquement les éléments publics. Seul l'admin peut le gérer.",
+    "accessCodeProtect": "Protection par code d'accès (groupe masqué)",
+    "accessCodeProtectDescOn": "Une fois activé, ce groupe est masqué. Cliquez 3 fois sur le titre de la page et saisissez le code d'accès pour le déverrouiller et l'afficher.",
+    "accessCodeProtectDescOff": "Aucun code d'accès global défini : l'admin doit cliquer 3 fois sur le titre de la page pour en définir un."
   },
   "edit": {
     "addBookmark": "Ajouter un nouvel élément",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, shallowRef, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
 import type { NavItem } from "@/types";
 import { useSmartIconMatch } from "@/composables/useSmartIconMatch";
 import { useMainStore } from "../stores/main";
@@ -23,6 +24,7 @@ const props = defineProps<{
 const emit = defineEmits(["update:show", "save"]);
 
 const store = useMainStore();
+const { t } = useI18n();
 
 const currentHour = ref(new Date().getHours());
 let daylightTimer: number | null = null;
@@ -298,7 +300,7 @@ const onIconFileChange = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) {
-    alert("图片太大啦，请上传小于 5MB 的图片");
+    alert(t("settings.editModal.imageTooLarge"));
     return;
   }
   const reader = new FileReader();
@@ -347,22 +349,22 @@ type IconCacheErrorResponse = {
 };
 
 const extractIconCacheError = (data: IconCacheErrorResponse | null): string => {
-  if (!data) return "图标缓存失败，请稍后重试";
+  if (!data) return t("settings.editModal.iconCacheFailed");
   if (typeof data.error === "string") return data.error;
   if (data.error && typeof data.error.message === "string") {
     const code = typeof data.error.code === "string" ? data.error.code : "";
     const tips: Record<string, string> = {
-      invalid_url: "请使用有效的 http/https 图标地址",
-      blocked_host: "该地址属于受限内网地址，建议先上传图标再保存",
-      icon_too_large: "图标超过 5MB，建议压缩后重试",
-      unsupported_icon_type: "仅支持 png/jpg/webp/gif/svg/ico",
-      unsafe_svg: "SVG 含高风险脚本内容，请换一个安全图标",
-      fetch_failed: "远程图标拉取失败，请检查网络后重试",
+      invalid_url: t("settings.editModal.iconInvalidUrl"),
+      blocked_host: t("settings.editModal.iconBlockedHost"),
+      icon_too_large: t("settings.editModal.iconTooLarge"),
+      unsupported_icon_type: t("settings.editModal.iconUnsupportedType"),
+      unsafe_svg: t("settings.editModal.iconUnsafeSvg"),
+      fetch_failed: t("settings.editModal.iconFetchFailed"),
     };
     const tip = code && tips[code] ? `（${tips[code]}）` : "";
     return `${data.error.message}${tip}`;
   }
-  return "图标缓存失败，请稍后重试";
+  return t("settings.editModal.iconCacheFailed");
 };
 
 const cacheIconToLocal = async (icon: string): Promise<{ path: string | null; error: string | null }> => {
@@ -410,7 +412,7 @@ const cacheIconToLocal = async (icon: string): Promise<{ path: string | null; er
     }
   }
 
-  if (!payload) return { path: null, error: "图标地址格式不支持本地缓存，请改为上传图片或使用 http/https 链接" };
+  if (!payload) return { path: null, error: t("settings.editModal.iconCacheFormatError") };
 
   try {
     const res = await fetch("/api/icon-cache", {
@@ -426,13 +428,13 @@ const cacheIconToLocal = async (icon: string): Promise<{ path: string | null; er
     return { path: null, error: extractIconCacheError(data) };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "";
-    return { path: null, error: message || "图标缓存请求失败，请稍后重试" };
+    return { path: null, error: message || t("settings.editModal.iconCacheRequestFailed") };
   }
 };
 
 // 提交保存
 const submit = async () => {
-  if (!form.value.title && !form.value.url) return alert("标题和链接总得写一个吧！");
+  if (!form.value.title && !form.value.url) return alert(t("settings.editModal.titleUrlRequired"));
 
   isSaving.value = true;
   try {
@@ -443,7 +445,7 @@ const submit = async () => {
         if (cached.path) {
           form.value.icon = cached.path;
         } else if (cached.error) {
-          alert(`图标本地缓存失败：${cached.error}\n将保留当前图标继续保存。`);
+          alert(t("settings.editModal.iconCacheSaveWarning", { error: cached.error }));
         }
       }
     }
@@ -462,7 +464,7 @@ const submit = async () => {
     close();
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "";
-    alert(message || "保存失败，请重试");
+    alert(message || t("settings.editModal.saveFailed"));
   } finally {
     isSaving.value = false;
   }
@@ -486,12 +488,12 @@ const submit = async () => {
       <div
         class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white select-none"
       >
-        <h3 class="text-lg font-bold text-gray-800">{{ data ? "修改项目" : "添加新项目" }}</h3>
+        <h3 class="text-lg font-bold text-gray-800">{{ data ? t("settings.editModal.editItem") : t("settings.editModal.addItem") }}</h3>
 
         <div class="flex items-center gap-2 ml-auto mr-4">
           <GroupSelector v-model="localGroupId" />
           <div class="w-px h-4 bg-gray-200 mx-1"></div>
-          <span class="text-xs font-bold text-gray-500">公开</span>
+          <span class="text-xs font-bold text-gray-500">{{ t("settings.editModal.public") }}</span>
           <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" v-model="form.isPublic" class="sr-only peer" />
             <div
@@ -509,31 +511,31 @@ const submit = async () => {
         <div class="flex gap-3">
           <div class="flex-1">
             <label class="block text-sm font-medium text-gray-600 mb-1"
-              >标题 <span class="text-red-500">*</span></label
+              >{{ t("settings.editModal.titleRequired") }} <span class="text-red-500">*</span></label
             >
             <div class="relative">
               <input
                 v-model="form.title"
                 type="text"
                 class="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-gray-900 outline-none transition-colors pr-4"
-                placeholder="例如：我的博客"
+                :placeholder="t('settings.editModal.titlePlaceholder')"
               />
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-600 mb-1">标题颜色</label>
+            <label class="block text-sm font-medium text-gray-600 mb-1">{{ t("settings.editModal.titleColor") }}</label>
             <div class="flex items-center h-[42px] px-2 border border-gray-200 rounded-lg bg-white">
               <input
                 v-model="form.titleColor"
                 type="color"
                 class="w-8 h-8 rounded cursor-pointer border-none p-0 bg-transparent"
-                title="选择标题颜色"
+                :title="t('settings.editModal.titleColorTooltip')"
               />
               <button
                 v-if="form.titleColor"
                 @click="form.titleColor = ''"
                 class="ml-2 text-xs text-gray-400 hover:text-red-500"
-                title="清除颜色"
+                :title="t('settings.editModal.clearColorTooltip')"
               >
                 ✕
               </button>
@@ -543,28 +545,26 @@ const submit = async () => {
 
         <div v-if="!isVertical">
           <label class="block text-xs font-medium text-gray-500 mb-1"
-            >描述 (水平模式显示，每行对应一行文字)</label
+            >{{ t("settings.editModal.description") }}</label
           >
           <textarea
             v-model="mergedDescription"
             @input="autoResize"
             class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-gray-900 outline-none transition-colors text-sm resize-none overflow-hidden"
-            placeholder="第一行 (上)
-第二行 (中)
-第三行 (下)"
+            :placeholder="t('settings.editModal.descriptionPlaceholder')"
             rows="3"
           ></textarea>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-600 mb-1"
-            >外网链接 <span class="text-red-500">*</span>
+            >{{ t("settings.editModal.wanUrl") }} <span class="text-red-500">*</span>
             <button
               @click="addBackupUrl"
               class="ml-2 text-xs text-gray-500 hover:text-gray-900 hover:underline"
-              title="添加备用外网地址"
+              :title="t('settings.editModal.addBackupWanUrl')"
             >
-              + 备用地址
+              {{ t("settings.editModal.backupWanUrl") }}
             </button>
           </label>
           <div class="relative">
@@ -596,7 +596,7 @@ const submit = async () => {
                       ? 'border-red-300'
                       : 'border-gray-200',
                   ]"
-                  placeholder="名称"
+                  :placeholder="t('settings.editModal.urlNamePlaceholder')"
                   @keydown.enter.prevent
                   @keydown.tab="focusNextInput($event)"
                 />
@@ -604,7 +604,7 @@ const submit = async () => {
                   v-if="item.name"
                   @click="item.name = ''"
                   class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 rounded-full p-0.5"
-                  title="清除"
+                  :title="t('settings.editModal.clear')"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -627,14 +627,14 @@ const submit = async () => {
                   maxlength="500"
                   class="w-full px-3 py-2 rounded-lg border focus:border-gray-900 outline-none transition-colors text-sm pr-8"
                   :class="isValidUrl(item.url) ? 'border-gray-200' : 'border-red-300 bg-red-50'"
-                  placeholder="请输入完整URL地址"
+                  :placeholder="t('settings.editModal.fullUrlPlaceholder')"
                   @keydown.enter.prevent
                 />
                 <button
                   v-if="item.url"
                   @click="item.url = ''"
                   class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 rounded-full p-0.5"
-                  title="清除"
+                  :title="t('settings.editModal.clear')"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -652,7 +652,7 @@ const submit = async () => {
               <button
                 @click="removeBackupUrl(index)"
                 class="text-gray-400 hover:text-red-500 p-2 sm:p-1 self-end sm:self-center"
-                title="删除"
+                :title="t('settings.editModal.delete')"
               >
                 ✕
               </button>
@@ -662,13 +662,13 @@ const submit = async () => {
 
         <div>
           <label class="block text-sm font-medium text-gray-600 mb-1"
-            >内网链接 <span class="text-gray-400 text-xs">(选填，内网访问时优先跳转)</span>
+            >{{ t("settings.editModal.lanUrl") }} <span class="text-gray-400 text-xs">{{ t("settings.editModal.lanUrlHint") }}</span>
             <button
               @click="addBackupLanUrl"
               class="ml-2 text-xs text-gray-500 hover:text-gray-900 hover:underline"
-              title="添加备用内网地址"
+              :title="t('settings.editModal.addBackupLanUrl')"
             >
-              + 备用地址
+              {{ t("settings.editModal.backupLanUrl") }}
             </button>
           </label>
           <input
@@ -698,7 +698,7 @@ const submit = async () => {
                       ? 'border-red-300'
                       : 'border-gray-200',
                   ]"
-                  placeholder="名称"
+                  :placeholder="t('settings.editModal.urlNamePlaceholder')"
                   @keydown.enter.prevent
                   @keydown.tab="focusNextInput($event)"
                 />
@@ -706,7 +706,7 @@ const submit = async () => {
                   v-if="item.name"
                   @click="item.name = ''"
                   class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 rounded-full p-0.5"
-                  title="清除"
+                  :title="t('settings.editModal.clear')"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -729,14 +729,14 @@ const submit = async () => {
                   maxlength="500"
                   class="w-full px-3 py-2 rounded-lg border focus:border-gray-900 outline-none transition-colors text-sm pr-8"
                   :class="isValidUrl(item.url) ? 'border-gray-200' : 'border-red-300 bg-red-50'"
-                  placeholder="请输入完整URL地址"
+                  :placeholder="t('settings.editModal.fullUrlPlaceholder')"
                   @keydown.enter.prevent
                 />
                 <button
                   v-if="item.url"
                   @click="item.url = ''"
                   class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 rounded-full p-0.5"
-                  title="清除"
+                  :title="t('settings.editModal.clear')"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -754,7 +754,7 @@ const submit = async () => {
               <button
                 @click="removeBackupLanUrl(index)"
                 class="text-gray-400 hover:text-red-500 p-2 sm:p-1 self-end sm:self-center"
-                title="删除"
+                :title="t('settings.editModal.delete')"
               >
                 ✕
               </button>
@@ -763,7 +763,7 @@ const submit = async () => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-3">图标</label>
+          <label class="block text-sm font-medium text-gray-600 mb-3">{{ t("settings.editModal.icon") }}</label>
 
           <div class="flex items-start gap-4 mb-4">
             <!-- 预览框 -->
@@ -779,7 +779,7 @@ const submit = async () => {
                 @error="handleIconError"
                 @load="onImgLoad"
               />
-              <span v-else class="text-gray-300 text-xs">预览</span>
+              <span v-else class="text-gray-300 text-xs">{{ t("settings.editModal.preview") }}</span>
             </div>
 
             <!-- 操作区 -->
@@ -794,7 +794,7 @@ const submit = async () => {
                       : 'bg-white text-gray-500 border-gray-300 hover:border-gray-400'
                   "
                 >
-                  {{ saveIconToLocal ? "已缓存" : "缓存到本地" }}
+                  {{ saveIconToLocal ? t("settings.editModal.cachedLocal") : t("settings.editModal.cacheToLocal") }}
                 </button>
                 <button
                   type="button"
@@ -814,7 +814,7 @@ const submit = async () => {
                   <svg v-else class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  {{ isSmartMatching ? "匹配中..." : "智能匹配" }}
+                  {{ isSmartMatching ? t("settings.editModal.matchingInProgress") : t("settings.editModal.smartMatching") }}
                 </button>
               </div>
 
@@ -831,10 +831,10 @@ const submit = async () => {
                     <span class="text-xs text-gray-600 truncate">
                       {{
                         isSmartMatching
-                          ? "正在抓取图标..."
+                          ? t("settings.editModal.fetchingIcon")
                           : smartMatchCandidates.length
-                            ? "选择一个图标即可应用"
-                            : "未找到合适图标"
+                            ? t("settings.editModal.selectIconHint")
+                            : t("settings.editModal.iconNotFound")
                       }}
                     </span>
                   </div>
@@ -842,9 +842,9 @@ const submit = async () => {
                     type="button"
                     @click="closeSmartMatchModal"
                     class="text-xs text-gray-400 hover:text-gray-600 shrink-0"
-                    title="收起"
+                    :title="t('settings.editModal.collapse')"
                   >
-                    收起
+                    {{ t("settings.editModal.collapse") }}
                   </button>
                 </div>
 
@@ -872,13 +872,13 @@ const submit = async () => {
                   v-else-if="!isSmartMatching"
                   class="mt-2 text-xs text-gray-400"
                 >
-                  请尝试修改标题、链接，或直接手动上传图标。
+                  {{ t("settings.editModal.iconErrorHint") }}
                 </div>
               </div>
 
               <!-- 缩放滑块 -->
               <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                <span class="text-xs text-gray-400 whitespace-nowrap">缩放</span>
+                <span class="text-xs text-gray-400 whitespace-nowrap">{{ t("settings.editModal.zoom") }}</span>
                 <input
                   type="range"
                   v-model.number="form.iconSize"
@@ -897,7 +897,7 @@ const submit = async () => {
             <input
               v-model="form.icon"
               type="text"
-              placeholder="图片 URL 地址..."
+              :placeholder="t('settings.editModal.iconUrlPlaceholder')"
               class="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm focus:border-gray-900 outline-none"
               @focus="iconInputFocused = true"
               @blur="onIconInputBlur"
@@ -915,22 +915,22 @@ const submit = async () => {
 
         <div class="pt-4 border-t border-gray-100">
           <label class="block text-sm font-medium text-gray-600 mb-2"
-            >卡片背景
-            <span class="text-xs text-gray-400 font-normal">(可选，支持模糊和遮罩效果)</span></label
+            >{{ t("settings.editModal.cardBg") }}
+            <span class="text-xs text-gray-400 font-normal">{{ t("settings.editModal.cardBgHint") }}</span></label
           >
           <div class="space-y-3">
             <div class="flex items-center gap-2">
               <input
                 v-model="form.backgroundImage"
                 type="text"
-                placeholder="背景图 URL..."
+                :placeholder="t('settings.editModal.bgUrlPlaceholder')"
                 class="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm focus:border-gray-900 outline-none"
               />
               <button
                 v-if="form.backgroundImage"
                 @click="form.backgroundImage = ''"
                 class="text-gray-400 hover:text-red-500 px-2"
-                title="清除背景"
+                :title="t('settings.editModal.clearBg')"
               >
                 ✕
               </button>
@@ -954,7 +954,7 @@ const submit = async () => {
             >
               <div>
                 <label class="block text-xs text-gray-500 mb-1 flex justify-between">
-                  <span>模糊半径</span>
+                  <span>{{ t("settings.editModal.blurRadius") }}</span>
                   <span>{{ form.backgroundBlur }}px</span>
                 </label>
                 <input
@@ -968,7 +968,7 @@ const submit = async () => {
               </div>
               <div>
                 <label class="block text-xs text-gray-500 mb-1 flex justify-between">
-                  <span>遮罩浓度</span>
+                  <span>{{ t("settings.editModal.maskOpacity") }}</span>
                   <span>{{ Math.round((form.backgroundMask || 0) * 100) }}%</span>
                 </label>
                 <input
@@ -989,7 +989,7 @@ const submit = async () => {
                   "
                   class="text-xs text-red-500 hover:text-red-700 underline"
                 >
-                  移除背景
+                  {{ t("settings.editModal.removeBg") }}
                 </button>
               </div>
             </div>
@@ -1002,14 +1002,14 @@ const submit = async () => {
           @click="close"
           class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors text-sm font-medium"
         >
-          取消
+          {{ t("settings.editModal.cancel") }}
         </button>
         <button
           @click="submit"
           :disabled="isSaving"
           class="px-6 py-2 rounded-lg bg-gray-900 text-white hover:bg-black transition-all active:scale-95 text-sm font-medium"
         >
-          {{ isSaving ? "保存中..." : data ? "保存修改" : "确认添加" }}
+          {{ isSaving ? t("settings.editModal.saving") : data ? t("settings.editModal.saveChanges") : t("settings.editModal.confirmAdd") }}
         </button>
       </div>
     </div>
@@ -1036,7 +1036,7 @@ const submit = async () => {
         class="bg-white w-full rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px]"
       >
         <div class="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-          <h3 class="font-bold text-gray-700">裁剪图标</h3>
+          <h3 class="font-bold text-gray-700">{{ t("settings.editModal.cropTitle") }}</h3>
           <button @click="showIconCropper = false" class="text-gray-400 hover:text-gray-600 text-xl">
             &times;
           </button>
@@ -1075,13 +1075,13 @@ const submit = async () => {
             @click="showIconCropper = false"
             class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors"
           >
-            取消
+            {{ t("settings.editModal.cancel") }}
           </button>
           <button
             @click="confirmIconCrop"
             class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
           >
-            确认使用
+            {{ t("settings.editModal.confirmCrop") }}
           </button>
         </div>
       </div>

@@ -143,7 +143,12 @@
     "confirmDelete": "Are you sure you want to delete group \"{name}\" and all its contents?",
     "confirmReset": "Are you sure you want to reset all settings of this group to global defaults?",
     "save": "Save Changes",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "sharedToAll": "Share with all users",
+    "sharedToAllDesc": "When enabled, this group appears as a \"Shared group\" to all users: logged-in users see it in full, while guests see only public items. Only admins can maintain it.",
+    "accessCodeProtect": "Access-code protection (hidden group)",
+    "accessCodeProtectDescOn": "When enabled, this group is hidden. Tap the page title 3 times and enter the access code to unlock and reveal it.",
+    "accessCodeProtectDescOff": "No global access code set yet: the admin should tap the page title 3 times to set one."
   },
   "edit": {
     "addBookmark": "Add New Item",

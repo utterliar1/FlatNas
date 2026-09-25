@@ -24,6 +24,7 @@ import type { NavItem, WidgetConfig, NavGroup } from "@/types";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
 import { isInternalNetwork, getNetworkConfig, computeEffectiveNetworkMode } from "@/utils/network";
 import DOMPurify from "dompurify";
+import { useI18n } from "vue-i18n";
 const CHUNK_RELOAD_KEY = "flatnas:chunk-reload-at";
 const loadAsync = <T extends Component>(loader: AsyncComponentLoader<T>) =>
   defineAsyncComponent({
@@ -82,6 +83,7 @@ const FileTransferWidget = loadAsync(() => import("./FileTransferWidget.vue"));
 const SizeSelector = loadAsync(() => import("./SizeSelector.vue"));
 
 const store = useMainStore();
+const { t } = useI18n();
 const { apiUpdateError, resetError } = useWallpaperRotation();
 const { deviceKey, isMobile } = useDevice(toRef(store.appConfig, "deviceMode"));
 const { width, height } = useWindowSize();
@@ -524,7 +526,7 @@ const engines = computed(
         urlTemplate: "https://www.google.com/search?q={q}",
       },
       { id: "bing", key: "bing", label: "Bing", urlTemplate: "https://cn.bing.com/search?q={q}" },
-      { id: "baidu", key: "baidu", label: "百度", urlTemplate: "https://www.baidu.com/s?wd={q}" },
+      { id: "baidu", key: "baidu", label: t("settings.gridPanel.engineBaidu"), urlTemplate: "https://www.baidu.com/s?wd={q}" },
     ],
 );
 const sessionEngine = ref<string | null>(null);
@@ -1521,7 +1523,14 @@ const handleSave = async (payload: { item: NavItem; groupId?: string }) => {
 
   const result = await store.saveData(true);
   if (result === "conflict" || result === "unauthorized") {
-    throw new Error(`保存失败：${result === "conflict" ? "发生版本冲突" : "未授权或登录已过期"}`);
+    throw new Error(
+      t("settings.gridPanel.saveFailedWithReason", {
+        reason:
+          result === "conflict"
+            ? t("settings.gridPanel.versionConflictReason")
+            : t("settings.gridPanel.unauthorizedReason"),
+      }),
+    );
   }
 };
 const normalizeGridSpan = (value: number) => Math.round(value * 2) / 2;
@@ -1567,6 +1576,7 @@ const addDivCardWidget = () => {
     colSpan: w,
     rowSpan: h,
     data: {
+      // 数据标识：写入用户数据并持久化，禁止 i18n
       title: "div 卡片",
       iconSize: 180,
     },
@@ -1606,7 +1616,7 @@ const handleDivCardClick = (widget: WidgetConfig) => {
   if (widget.data) {
     const item: NavItem = {
       id: widget.id,
-      title: widget.data.title || "div 卡片",
+      title: widget.data.title || t("settings.gridPanel.divCardDefaultTitle"),
       url: widget.data.url || "",
       ...widget.data,
     };
@@ -1918,7 +1928,7 @@ const handleDivCardContextMenu = (e: MouseEvent, widget: WidgetConfig) => {
 
   const proxyItem: NavItem = {
     id: widget.id,
-    title: widget.data?.title || "div 卡片",
+    title: widget.data?.title || t("settings.gridPanel.divCardDefaultTitle"),
     url: widget.data?.url || "", // Ensure it has a URL field so it's treated as a link item
     ...widget.data,
   };
@@ -2041,10 +2051,17 @@ const confirmDelete = async () => {
   try {
     const result = await store.saveData(true);
     if (result === "conflict" || result === "unauthorized") {
-      alert(`删除已执行，但保存失败：${result === "conflict" ? "发生版本冲突" : "未授权或登录已过期"}`);
+      alert(
+        t("settings.gridPanel.deleteSavedFailed", {
+          reason:
+            result === "conflict"
+              ? t("settings.gridPanel.versionConflictReason")
+              : t("settings.gridPanel.unauthorizedReason"),
+        }),
+      );
     }
   } catch {
-    alert("删除已执行，但保存失败，请重试");
+    alert(t("settings.gridPanel.deleteRetry"));
   }
 };
 
@@ -2157,13 +2174,16 @@ const getLayoutConfig = (group: NavGroup) => {
 // For now, let's use a simple window click listener or just rely on the toggle.
 // Better: Use a transparent fixed inset div when menu is open to catch clicks.
 
-const hitokoto = ref({ hitokoto: "加载中...", from: "" });
+const hitokoto = ref({ hitokoto: t("settings.gridPanel.hitokotoLoading"), from: "" });
 const fetchHitokoto = async () => {
   try {
     const res = await fetch("https://v1.hitokoto.cn/?c=i&c=d&c=k");
     hitokoto.value = await res.json();
   } catch {
-    hitokoto.value = { hitokoto: "生活原本沉闷，但跑起来就有风。", from: "网络" };
+    hitokoto.value = {
+      hitokoto: t("settings.gridPanel.hitokotoFallback"),
+      from: t("settings.gridPanel.hitokotoFromNetwork"),
+    };
   }
 };
 
@@ -2180,7 +2200,8 @@ const ipInfo = ref({
 
 const hasWanIp = computed(() => {
   const v = String(ipInfo.value.wanIp || "").trim();
-  return !!v && v !== "Error" && v !== "获取失败";
+  // 与 ipInfo 被赋值的本地化文案保持一致（否则切换语言后该守卫失效）
+  return !!v && v !== t("settings.gridPanel.ipError") && v !== t("settings.gridPanel.ipFetchFailed");
 });
 
 const hasLanIp = computed(() => {
@@ -2191,7 +2212,7 @@ const hasLanIp = computed(() => {
 const displayIp = computed(() => {
   if (hasWanIp.value) return ipInfo.value.wanIp;
   if (hasLanIp.value) return ipInfo.value.lanIp;
-  return "加载中...";
+  return t("settings.gridPanel.ipLoading");
 });
 
 const isIpv6 = computed(() => {
@@ -2200,8 +2221,8 @@ const isIpv6 = computed(() => {
 });
 
 const ipTypeLabel = computed(() => {
-  if (!hasWanIp.value && hasLanIp.value) return "内网 IP";
-  return isIpv6.value ? "IPv6" : "外网 IP";
+  if (!hasWanIp.value && hasLanIp.value) return t("settings.gridPanel.innerNetwork");
+  return isIpv6.value ? "IPv6" : t("settings.gridPanel.outerNetwork");
 });
 
 const showClientIp = computed(() => {
@@ -2214,11 +2235,15 @@ let copiedToastTimer: number | null = null;
 const copyToClipboard = async (text: string) => {
   const value = String(text || "").trim();
   if (!value) return;
-  if (value === "加载中..." || value === "检测中..." || value === "Error")
+  if (
+    value === t("settings.gridPanel.ipLoading") ||
+    value === t("settings.gridPanel.ipDetecting") ||
+    value === t("settings.gridPanel.ipError")
+  )
     return;
   try {
     await navigator.clipboard.writeText(value);
-    copiedToast.value = "已复制";
+    copiedToast.value = t("settings.gridPanel.copied");
   } catch {
     try {
       const el = document.createElement("textarea");
@@ -2230,9 +2255,9 @@ const copyToClipboard = async (text: string) => {
       el.select();
       document.execCommand("copy");
       document.body.removeChild(el);
-      copiedToast.value = "已复制";
+      copiedToast.value = t("settings.gridPanel.copied");
     } catch {
-      copiedToast.value = "复制失败";
+      copiedToast.value = t("settings.gridPanel.copyFailed");
     }
   }
 
@@ -2364,7 +2389,7 @@ const fetchIp = async (force = false) => {
     if (data.success) {
       ipInfo.value.wanIp = data.ip || "";
       ipInfo.value.lanIp = data.clientIp || "";
-      ipInfo.value.location = data.location || "未知位置";
+      ipInfo.value.location = data.location || t("settings.gridPanel.unknownLocation");
       ipInfo.value.clientIp = data.clientIp || "";
       ipInfo.value.clientIpSource = data.clientIpSource || "";
       lastKnownClientIp.value = ipInfo.value.clientIp;
@@ -2388,7 +2413,7 @@ const fetchIp = async (force = false) => {
     } else {
       ipInfo.value.wanIp = data.ip || "";
       ipInfo.value.lanIp = data.clientIp || "";
-      ipInfo.value.location = "未知位置";
+      ipInfo.value.location = t("settings.gridPanel.unknownLocation");
       ipInfo.value.clientIp = data.clientIp || "";
       ipInfo.value.clientIpSource = data.clientIpSource || "";
       isLanMode.value = initialIsLanMode;
@@ -2706,7 +2731,7 @@ onUnmounted(() => {
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 "
               >
-                {{ isEditMode ? "完成" : "编辑" }}
+                {{ isEditMode ? t('settings.gridPanel.complete') : t('settings.gridPanel.edit') }}
               </button>
               <button
                 @click="toggleForceMode"
@@ -2720,12 +2745,12 @@ onUnmounted(() => {
               >
                 {{
                   forceMode === "auto"
-                    ? "自动"
+                    ? t('settings.gridPanel.auto')
                     : forceMode === "lan"
-                      ? "强制内网"
+                      ? t('settings.gridPanel.forceLan')
                       : forceMode === "wan"
-                        ? "强制外网"
-                        : "延迟判定"
+                        ? t('settings.gridPanel.forceWan')
+                        : t('settings.gridPanel.latencyMode')
                 }}
               </button>
               <div
@@ -2743,7 +2768,7 @@ onUnmounted(() => {
                     :class="effectiveIsLan ? 'bg-green-500' : 'bg-blue-500'"
                   ></div>
                   <span :class="effectiveIsLan ? 'text-green-700' : 'text-blue-700'">{{
-                    effectiveIsLan ? "内网" : "外网"
+                    effectiveIsLan ? t('settings.gridPanel.lanLabel') : t('settings.gridPanel.wanLabel')
                   }}</span
                   ><span class="text-gray-400 border-l pl-2 ml-1">{{ latency }}ms</span></template
                 >
@@ -2757,7 +2782,7 @@ onUnmounted(() => {
                     : 'bg-gray-100 text-gray-500 hover:bg-blue-500 hover:text-white',
                 ]"
               >
-                {{ store.isLogged ? "退出" : "登录" }}
+                {{ store.isLogged ? t('settings.gridPanel.logout') : t('settings.gridPanel.login') }}
               </button>
             </div>
           </div>
@@ -2788,19 +2813,21 @@ onUnmounted(() => {
                 @mousedown.stop
                 type="search"
                 role="searchbox"
-                aria-label="搜索框"
+                :aria-label="t('settings.gridPanel.searchAriaLabel')"
                 autocomplete="off"
                 :autofocus="!isMobile"
                 class="h-full pl-6 pr-4 rounded-full bg-transparent border-0 outline-none flatnas-search-input"
                 :style="{ width: 'calc(100% - 33.75%)' }"
                 :placeholder="
-                  (engines.find((e) => e.key === effectiveEngine)?.label || '搜索') + ' 搜索...'
+                  t('settings.gridPanel.searchPlaceholder', {
+                    engine: engines.find((e) => e.key === effectiveEngine)?.label || '',
+                  })
                 "
               />
               <div class="flex items-center justify-end" :style="{ width: '33.75%' }">
                 <select
                   v-model="effectiveEngine"
-                  aria-label="搜索引擎"
+                  :aria-label="t('settings.gridPanel.searchEngineAriaLabel')"
                   class="h-[34px] px-3 py-0 bg-transparent rounded-full border border-gray-200 focus:border-blue-400 outline-none flatnas-search-select"
                   :style="{ width: 'calc(100%)', fontSize: '15px' }"
                   @click.stop
@@ -2847,7 +2874,7 @@ onUnmounted(() => {
                   : 'bg-transparent text-white/70 hover:text-white xl:bg-white xl:text-gray-700 xl:hover:bg-gray-50 px-2 py-1 xl:px-4 xl:py-2 xl:shadow-sm shadow-none'
               "
             >
-              {{ isEditMode ? "完成" : "编辑" }}
+              {{ isEditMode ? t('settings.gridPanel.complete') : t('settings.gridPanel.edit') }}
             </button>
             <button
               v-if="store.isLogged && isEditMode"
@@ -2859,17 +2886,17 @@ onUnmounted(() => {
                   ? 'bg-amber-500 text-white shadow-sm hover:bg-amber-600'
                   : 'bg-white/20 text-white/70 hover:bg-white/30'
               "
-              title="保存配置到服务端"
+              :title="t('settings.gridPanel.saveTooltip')"
             >
               <span v-if="store.isSaving" class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              {{ store.isSaving ? "保存中…" : "保存" }}
+              {{ store.isSaving ? t('settings.gridPanel.saving') : t('settings.gridPanel.save') }}
             </button>
             <button
               v-if="store.isLogged && isEditMode"
               @click="addDivCardWidget"
               class="hidden xl:flex pointer-events-auto rounded-lg text-sm font-medium transition-all bg-blue-500 text-white px-4 py-2 shadow-sm hover:bg-blue-600"
             >
-              新建卡片
+              {{ t('settings.gridPanel.newCard') }}
             </button>
           </div>
         </div>
@@ -3059,14 +3086,14 @@ onUnmounted(() => {
                   textShadow: widget.data?.backgroundImage ? '0 2px 4px rgba(0,0,0,0.8)' : 'none',
                 }"
               >
-                {{ widget.data?.title || "div 卡片" }}
+                {{ widget.data?.title || t('settings.gridPanel.divCardDefaultTitle') }}
               </div>
 
               <div
                 v-if="!widget.data?.url && !widget.data?.lanUrl && !widget.data?.icon"
                 class="text-[10px] opacity-70 mt-1 relative z-10"
               >
-                请在编辑模式下右键添加项目
+                {{ t('settings.gridPanel.emptyItemsHint') }}
               </div>
             </div>
             <div
@@ -3078,29 +3105,29 @@ onUnmounted(() => {
               }"
             >
               <div
-                v-if="ipInfo.location && ipInfo.location !== '未知位置'"
+                v-if="ipInfo.location && ipInfo.location !== t('settings.gridPanel.unknownLocation')"
                 class="text-[19px] font-medium sm:font-bold w-full truncate flex-1 flex items-center justify-center -mt-px"
                 :title="ipInfo.location"
               >
                 {{ formattedLocation }}
               </div>
               <div v-if="hasWanIp" class="flex items-center justify-center gap-2 w-full flex-1">
-                <span class="text-[12px] opacity-70 uppercase">外网</span>
+                <span class="text-[12px] opacity-70 uppercase">{{ t('settings.gridPanel.wanIpLabel') }}</span>
                 <button
                   class="max-w-full font-mono font-medium sm:font-bold leading-tight text-center select-text break-all hover:opacity-90 transition-opacity text-xl"
                   type="button"
-                  title="点击复制外网 IP"
+                  :title="t('settings.gridPanel.wanIpTooltip')"
                   @click.stop="copyToClipboard(ipInfo.wanIp)"
                 >
                   {{ ipInfo.wanIp }}
                 </button>
               </div>
               <div v-if="hasLanIp" class="flex items-center justify-center gap-2 w-full flex-1">
-                <span class="text-[10px] opacity-50 uppercase">内网</span>
+                <span class="text-[10px] opacity-50 uppercase">{{ t('settings.gridPanel.lanIpLabel') }}</span>
                 <button
                   class="max-w-full font-mono font-medium leading-tight text-center select-text break-all opacity-70 hover:opacity-90 transition-opacity text-sm"
                   type="button"
-                  title="点击复制内网 IP"
+                  :title="t('settings.gridPanel.lanIpTooltip')"
                   @click.stop="copyToClipboard(ipInfo.lanIp)"
                 >
                   {{ ipInfo.lanIp }}
@@ -3111,7 +3138,7 @@ onUnmounted(() => {
               </div>
 
               <div class="flex items-center justify-center gap-2 w-full flex-1">
-                <span class="text-[12px] opacity-70 uppercase">PING测试</span>
+                <span class="text-[12px] opacity-70 uppercase">{{ t('settings.gridPanel.pingLabel') }}</span>
                 <div
                   class="text-base font-mono font-medium text-white/90 bg-white/20 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded"
                 >
@@ -3121,7 +3148,7 @@ onUnmounted(() => {
                   @click="fetchIp(true)"
                   class="text-[12px] text-white/80 bg-white/20 px-2.5 py-0.5 rounded hover:bg-white/30 transition-colors"
                 >
-                  刷新
+                  {{ t('settings.gridPanel.refresh') }}
                 </button>
               </div>
 
@@ -3155,7 +3182,7 @@ onUnmounted(() => {
               @click="store.addGroup"
               class="bg-white/10 hover:bg-white/20 text-white backdrop-blur border border-white/20 px-6 py-2 rounded-full font-bold transition-all flex items-center gap-2 shadow-lg"
             >
-              <span>➕</span> 新建分组
+              {{ t('settings.gridPanel.newGroup') }}
             </button>
           </div>
         </Transition>
@@ -3205,7 +3232,7 @@ onUnmounted(() => {
                   v-if="store.isLogged && !group.readonly"
                   @click="openAddModal(group.id)"
                   class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/30 text-white flex items-center justify-center transition-all shadow-sm border border-white/10"
-                  title="添加卡片"
+                  :title="t('settings.gridPanel.addCardTooltip')"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -3227,7 +3254,7 @@ onUnmounted(() => {
                   v-if="store.isLogged && !group.readonly"
                   @click.stop="toggleGroupSettings(group.id)"
                   class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/30 text-white flex items-center justify-center transition-all shadow-sm border border-white/10"
-                  title="分组设置"
+                  :title="t('settings.gridPanel.groupSettingsTooltip')"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -3255,7 +3282,7 @@ onUnmounted(() => {
                   v-if="store.isLogged && isEditMode && !group.readonly"
                   @click="openGroupDeleteConfirm(group.id)"
                   class="w-7 h-7 rounded-full bg-white/10 hover:bg-red-500 hover:text-white text-white/50 flex items-center justify-center transition-all shadow-sm border border-white/10"
-                  title="删除分组"
+                  :title="t('settings.gridPanel.deleteGroupTooltip')"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -3276,13 +3303,13 @@ onUnmounted(() => {
                 v-if="group.preset"
                 class="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded border border-yellow-200"
               >
-                预设
+                {{ t('settings.gridPanel.preset') }}
               </span>
 
               <span
                 v-if="group.shared || group.readonly"
                 class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1"
-                :title="group.readonly ? '共享分组（由管理员维护，只读）' : '此分组已共享给所有用户'"
+                :title="group.readonly ? t('settings.gridPanel.sharedGroupReadonly') : t('settings.gridPanel.sharedGroupAll')"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -3298,14 +3325,14 @@ onUnmounted(() => {
                     d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
-                共享
+                {{ t('settings.gridPanel.shared') }}
               </span>
 
               <!-- 访问码保护徽标（解锁后可见，提示该组处于保护状态） -->
               <span
                 v-if="group.protected"
                 class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"
-                title="访问码保护分组（上锁后隐藏）"
+                :title="t('settings.gridPanel.protectedGroupTooltip')"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -3321,7 +3348,7 @@ onUnmounted(() => {
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                   />
                 </svg>
-                保护
+                {{ t('settings.gridPanel.protected') }}
               </span>
             </div>
 
@@ -3418,7 +3445,7 @@ onUnmounted(() => {
                   v-if="isEditMode && item.isPublic"
                   class="absolute bottom-1 right-1 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded border border-green-200 z-20"
                 >
-                  公开
+                  {{ t('common.common.public') }}
                 </div>
 
                 <div
@@ -3468,7 +3495,9 @@ onUnmounted(() => {
                         lineHeight: 1,
                       }"
                       :title="
-                        typeof url === 'string' ? '外网: ' + url : url.name || '外网: ' + url.url
+                        typeof url === 'string'
+                          ? t('settings.gridPanel.wanTitleWithName', { name: url })
+                          : url.name || t('settings.gridPanel.wanTitleWithName', { name: url.url })
                       "
                     >
                       {{ idx + 1 }}
@@ -3492,7 +3521,9 @@ onUnmounted(() => {
                         lineHeight: 1,
                       }"
                       :title="
-                        typeof url === 'string' ? '内网: ' + url : url.name || '内网: ' + url.url
+                        typeof url === 'string'
+                          ? t('settings.gridPanel.lanTitleWithName', { name: url })
+                          : url.name || t('settings.gridPanel.lanTitleWithName', { name: url.url })
                       "
                     >
                       {{ idx + 1 }}
@@ -3626,7 +3657,7 @@ onUnmounted(() => {
           <div
             v-if="false"
             class="flex items-center gap-2 opacity-80 select-none"
-            :title="store.isConnected ? '已连接到服务器' : '与服务器断开连接'"
+            :title="store.isConnected ? t('settings.gridPanel.connectedTooltip') : t('settings.gridPanel.disconnectedTooltip')"
           >
             <div
               class="w-2 h-2 rounded-full transition-colors duration-300"
@@ -3649,17 +3680,17 @@ onUnmounted(() => {
             :class="store.appConfig.background ? 'text-white shadow-text' : 'text-gray-500'"
           >
             <div class="flex flex-col gap-1">
-              <span>访客记录</span>
+              <span>{{ t('settings.gridPanel.visitorLog') }}</span>
               <span class="font-mono">{{ totalVisitors }}</span>
             </div>
             <div class="w-px bg-current opacity-30"></div>
             <div class="flex flex-col gap-1">
-              <span>今日访客</span>
+              <span>{{ t('settings.gridPanel.todayVisitors') }}</span>
               <span class="font-mono">{{ todayVisitors }}</span>
             </div>
             <div class="w-px bg-current opacity-30"></div>
             <div class="flex flex-col gap-1">
-              <span>在线时长</span>
+              <span>{{ t('settings.gridPanel.onlineDuration') }}</span>
               <span class="font-mono">{{ onlineDuration }}</span>
             </div>
           </div>
@@ -3682,7 +3713,7 @@ onUnmounted(() => {
             class="text-right max-w-md cursor-pointer hover:opacity-80 transition-opacity select-none"
             :class="{ '!text-center': isMobile }"
             @click="fetchHitokoto"
-            title="点击刷新"
+            :title="t('settings.gridPanel.clickToRefresh')"
           >
             <p
               class="font-serif italic mb-1 opacity-70"
@@ -3740,12 +3771,12 @@ onUnmounted(() => {
         @click="handleMenuLanOpen"
         class="px-4 py-2 hover:bg-green-50 text-green-700 cursor-pointer flex items-center gap-3 text-sm transition-colors border-b border-gray-100 truncate"
         role="menuitem"
-        :aria-label="'内网访问 ' + (contextMenuItem.title || '')"
+        :aria-label="t('settings.gridPanel.ctxAccessLanWithName', { name: contextMenuItem.title || '' })"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
         </svg>
-        <span class="text-[14px] truncate">内网访问</span>
+        <span class="text-[14px] truncate">{{ t('settings.gridPanel.ctxAccessLan') }}</span>
       </div>
       <!-- Backup LAN URLs -->
       <template v-if="contextMenuItem?.backupLanUrls && contextMenuItem.backupLanUrls.length > 0">
@@ -3759,7 +3790,7 @@ onUnmounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
           </svg>
-          <span class="text-[14px] truncate">{{ typeof url === "string" ? "备用内网 " + (index + 1) : url.name || "备用内网 " + (index + 1) }}</span>
+          <span class="text-[14px] truncate">{{ typeof url === "string" ? t('settings.gridPanel.backupLanWithIndex', { index: index + 1 }) : url.name || t('settings.gridPanel.backupLanWithIndex', { index: index + 1 }) }}</span>
         </div>
       </template>
 
@@ -3768,12 +3799,12 @@ onUnmounted(() => {
         @click="handleMenuWanOpen"
         class="px-4 py-2 hover:bg-blue-50 text-blue-700 cursor-pointer flex items-center gap-3 text-sm transition-colors border-b border-gray-100 truncate"
         role="menuitem"
-        :aria-label="'外网访问 ' + (contextMenuItem.title || '')"
+        :aria-label="t('settings.gridPanel.ctxAccessWanWithName', { name: contextMenuItem.title || '' })"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
         </svg>
-        <span class="text-[14px] truncate">外网访问</span>
+        <span class="text-[14px] truncate">{{ t('settings.gridPanel.ctxAccessWan') }}</span>
       </div>
       <!-- Backup WAN URLs -->
       <template v-if="contextMenuItem?.backupUrls && contextMenuItem.backupUrls.length > 0">
@@ -3787,7 +3818,7 @@ onUnmounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
           </svg>
-          <span class="text-[14px] truncate">{{ typeof url === "string" ? "备用外网 " + (index + 1) : url.name || "备用外网 " + (index + 1) }}</span>
+          <span class="text-[14px] truncate">{{ typeof url === "string" ? t('settings.gridPanel.backupWanWithIndex', { index: index + 1 }) : url.name || t('settings.gridPanel.backupWanWithIndex', { index: index + 1 }) }}</span>
         </div>
       </template>
 
@@ -3795,23 +3826,23 @@ onUnmounted(() => {
         @click="handleMenuEdit"
         class="px-4 py-2 hover:bg-blue-50 text-gray-700 cursor-pointer flex items-center gap-3 text-sm transition-colors"
         role="menuitem"
-        aria-label="编辑卡片"
+        :aria-label="t('settings.gridPanel.editCard')"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
-        <span class="text-[14px] truncate">编辑卡片</span>
+        <span class="text-[14px] truncate">{{ t('settings.gridPanel.editCard') }}</span>
       </div>
       <div
         @click="handleMenuDelete"
         class="px-4 py-2 hover:bg-red-50 text-red-600 cursor-pointer flex items-center gap-3 text-sm transition-colors border-t border-gray-100"
         role="menuitem"
-        aria-label="删除卡片"
+        :aria-label="t('settings.gridPanel.deleteCard')"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
-        <span class="text-[14px] truncate">删除卡片</span>
+        <span class="text-[14px] truncate">{{ t('settings.gridPanel.deleteCard') }}</span>
       </div>
     </div>
     </OverlayMotion>
@@ -3827,23 +3858,23 @@ onUnmounted(() => {
     >
       <div class="bg-white rounded-xl shadow-2xl p-6 w-full border border-gray-100">
         <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
-          <span class="text-red-500 text-xl">⚠️</span> 删除确认
+          <span class="text-red-500 text-xl">⚠️</span> {{ t('settings.gridPanel.deleteConfirmTitle') }}
         </h3>
         <p class="text-gray-600 mb-6">
-          确定要删除这个{{ deleteType === "group" ? "分组" : "卡片" }}吗？此操作无法撤销。
+          {{ t('settings.gridPanel.deleteConfirmDesc', { type: deleteType === "group" ? t('settings.gridPanel.deleteTypeGroup') : t('settings.gridPanel.deleteTypeCard') }) }}
         </p>
         <div class="flex justify-end gap-3">
           <button
             @click="showDeleteConfirm = false"
             class="px-4 py-2 min-h-[44px] rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors"
           >
-            取消
+            {{ t('common.common.cancel') }}
           </button>
           <button
             @click="confirmDelete"
             class="px-4 py-2 min-h-[44px] rounded-lg bg-red-500 text-white hover:bg-red-600 font-medium shadow-sm transition-colors flex items-center gap-1"
           >
-            <span>🗑️</span> 删除
+            <span>🗑️</span> {{ t('common.common.delete') }}
           </button>
         </div>
       </div>

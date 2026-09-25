@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { useI18n, I18nT } from "vue-i18n";
 import type { WidgetConfig } from "../types";
 import { useMainStore } from "@/stores/main";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   widget: WidgetConfig;
@@ -12,7 +15,7 @@ const isEditing = ref(false);
 const canEdit = computed(() => store.isLogged);
 const activeTab = ref<"html" | "css" | "js">("html");
 
-const titleContent = ref(props.widget.data?.title || "自定义组件");
+const titleContent = ref(props.widget.data?.title || t("settings.customCss.defaultTitle"));
 const htmlContent = ref(
   props.widget.data?.html || '<div class="my-component">Hello Custom Widget</div>',
 );
@@ -230,14 +233,9 @@ const exportJson = () => {
 };
 
 const copyPrompt = () => {
-  const text = `请帮我写一个简洁的 HTML/CSS 卡片组件。
-功能：[在此输入你的需求，如：显示当前日期和一句名言]
-要求：
-1. 容器宽高自适应，内容居中。
-2. 风格现代简约，圆角设计。
-3. 请分别提供 HTML 和 CSS 代码（可选 JS）。`;
+  const text = t("settings.customCss.promptFull");
   navigator.clipboard.writeText(text).then(() => {
-    alert("提示词已复制到剪贴板，快去发送给 AI 吧！");
+    alert(t("settings.customCss.promptCopied"));
   });
 };
 
@@ -245,7 +243,7 @@ const toggleEdit = () => {
   if (!canEdit.value) return;
   isEditing.value = !isEditing.value;
   if (isEditing.value) {
-    titleContent.value = props.widget.data?.title || "自定义组件";
+    titleContent.value = props.widget.data?.title || t("settings.customCss.defaultTitle");
     htmlContent.value = props.widget.data?.html || "";
     cssContent.value = props.widget.data?.css || "";
     jsContent.value = props.widget.data?.js || "";
@@ -313,7 +311,7 @@ watch(
       v-if="canEdit"
       @click="toggleEdit"
       class="absolute top-2 right-2 z-50 p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-gray-600"
-      title="编辑组件"
+      :title="t('settings.customCss.editWidgetTooltip')"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -329,20 +327,20 @@ watch(
     >
       <!-- Header -->
       <div class="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50 flex-shrink-0">
-        <h3 class="font-bold text-gray-700 text-sm">编辑自定义组件</h3>
+        <h3 class="font-bold text-gray-700 text-sm">{{ t('settings.customCss.editTitle') }}</h3>
         <div class="flex gap-1.5 items-center">
           <!-- Import -->
           <label class="cursor-pointer px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs flex items-center gap-1 text-gray-700">
-            <span>📂</span><span>导入</span>
+            <span>📂</span><span>{{ t('settings.customCss.importBtn') }}</span>
             <input type="file" accept=".json,.txt,.html,.css" class="hidden" @change="handleFileUpload" />
           </label>
           <!-- Export -->
           <button
             @click="exportJson"
             class="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs text-gray-700 flex items-center gap-1"
-            title="导出为 JSON 文件"
+            :title="t('settings.customCss.exportJsonTooltip')"
           >
-            <span>💾</span><span>导出</span>
+            <span>💾</span><span>{{ t('settings.customCss.exportBtn') }}</span>
           </button>
           <!-- Save -->
           <button
@@ -350,25 +348,25 @@ watch(
             :disabled="isSaving"
             class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {{ isSaving ? '保存中...' : '保存' }}
+            {{ isSaving ? t('settings.customCss.saving') : t('common.common.save') }}
           </button>
           <!-- Cancel -->
           <button
             @click="toggleEdit"
             class="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
           >
-            取消
+            {{ t('common.common.cancel') }}
           </button>
         </div>
       </div>
 
       <!-- Title Field -->
       <div class="px-3 pt-2 pb-1 flex-shrink-0">
-        <label class="text-xs font-semibold text-gray-500 block mb-1">标题</label>
+        <label class="text-xs font-semibold text-gray-500 block mb-1">{{ t('settings.customCss.titleLabel') }}</label>
         <input
           v-model="titleContent"
           class="w-full p-1.5 border rounded text-xs focus:border-blue-500 outline-none text-gray-900"
-          placeholder="自定义组件"
+          :placeholder="t('settings.customCss.defaultTitle')"
         />
       </div>
 
@@ -394,7 +392,7 @@ watch(
       <div class="flex-1 flex flex-col min-h-0 p-3 gap-1">
         <!-- HTML Tab -->
         <template v-if="activeTab === 'html'">
-          <label class="text-xs text-gray-400">HTML 结构</label>
+          <label class="text-xs text-gray-400">{{ t('settings.customCss.htmlStructure') }}</label>
           <textarea
             v-model="htmlContent"
             class="flex-1 p-2 border rounded font-mono text-xs resize-none focus:border-blue-500 outline-none text-gray-900 min-h-0"
@@ -405,7 +403,7 @@ watch(
 
         <!-- CSS Tab -->
         <template v-if="activeTab === 'css'">
-          <label class="text-xs text-gray-400">CSS 样式（自动作用域隔离，实时预览）</label>
+          <label class="text-xs text-gray-400">{{ t('settings.customCss.cssStyle') }}</label>
           <textarea
             v-model="cssContent"
             class="flex-1 p-2 border rounded font-mono text-xs resize-none focus:border-blue-500 outline-none text-gray-900 min-h-0"
@@ -413,30 +411,28 @@ watch(
             spellcheck="false"
           ></textarea>
           <p class="text-[10px] text-gray-400">
-            提示：选择器自动加 <code>#widget-{{ widget.id }}</code> 前缀隔离。支持 <code>@media</code>、<code>@keyframes</code>。使用 <code>:root</code> 映射为当前 widget 容器。CSS 变化后 300ms 自动预览。
+            <i18n-t keypath="settings.customCss.cssHint" tag="span">
+              <template #prefix><code>#widget-{{ widget.id }}</code></template>
+              <template #atMedia><code>@media</code></template>
+              <template #atKeyframes><code>@keyframes</code></template>
+              <template #root><code>:root</code></template>
+            </i18n-t>
           </p>
         </template>
 
         <!-- JS Tab -->
         <template v-if="activeTab === 'js'">
-          <label class="text-xs text-gray-400">JavaScript（保存后生效）</label>
+          <label class="text-xs text-gray-400">{{ t('settings.customCss.jsCode') }}</label>
           <textarea
             v-model="jsContent"
             class="flex-1 p-2 border rounded font-mono text-xs resize-none focus:border-blue-500 outline-none text-gray-900 min-h-0"
-            placeholder="// ctx.el     — widget 容器 DOM
-// ctx.query  — querySelector(限本 widget)
-// ctx.on / ctx.emit — 事件总线
-
-const el = ctx.query('.my-widget');
-if (el) el.textContent = '运行中 ' + new Date().toLocaleTimeString();
-
-ctx.onCleanup(() => {
-  // 卸载时清理（定时器、监听器等）
-});"
+            :placeholder="t('settings.customCss.jsPlaceholder')"
             spellcheck="false"
           ></textarea>
           <p class="text-[10px] text-amber-600 bg-amber-50 rounded px-2 py-1 mt-0.5">
-            ⚠️ JS 保存后才会重新执行。非模块脚本可直接使用 <code>ctx</code> 变量访问 widget 上下文。
+            <i18n-t keypath="settings.customCss.jsWarning" tag="span">
+              <template #ctx><code>ctx</code></template>
+            </i18n-t>
           </p>
         </template>
       </div>
@@ -445,17 +441,17 @@ ctx.onCleanup(() => {
       <div class="mx-3 mb-3 p-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100 flex-shrink-0">
         <div class="flex items-center gap-1 mb-1">
           <span class="text-sm">🤖</span>
-          <span class="text-xs font-bold text-purple-700">AI 辅助生成</span>
+          <span class="text-xs font-bold text-purple-700">{{ t('settings.customCss.aiAssist') }}</span>
         </div>
         <div
           class="bg-white p-1.5 rounded border border-purple-100 text-[10px] text-gray-500 font-mono cursor-pointer hover:border-purple-300 transition-colors relative group/ai"
           @click="copyPrompt"
-          title="点击复制提示词"
+          :title="t('settings.customCss.copyPromptTooltip')"
         >
           <div class="hidden group-hover/ai:block absolute right-1 top-1 bg-purple-100 text-purple-600 px-1 py-0.5 rounded text-[10px]">
-            点击复制
+            {{ t('settings.customCss.copyPromptBtn') }}
           </div>
-          <span class="text-purple-600 select-none">Prompt: </span>请帮我写一个简洁的 HTML/CSS 卡片组件...
+          <span class="text-purple-600 select-none">Prompt: </span>{{ t('settings.customCss.promptPreview') }}
         </div>
       </div>
     </div>

@@ -143,7 +143,12 @@
     "confirmDelete": "确定要删除分组 \"{name}\" 及其所有内容吗？",
     "confirmReset": "确定要重置此分组的所有设置，恢复为全局默认吗？",
     "save": "保存更改",
-    "cancel": "取消"
+    "cancel": "取消",
+    "sharedToAll": "共享给所有用户",
+    "sharedToAllDesc": "开启后该分组作为「共享分组」呈现给所有用户：登录用户可完整查看，未登录访客仅见公开条目。仅管理员可维护。",
+    "accessCodeProtect": "访问码保护（隐藏分组）",
+    "accessCodeProtectDescOn": "开启后该分组被隐藏，需连点页面标题 3 次并输入访问码解锁后才显示。",
+    "accessCodeProtectDescOff": "尚未设置全局访问码：请由管理员连点页面标题 3 次进行设置。"
   },
   "edit": {
     "addBookmark": "添加新项目",
