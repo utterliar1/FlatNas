@@ -82,22 +82,52 @@ export const useGroupsStore = defineStore("groups", () => {
     }
   };
 
+  // 重建完整混排顺序：以新可见顺序为主干，把偏好中当前不可见的 id
+  // （受保护隐藏分组、已失效 id）按原有相对位置插回——
+  // 逐个在 oldOrder 中向前找第一个已在新顺序中的 id，插到它后面；
+  // 找不到锚点（原本就最靠前）则插到最前面。保证解锁后隐藏分组位置不漂移。
+  const rebuildOrderPreservingInvisible = (visibleIds: string[]): string[] => {
+    const visibleSet = new Set(visibleIds);
+    const oldOrder = groupOrder.value || [];
+    const result = [...visibleIds];
+    for (const id of oldOrder) {
+      if (visibleSet.has(id) || result.includes(id)) continue;
+      const idx = oldOrder.indexOf(id);
+      let inserted = false;
+      for (let i = idx - 1; i >= 0; i--) {
+        const ai = result.indexOf(oldOrder[i]);
+        if (ai !== -1) {
+          result.splice(ai + 1, 0, id);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) result.unshift(id);
+    }
+    return result;
+  };
+
   const reorderGroups = (fromIndex: number, toIndex: number) => {
     if (fromIndex < 0 || fromIndex >= groups.value.length) return;
     if (toIndex < 0 || toIndex >= groups.value.length) return;
     const [moved] = groups.value.splice(fromIndex, 1);
     if (!moved) return;
     groups.value.splice(toIndex, 0, moved);
+    // 同步维护混排偏好：即使走的是无共享分组的快速路径，也要把新顺序写入
+    // groupOrder（并保留锁定状态下不可见的隐藏分组 id 的位置），否则解锁后
+    // 隐藏分组的展示位置会随 groups 数组顺序漂移。
+    groupOrder.value = rebuildOrderPreservingInvisible(groups.value.map((g) => g.id));
   };
 
   // 按拖拽后的完整展示顺序（自己的分组 + 只读共享分组的混排列表）拆分写回：
   //   - 自己的分组：按新顺序整体替换 groups 数组（保留原对象引用）；
-  //   - 完整 id 顺序（含共享分组）：写入 groupOrder 作为本用户的持久化偏好。
+  //   - 完整 id 顺序（含共享分组）：写入 groupOrder 作为本用户的持久化偏好，
+  //     并保留偏好中当前不可见的 id（锁定时的隐藏分组）的原有相对位置。
   const applyMergedGroupOrder = (list: NavGroup[]) => {
     const sharedIds = new Set((sharedGroups.value || []).map((g) => g.id));
     const ownIds = new Set(groups.value.map((g) => g.id));
     groups.value = list.filter((g) => !sharedIds.has(g.id) && ownIds.has(g.id));
-    groupOrder.value = list.map((g) => g.id);
+    groupOrder.value = rebuildOrderPreservingInvisible(list.map((g) => g.id));
   };
 
   return {

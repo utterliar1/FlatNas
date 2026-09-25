@@ -1053,25 +1053,13 @@ func SaveData(c *gin.Context) {
 	delete(payload, "sharedGroups")
 
 	// 访问码保护：未解锁时前端看不到 protected 分组，其提交的 groups 必然缺少这些组。
-	// 从既有文件补回，避免锁定状态下的一次普通保存把隐藏分组静默删除。
+	// 从既有文件按「原始位置」补回，避免锁定状态下的一次普通保存把隐藏分组静默删除、
+	// 或将其顺序漂移到末尾。以 payload 顺序为主干，双指针沿既有文件顺序推进，
+	// 在每个缺失 protected 分组原先所在的位置插回。
 	if accessProtectionActive() && !requestUnlocked(c) {
 		if _, hasGroups := payload["groups"]; hasGroups {
 			if existingGroups, ok := existingData["groups"].([]interface{}); ok {
 				payloadGroups, _ := payload["groups"].([]interface{})
-				protectedByID := map[string]map[string]interface{}{}
-				var protectedOrder []string
-				for _, g := range existingGroups {
-					gm, ok := g.(map[string]interface{})
-					if !ok {
-						continue
-					}
-					if p, _ := gm["protected"].(bool); p {
-						if id, _ := gm["id"].(string); id != "" {
-							protectedByID[id] = gm
-							protectedOrder = append(protectedOrder, id)
-						}
-					}
-				}
 				present := make(map[string]bool, len(payloadGroups))
 				for _, g := range payloadGroups {
 					if gm, ok := g.(map[string]interface{}); ok {
@@ -1080,12 +1068,48 @@ func SaveData(c *gin.Context) {
 						}
 					}
 				}
-				for _, id := range protectedOrder {
-					if !present[id] {
-						payloadGroups = append(payloadGroups, protectedByID[id])
+				idOf := func(g interface{}) string {
+					if gm, ok := g.(map[string]interface{}); ok {
+						id, _ := gm["id"].(string)
+						return id
+					}
+					return ""
+				}
+				rebuilt := make([]interface{}, 0, len(existingGroups)+len(payloadGroups))
+				ei := 0
+				for _, g := range payloadGroups {
+					pid := idOf(g)
+					// 沿既有文件推进到当前 payload 分组的位置，途中把缺失的 protected 原位插回
+					for ei < len(existingGroups) {
+						egm, ok := existingGroups[ei].(map[string]interface{})
+						if !ok {
+							ei++
+							continue
+						}
+						eid, _ := egm["id"].(string)
+						if eid == pid && pid != "" {
+							break
+						}
+						if p, _ := egm["protected"].(bool); p && eid != "" && !present[eid] {
+							rebuilt = append(rebuilt, egm)
+						}
+						ei++
+					}
+					rebuilt = append(rebuilt, g)
+				}
+				// 既有文件尾部剩余的缺失 protected 分组同样补回
+				for ; ei < len(existingGroups); ei++ {
+					egm, ok := existingGroups[ei].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					if p, _ := egm["protected"].(bool); p {
+						if eid, _ := egm["id"].(string); eid != "" && !present[eid] {
+							rebuilt = append(rebuilt, egm)
+						}
 					}
 				}
-				payload["groups"] = payloadGroups
+				payload["groups"] = rebuilt
 			}
 		}
 	}
