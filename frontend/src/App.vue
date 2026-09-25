@@ -53,6 +53,14 @@ const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
+// 多端字段级合并冲突（非阻塞）：后端以服务端为准消解后回报，这里以顶部横幅提示。
+watch(
+  () => store.mergeNotice,
+  (msg) => {
+    if (msg) pushSaveError(msg);
+  },
+);
+
 watch(
   () => store.appConfig.customTitle,
   (newTitle) => {

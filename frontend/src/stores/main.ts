@@ -205,6 +205,7 @@ export const useMainStore = defineStore("main", () => {
   const isServerSnapshotReady = computed(() => sync.isServerSnapshotReady);
   const isClientReady = computed(() => sync.isClientReady);
   const conflictState = computed(() => sync.conflictState);
+  const mergeNotice = computed(() => sync.mergeNotice);
   const syncConfirmModal = computed(() => sync.syncConfirmModal);
   const confirmSyncFromServer = sync.confirmSyncFromServer;
   const dismissSyncConfirm = sync.dismissSyncConfirm;
@@ -348,6 +349,7 @@ export const useMainStore = defineStore("main", () => {
     isServerSnapshotReady,
     isClientReady,
     conflictState,
+    mergeNotice,
     syncConfirmModal,
     confirmSyncFromServer,
     dismissSyncConfirm,

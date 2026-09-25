@@ -1040,7 +1040,20 @@ func SaveData(c *gin.Context) {
 		clientVersion = normalizeVersion(v)
 		hasClientVersion = true
 	}
-	if hasClientVersion && clientVersion != existingVersion {
+
+	// 三方合并模式：前端携带 base 基线时，不再以「版本号不一致」直接 409，
+	// 而是基于 base(上次同步基线) / local(本次提交) / server(服务端最新) 逐字段合并，
+	// 从根上消除多端「整份文档全量覆盖」造成的互相清空。
+	var baseDoc map[string]interface{}
+	mergeMode := false
+	if raw, ok := payload["base"]; ok {
+		if bm, ok := raw.(map[string]interface{}); ok {
+			baseDoc = bm
+			mergeMode = true
+		}
+	}
+
+	if hasClientVersion && clientVersion != existingVersion && !mergeMode {
 		c.JSON(http.StatusConflict, gin.H{"error": "Version conflict", "currentVersion": existingVersion})
 		return
 	}
@@ -1075,6 +1088,45 @@ func SaveData(c *gin.Context) {
 			payload[k] = v
 		}
 	}
+
+	// 三方合并：以 base 为基线，逐字段协调 local(payload) 与 server(existingData)。
+	// 放在「补齐缺失顶层键」之后，使合并阶段的显式删除（双方都删）不会被上一循环复活。
+	var mergeConflicts []Conflict
+	needsResync := false
+	if mergeMode {
+		localDoc := map[string]interface{}{}
+		serverDoc := map[string]interface{}{}
+		for _, k := range mergeableKeys {
+			if v, ok := payload[k]; ok {
+				localDoc[k] = v
+			}
+			if v, ok := existingData[k]; ok {
+				serverDoc[k] = v
+			}
+		}
+		merged, cfs := mergeDocument(baseDoc, localDoc, serverDoc)
+		for _, k := range mergeableKeys {
+			if v, ok := merged[k]; ok {
+				payload[k] = v
+			} else {
+				delete(payload, k)
+			}
+		}
+		mergeConflicts = cfs
+
+		// 判断合并是否引入了本端之外的改动，需要前端回拉以收敛视图。
+		// 锁定态下服务端独有（本端不可见）的 protected 分组不算「变化」，需先剔除再比对，
+		// 否则每次保存都会误触发一次回拉。
+		mergedSnap := comparableSnapshot(merged)
+		localSnap := comparableSnapshot(localDoc)
+		if accessProtectionActive() && !requestUnlocked(c) {
+			if g, ok := mergedSnap["groups"].([]interface{}); ok {
+				mergedSnap["groups"] = filterProtectedGroups(g)
+			}
+		}
+		needsResync = !jsonEqual(mergedSnap, localSnap)
+	}
+	delete(payload, "base")
 
 	// Clean up legacy "items" field if "groups" is present in payload
 	// This prevents the issue where deleting all groups causes legacy items to reappear as a "Default Group"
@@ -1211,7 +1263,12 @@ func SaveData(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "version": newVersion})
+	resp := gin.H{"success": true, "version": newVersion}
+	if mergeMode {
+		resp["conflicts"] = mergeConflicts
+		resp["resync"] = needsResync
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // ImportData handles importing JSON configuration

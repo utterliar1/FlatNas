@@ -30,6 +30,17 @@ export const useSaveStore = defineStore("save", () => {
   let lastSavedJson = "";
   const hasUnsavedChanges = ref(false);
 
+  // 三方合并基线：最近一次「与服务端一致」的合并字段快照（不含 version/password）。
+  // 随每次保存/服务端数据应用而重置。后端以此为 base 做 base/local/server 逐字段合并，
+  // 从而在多端同时编辑时只让「真正改动的字段」生效，杜绝整份文档互相覆盖。
+  const baseJson = ref("");
+
+  // 合并过程中的字段级冲突提示（非阻塞）：多端改同一字段时后端以服务端为准并回报。
+  const mergeNotice = ref("");
+  let mergeNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+  // 合并结果引入了本端之外的变化 → 需回拉服务端以收敛视图（由 sync 包装层消费）。
+  const resyncRequested = ref(false);
+
   const conflictState = ref({ show: false, serverVersion: 0, clientVersion: 0 });
   const conflictResolving = ref(false);
 
@@ -67,6 +78,35 @@ export const useSaveStore = defineStore("save", () => {
     return "{" + sorted.map((k) => JSON.stringify(k) + ":" + stableStringify((obj as Record<string, unknown>)[k])).join(",") + "}";
   };
 
+  // 构造参与合并的「干净」字段集（不含 version/password），既作为 base 基线，
+  // 也用于保存载荷。与后端 mergeableKeys 保持一致。
+  const buildCleanBody = (feeds: unknown[], cats: unknown[]): Record<string, unknown> => ({
+    groups: groupsStore.groups,
+    groupOrder: Array.isArray(groupsStore.groupOrder) ? groupsStore.groupOrder : [],
+    widgets: widgetsStore.widgets.map((w) => stripWidgetUiState(w)),
+    appConfig: stripForceNetworkMode(configStore.appConfig as unknown as Record<string, unknown>),
+    rssFeeds: feeds,
+    rssCategories: cats,
+  });
+
+  // 以当前内存状态（= 刚与服务端同步后的状态）重置合并基线。
+  const seedBase = (feeds: unknown[], cats: unknown[]) => {
+    baseJson.value = JSON.stringify(buildCleanBody(feeds, cats));
+  };
+
+  const setMergeNotice = (msg: string) => {
+    if (!msg) return;
+    mergeNotice.value = msg;
+    if (mergeNoticeTimer) clearTimeout(mergeNoticeTimer);
+    mergeNoticeTimer = setTimeout(() => { mergeNotice.value = ""; mergeNoticeTimer = null; }, 8000);
+  };
+
+  const consumeResyncRequest = (): boolean => {
+    if (!resyncRequested.value) return false;
+    resyncRequested.value = false;
+    return true;
+  };
+
   const saveData = async (
     immediate = false,
     force = false,
@@ -94,13 +134,7 @@ export const useSaveStore = defineStore("save", () => {
         }
 
         const body: Record<string, unknown> = {
-          groups: groupsStore.groups,
-          // 分组混排顺序偏好（含只读共享分组的 id 顺序），随用户数据一起持久化
-          groupOrder: Array.isArray(groupsStore.groupOrder) ? groupsStore.groupOrder : [],
-          widgets: widgetsStore.widgets.map((w) => stripWidgetUiState(w)),
-          appConfig: stripForceNetworkMode(configStore.appConfig as unknown as Record<string, unknown>),
-          rssFeeds: rssFeeds.value,
-          rssCategories: rssCategories.value,
+          ...buildCleanBody(rssFeeds.value, rssCategories.value),
           version: dataVersion.value,
         };
         if (typeof auth.password === "string" && auth.password.length > 0) {
@@ -115,7 +149,14 @@ export const useSaveStore = defineStore("save", () => {
         }
 
         cacheStore.saveToCache(body);
-        const compressed = pako.gzip(json);
+        // 带 base 基线走「字段级三方合并」；无基线（首次/旧缓存）时退化为后端旧的全量+版本校验逻辑。
+        const wireBody: Record<string, unknown> = { ...body };
+        if (baseJson.value) {
+          try {
+            wireBody.base = JSON.parse(baseJson.value);
+          } catch { /* 基线损坏则忽略，走旧逻辑 */ }
+        }
+        const compressed = pako.gzip(JSON.stringify(wireBody));
 
         const getSaveTimeout = () => {
           if (configStore.effectiveIsLan) return 15000;
@@ -159,6 +200,17 @@ export const useSaveStore = defineStore("save", () => {
             dataVersion.value = normalizeVersion((result as { version?: number }).version);
           }
           lastSavedJson = JSON.stringify({ ...body, version: dataVersion.value });
+          // 保存成功后，本端与服务端在「本端改动字段」上已一致，重置基线为刚提交的干净字段集。
+          baseJson.value = JSON.stringify(buildCleanBody(rssFeeds.value, rssCategories.value));
+          // 三方合并结果处理（仅合并模式返回这些字段）
+          const conflicts = (result as { conflicts?: Array<{ scope?: string; field?: string; id?: string }> } | null)?.conflicts;
+          if (Array.isArray(conflicts) && conflicts.length > 0) {
+            console.warn("[Merge] 检测到并发修改冲突，已按服务端为准合并：", conflicts);
+            setMergeNotice(`检测到 ${conflicts.length} 处多端并发修改冲突，已按服务端为准自动合并。`);
+          }
+          if ((result as { resync?: boolean } | null)?.resync === true) {
+            resyncRequested.value = true;
+          }
           widgetsStore.updateLastSavedLayout();
           if (body.password) auth.password = "";
           saveCustomScripts();
@@ -342,6 +394,12 @@ export const useSaveStore = defineStore("save", () => {
             rssCategories: rssCategories.value,
             version: dataVersion.value,
           };
+          // 离线队列回放时同样携带基线，让合并策略在恢复联网后依然生效。
+          if (baseJson.value) {
+            try {
+              fallbackBody.base = JSON.parse(baseJson.value);
+            } catch { /* ignore */ }
+          }
           await offlineQueue.enqueue(fallbackBody, dataVersion.value);
           offlineQueueCount.value = await offlineQueue.size();
           hasPendingSave.value = true;
@@ -513,6 +571,10 @@ export const useSaveStore = defineStore("save", () => {
     heartbeatLostSinceLastVisible,
     markDirty,
     saveData,
+    baseJson,
+    mergeNotice,
+    seedBase,
+    consumeResyncRequest,
     resolveConflict,
     checkVersionAfterActivation,
     confirmSyncFromServer,

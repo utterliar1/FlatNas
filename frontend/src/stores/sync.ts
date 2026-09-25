@@ -362,6 +362,8 @@ export const useSyncStore = defineStore("sync", () => {
     networkStore.fetchCustomScripts();
     widgetsStore.updateLastSavedLayout();
     cacheStore.saveToCache(buildCacheSnapshot(data));
+    // 刚应用完服务端数据 = 本端与服务端一致，重置三方合并基线。
+    saveStore.seedBase(rssFeeds.value, rssCategories.value);
     saveStore.hasUnsavedChanges = false;
     // 不能在此同步复位：上面的赋值会触发 flush:'pre' 的深度 watcher，而它们在微任务里
     // 执行，届时若标记已复位，会把「应用服务端数据」误判为用户编辑 → markDirty →
@@ -710,6 +712,8 @@ export const useSyncStore = defineStore("sync", () => {
     saveStore.hasUnsavedChanges = false;
     saveStore.hasPendingSave = false;
     saveStore.conflictState.show = false;
+    saveStore.baseJson = "";
+    saveStore.mergeNotice = "";
     await init();
     nextTick(() => { isApplyingServerData = false; });
   };
@@ -719,6 +723,11 @@ export const useSyncStore = defineStore("sync", () => {
     const result = await saveStore.saveData(immediate, force, dataVersion, rssFeeds, rssCategories, fetchAndProcessData);
     if (result === "saved") {
       broadcastSaved(dataVersion.value);
+      // 三方合并引入了本端之外的服务端改动（例如其他设备改了本端未触碰的字段）：
+      // 显式回拉以收敛视图（同源 WS 广播因版本相等不会触发回拉）。
+      if (saveStore.consumeResyncRequest()) {
+        await fetchAndProcessData();
+      }
       if (pendingServerVersion.value > 0 && pendingServerVersion.value > dataVersion.value) {
         const psv = pendingServerVersion.value;
         pendingServerVersion.value = 0;
@@ -763,7 +772,7 @@ export const useSyncStore = defineStore("sync", () => {
       try {
         if (!auth.isLogged || !saveStore.hasUnsavedChanges || saveStore.isSaving) return;
         if (saveStore.conflictState.show) return;
-        const body = {
+        const body: Record<string, unknown> = {
           groups: groupsStore.groups,
           groupOrder: Array.isArray(groupsStore.groupOrder) ? groupsStore.groupOrder : [],
           widgets: widgetsStore.widgets,
@@ -772,6 +781,12 @@ export const useSyncStore = defineStore("sync", () => {
           rssCategories: rssCategories.value,
           version: dataVersion.value,
         };
+        // 兜底落盘同样携带基线，保证多端并发时仍走字段级合并而非整份覆盖。
+        if (saveStore.baseJson) {
+          try {
+            body.base = JSON.parse(saveStore.baseJson);
+          } catch { /* ignore */ }
+        }
         fetch("/api/save", {
           method: "POST",
           headers: { ...cacheStore.getHeaders(), "Content-Encoding": "gzip" },
@@ -907,6 +922,7 @@ export const useSyncStore = defineStore("sync", () => {
     isSaving: saveStore.isSaving, hasPendingSave: saveStore.hasPendingSave, hasUnsavedChanges: saveStore.hasUnsavedChanges,
     markDirty: saveStore.markDirty, saveData, resolveConflict,
     conflictState: saveStore.conflictState,
+    mergeNotice: saveStore.mergeNotice,
     isServerSnapshotReady: cacheStore.isServerSnapshotReady, isClientReady: computed(() => cacheStore.isClientReady || initCompleted.value),
     cacheLoadedAt: cacheStore.cacheLoadedAt, hasServerSnapshot: cacheStore.hasServerSnapshot,
     offlineQueueCount: saveStore.offlineQueueCount, offlineQueueConflictState: saveStore.offlineQueueConflictState,
