@@ -309,6 +309,8 @@ func main() {
 	{
 		api.POST("/login", handlers.Login)
 		api.POST("/register", handlers.Register)
+		api.POST("/access/unlock", handlers.UnlockAccess) // 访问码解锁（隐藏分组），公开端点，内置限流
+		api.POST("/access/lock", handlers.LockAccess)     // 重新上锁，清除解锁 Cookie
 		api.GET("/data", middleware.OptionalAuthMiddleware(), handlers.GetData)
 		api.GET("/version", middleware.OptionalAuthMiddleware(), handlers.GetVersion)
 		api.GET("/system-config", handlers.GetSystemConfig)

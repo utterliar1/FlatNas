@@ -227,6 +227,35 @@ const bgAlpha = computed({
             </label>
           </div>
 
+          <!-- Access Code Protection Toggle（访问码保护：隐藏分组） -->
+          <div
+            class="flex items-center justify-between bg-amber-50 p-3 rounded-lg border border-amber-100"
+          >
+            <div class="flex flex-col pr-3">
+              <span class="text-xs font-bold text-gray-700">访问码保护（隐藏分组）</span>
+              <span class="text-[10px] text-gray-400">
+                {{
+                  store.systemConfig.hasAccessCode
+                    ? "开启后该分组被隐藏，需连点页面标题 3 次并输入访问码解锁后才显示。"
+                    : "尚未设置全局访问码：请由管理员连点页面标题 3 次进行设置。"
+                }}
+              </span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                :checked="!!group.protected"
+                @change="
+                  (e) => updateGroup({ protected: (e.target as HTMLInputElement).checked })
+                "
+                class="sr-only peer"
+              />
+              <div
+                class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"
+              ></div>
+            </label>
+          </div>
+
           <!-- Auto Hide Title Toggle -->
           <div
             class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100"

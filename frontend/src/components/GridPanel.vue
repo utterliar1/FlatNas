@@ -57,6 +57,7 @@ const SettingsModal = loadAsync(() => import("./SettingsModal.vue"));
 const GroupSettingsModal = loadAsync(() => import("./GroupSettingsModal.vue"));
 /** 同步导入，避免生产/Docker 下动态 chunk 请求失败导致登录框无法弹出；LoginModal 内已做 store/authMode 防御 */
 import LoginModal from "./LoginModal.vue";
+import AccessCodeModal from "./AccessCodeModal.vue";
 const BookmarkWidget = loadAsync(() => import("./BookmarkWidget.vue"));
 const MemoWidget = loadAsync(() => import("./MemoWidget.vue"));
 const TodoWidget = loadAsync(() => import("./TodoWidget.vue"));
@@ -378,6 +379,24 @@ const empireBackgroundUrl = `data:image/svg+xml,%3Csvg width='60' height='60' vi
 const showEditModal = ref(false);
 const showSettingsModal = ref(false);
 const showGroupSettingsModal = ref(false);
+const showAccessCodeModal = ref(false);
+
+// 隐蔽入口：快速连点页面标题 3 次（1.5 秒内）弹出访问码弹窗，无任何可见提示
+const secretTitleClicks = ref<number[]>([]);
+const onTitleSecretClick = () => {
+  const now = Date.now();
+  secretTitleClicks.value = [...secretTitleClicks.value.filter((t) => now - t < 1500), now];
+  if (secretTitleClicks.value.length >= 3) {
+    secretTitleClicks.value = [];
+    showAccessCodeModal.value = true;
+  }
+};
+
+// 访问码弹窗操作成功后：重新拉取系统配置（hasAccessCode 可能变化）与数据（分组显隐变化）
+const onAccessCodeChanged = () => {
+  store.fetchSystemConfig();
+  store.fetchData();
+};
 
 const showLoginModal = ref(false);
 const isEditMode = ref(false);
@@ -2645,12 +2664,13 @@ onUnmounted(() => {
             :style="{ order: isHeaderRowLayout && store.appConfig.titleAlign === 'right' ? 2 : 0 }"
           >
             <h1
-              class="font-bold transition-all duration-300 whitespace-nowrap"
+              class="font-bold transition-all duration-300 whitespace-nowrap select-none"
               :style="{
                 fontSize: store.appConfig.titleSize + 'px',
                 color: store.appConfig.titleColor,
                 textShadow: store.appConfig.background ? '0 2px 8px rgba(0,0,0,0.5)' : 'none',
               }"
+              @click="onTitleSecretClick"
             >
               {{ store.appConfig.customTitle }}
             </h1>
@@ -3279,6 +3299,29 @@ onUnmounted(() => {
                 </svg>
                 共享
               </span>
+
+              <!-- 访问码保护徽标（解锁后可见，提示该组处于保护状态） -->
+              <span
+                v-if="group.protected"
+                class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"
+                title="访问码保护分组（上锁后隐藏）"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-3 w-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                保护
+              </span>
             </div>
 
             <VueDraggable
@@ -3674,6 +3717,9 @@ onUnmounted(() => {
     />
     <SettingsModal v-if="showSettingsModal" v-model:show="showSettingsModal" />
     <LoginModal v-if="showLoginModal" v-model:show="showLoginModal" />
+
+    <!-- 访问码弹窗（隐蔽入口：连点页面标题 3 次触发） -->
+    <AccessCodeModal v-model:show="showAccessCodeModal" @changed="onAccessCodeChanged" />
 
     <!-- Context Menu -->
     <OverlayMotion

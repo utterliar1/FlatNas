@@ -36,6 +36,8 @@ export interface NavGroup {
   shared?: boolean;
   // 只读标记：其他用户 / 访客拿到的共享分组副本，仅本地用于禁用编辑入口，不持久化。
   readonly?: boolean;
+  // 访问码保护：标记后该分组仅在输入全局访问码解锁后由后端下发（数据层面隐藏）。
+  protected?: boolean;
   cardLayout?: "vertical" | "horizontal" | string;
   iconShape?:
   | "circle"
@@ -196,6 +198,8 @@ export interface AppConfig {
 
 export interface SystemConfig {
   authMode: "single" | "multi";
+  // 访问码保护：服务端只暴露「是否已设置」，绝不回传访问码本身
+  hasAccessCode?: boolean;
 }
 
 export interface WidgetConfig {

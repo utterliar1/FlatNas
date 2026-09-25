@@ -80,6 +80,9 @@ type WallpaperConfig struct {
 
 type SystemConfig struct {
 	AuthMode string `json:"authMode"` // "single" or "multi"
+	// 访问码（隐藏分组保护）：仅在服务端持久化与校验，任何对外响应都必须
+	// 剔除该字段（GetSystemConfig / GetData 注入处已做脱敏，只暴露 hasAccessCode）。
+	AccessCode string `json:"accessCode,omitempty"`
 }
 
 type LoginRequest struct {

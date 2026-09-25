@@ -269,9 +269,9 @@ func latestModTime(a, b time.Time) time.Time {
 	return b
 }
 
-func buildGetDataETag(username, userFile string, isGuest bool, dataMod, sysMod, sharedMod time.Time, dataSize int64) string {
+func buildGetDataETag(username, userFile string, isGuest bool, dataMod, sysMod, sharedMod time.Time, dataSize int64, accessUnlocked bool) string {
 	payload := fmt.Sprintf(
-		"%s|%s|%t|%d|%d|%d|%d",
+		"%s|%s|%t|%d|%d|%d|%d|%t",
 		username,
 		userFile,
 		isGuest,
@@ -279,6 +279,7 @@ func buildGetDataETag(username, userFile string, isGuest bool, dataMod, sysMod, 
 		sysMod.UnixNano(),
 		sharedMod.UnixNano(),
 		dataSize,
+		accessUnlocked,
 	)
 	sum := sha256.Sum256([]byte(payload))
 	return fmt.Sprintf("\"%x\"", sum[:])
@@ -340,6 +341,9 @@ func GetData(c *gin.Context) {
 	// 共享分组（多用户共同的书签分组）来自管理员数据文件，其修改时间同样参与缓存与 ETag 失效判断
 	sharedMod := sharedGroupsModTime()
 
+	// 访问码保护（隐藏分组）：解锁状态参与 ETag 与缓存键，避免锁定/解锁响应互相污染
+	accessUnlocked := accessProtectionActive() && requestUnlocked(c)
+
 	userFile := filepath.Join(config.UsersDir, username+".json")
 	if username == "admin" && sysConfig.AuthMode == "single" {
 		userFile = filepath.Join(config.DataDir, "data.json")
@@ -356,7 +360,7 @@ func GetData(c *gin.Context) {
 	}
 	etag := ""
 	if userStatErr == nil {
-		etag = buildGetDataETag(username, userFile, isGuest, dataMod, sysMod, sharedMod, dataSize)
+		etag = buildGetDataETag(username, userFile, isGuest, dataMod, sysMod, sharedMod, dataSize, accessUnlocked)
 	}
 	setGetDataCacheHeaders(c, etag, dataMod, sysMod)
 	if requestHasMatchingETag(c, etag) {
@@ -369,6 +373,9 @@ func GetData(c *gin.Context) {
 		cacheKey += "|guest"
 	} else {
 		cacheKey += "|auth"
+	}
+	if accessUnlocked {
+		cacheKey += "|unlocked"
 	}
 	if userStatErr == nil && !sysMod.IsZero() {
 		getDataCacheMu.RLock()
@@ -401,7 +408,7 @@ func GetData(c *gin.Context) {
 			if refreshedInfo, statErr := os.Stat(userFile); statErr == nil {
 				dataMod = refreshedInfo.ModTime()
 				dataSize = refreshedInfo.Size()
-				etag = buildGetDataETag(username, userFile, isGuest, dataMod, sysMod, sharedMod, dataSize)
+				etag = buildGetDataETag(username, userFile, isGuest, dataMod, sysMod, sharedMod, dataSize, accessUnlocked)
 				setGetDataCacheHeaders(c, etag, dataMod, sysMod)
 			}
 		}
@@ -409,6 +416,17 @@ func GetData(c *gin.Context) {
 
 	// Remove password from response
 	delete(userData, "password")
+
+	// 访问码保护：未解锁时整体剔除 protected 分组（对所有人生效，含访客与管理员），
+	// 数据不下发而非仅前端隐藏；过滤必须发生在写缓存之前。
+	if accessProtectionActive() && !accessUnlocked {
+		if groups, ok := userData["groups"].([]interface{}); ok {
+			userData["groups"] = filterProtectedGroups(groups)
+		}
+		if sgs, ok := userData["sharedGroups"].([]interface{}); ok {
+			userData["sharedGroups"] = filterProtectedGroups(sgs)
+		}
+	}
 
 	filterStart := time.Now()
 	if isGuest {
@@ -460,8 +478,8 @@ func GetData(c *gin.Context) {
 	}
 	filterMs := time.Since(filterStart).Milliseconds()
 
-	// Inject system config
-	userData["systemConfig"] = sysConfig
+	// Inject system config（脱敏：绝不包含访问码本身，仅暴露 hasAccessCode）
+	userData["systemConfig"] = sanitizedSystemConfig(sysConfig)
 	// Single-user mode must always present as admin, even if old data files carry stale usernames.
 	if sysConfig.AuthMode == "single" && username == "admin" {
 		userData["username"] = "admin"
@@ -1033,6 +1051,44 @@ func SaveData(c *gin.Context) {
 	// 显式剔除以免被误写入用户自己的数据文件。
 	delete(payload, "sharedGroups")
 
+	// 访问码保护：未解锁时前端看不到 protected 分组，其提交的 groups 必然缺少这些组。
+	// 从既有文件补回，避免锁定状态下的一次普通保存把隐藏分组静默删除。
+	if accessProtectionActive() && !requestUnlocked(c) {
+		if _, hasGroups := payload["groups"]; hasGroups {
+			if existingGroups, ok := existingData["groups"].([]interface{}); ok {
+				payloadGroups, _ := payload["groups"].([]interface{})
+				protectedByID := map[string]map[string]interface{}{}
+				var protectedOrder []string
+				for _, g := range existingGroups {
+					gm, ok := g.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					if p, _ := gm["protected"].(bool); p {
+						if id, _ := gm["id"].(string); id != "" {
+							protectedByID[id] = gm
+							protectedOrder = append(protectedOrder, id)
+						}
+					}
+				}
+				present := make(map[string]bool, len(payloadGroups))
+				for _, g := range payloadGroups {
+					if gm, ok := g.(map[string]interface{}); ok {
+						if id, _ := gm["id"].(string); id != "" {
+							present[id] = true
+						}
+					}
+				}
+				for _, id := range protectedOrder {
+					if !present[id] {
+						payloadGroups = append(payloadGroups, protectedByID[id])
+					}
+				}
+				payload["groups"] = payloadGroups
+			}
+		}
+	}
+
 	// groupOrder 是用户个人对分组（含只读共享分组）展示顺序的偏好，
 	// 只允许保存为字符串 id 列表（上限 500 条）；类型非法时直接丢弃。
 	// 旧文件里已有的 groupOrder 在前端未提交该键时会按原样保留。
@@ -1198,7 +1254,8 @@ func ResetData(c *gin.Context) {
 
 func GetSystemConfig(c *gin.Context) {
 	sysConfig := getCachedSystemConfig()
-	c.JSON(http.StatusOK, sysConfig)
+	// 访问码属敏感信息，对外只暴露「是否已设置」，绝不回传访问码本身
+	c.JSON(http.StatusOK, sanitizedSystemConfig(sysConfig))
 }
 
 func UpdateSystemConfig(c *gin.Context) {
@@ -1225,6 +1282,15 @@ func UpdateSystemConfig(c *gin.Context) {
 		sysConfig.AuthMode = v
 	}
 
+	// 全局访问码（隐藏分组保护）：仅管理员可设置/修改/清除（提交空字符串即清除）
+	if v, ok := payload["accessCode"].(string); ok {
+		v = strings.TrimSpace(v)
+		if len(v) > 128 {
+			v = v[:128]
+		}
+		sysConfig.AccessCode = v
+	}
+
 	if sysConfig.AuthMode != oldAuthMode {
 		if err := migrateAuthModeData(oldAuthMode, sysConfig.AuthMode); err != nil {
 			log.Printf("UpdateSystemConfig: data migration failed: %v", err)
@@ -1236,7 +1302,7 @@ func UpdateSystemConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, sysConfig)
+	c.JSON(http.StatusOK, sanitizedSystemConfig(sysConfig))
 }
 
 func migrateAuthModeData(from, to string) error {
