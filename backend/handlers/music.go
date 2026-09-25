@@ -50,6 +50,11 @@ func UploadMusic(c *gin.Context) {
 			continue
 		}
 
+		if file.Size > maxMusicUploadBytes {
+			errors = append(errors, fmt.Sprintf("%s: file too large (max %d MB)", filename, maxMusicUploadBytes>>20))
+			continue
+		}
+
 		if err := c.SaveUploadedFile(file, filepath.Join(config.MusicDir, filename)); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", filename, err))
 			continue

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,6 +16,31 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// usernamePattern 用户名白名单：仅允许字母/数字/下划线/连字符，长度 1~32。
+// 用于阻断「用户名路径穿越」（如 ../../public/x 使 filepath.Join(UsersDir, name+".json")
+// 逃逸到数据目录之外）以及任何非法文件名字符。
+var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,32}$`)
+
+// validUsername 校验用户名是否合法（详见 usernamePattern 注释）。
+func validUsername(name string) bool {
+	return usernamePattern.MatchString(name)
+}
+
+// userFilePath 在用户名合法且拼接结果仍位于 UsersDir 内时，返回该用户的数据文件路径。
+// 双重防护：先白名单，再对 Join 结果做前缀兜底，确保路径不逃逸目录。
+func userFilePath(username string) (string, bool) {
+	if !validUsername(username) {
+		return "", false
+	}
+	p := filepath.Join(config.UsersDir, username+".json")
+	root := filepath.Clean(config.UsersDir) + string(os.PathSeparator)
+	if !strings.HasPrefix(filepath.Clean(p), root) {
+		return "", false
+	}
+	return p, true
+}
+
 
 func Login(c *gin.Context) {
 	var req models.LoginRequest
@@ -33,7 +59,12 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	userFile := filepath.Join(config.UsersDir, req.Username+".json")
+	if !validUsername(req.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid username"})
+		return
+	}
+
+	userFile, _ := userFilePath(req.Username)
 	if req.Username == "admin" && sysConfig.AuthMode == "single" {
 		// Single mode admin data is in data.json
 		userFile = filepath.Join(config.DataDir, "data.json")
@@ -124,7 +155,10 @@ type LicenseRequest struct {
 }
 
 func initUserFile(username string, hashedPassword string) error {
-	userFile := filepath.Join(config.UsersDir, username+".json")
+	userFile, ok := userFilePath(username)
+	if !ok {
+		return os.ErrInvalid
+	}
 
 	if _, err := os.Stat(userFile); err == nil {
 		return nil
@@ -181,7 +215,12 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	userFile := filepath.Join(config.UsersDir, req.Username+".json")
+	if !validUsername(req.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid username (only letters, digits, _ and - are allowed)"})
+		return
+	}
+
+	userFile, _ := userFilePath(req.Username)
 	if _, err := os.Stat(userFile); err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
 		return
@@ -241,7 +280,12 @@ func AddUser(c *gin.Context) {
 		return
 	}
 
-	userFile := filepath.Join(config.UsersDir, req.Username+".json")
+	if !validUsername(req.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid username (only letters, digits, _ and - are allowed)"})
+		return
+	}
+
+	userFile, _ := userFilePath(req.Username)
 	if _, err := os.Stat(userFile); err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
 		return
@@ -269,12 +313,12 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	username := c.Param("usr")
-	if username == "" || username == "admin" {
+	if username == "" || username == "admin" || !validUsername(username) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid username"})
 		return
 	}
 
-	userFile := filepath.Join(config.UsersDir, username+".json")
+	userFile, _ := userFilePath(username)
 	if err := os.Remove(userFile); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return

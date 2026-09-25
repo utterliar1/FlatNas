@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,6 +15,32 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// 配置版本按「用户隔离」存储：文件名 = <sanitizeFileName(username)>_<id>.json。
+// 这样既能被 cleanUserData 按前缀连带清理，也从根本上杜绝跨用户 IDOR
+// （他人无法列出/还原/删除不属于自己的版本）。旧版遗留的纯数字文件名
+// （<id>.json）仅对管理员兼容可见。
+
+var versionIDPattern = regexp.MustCompile(`^[0-9]{1,20}$`)
+
+// versionFilePrefix 返回某用户的版本文件前缀（含结尾下划线）。
+func versionFilePrefix(username string) string {
+	return sanitizeFileName(username) + "_"
+}
+
+// resolveVersionFile 将 (username, id) 解析为版本文件路径；id 非法或路径逃逸时返回 false。
+func resolveVersionFile(username, id string) (string, bool) {
+	if !versionIDPattern.MatchString(id) {
+		return "", false
+	}
+	name := versionFilePrefix(username) + id + ".json"
+	p := filepath.Join(config.ConfigVersionsDir, name)
+	root := filepath.Clean(config.ConfigVersionsDir) + string(os.PathSeparator)
+	if !strings.HasPrefix(filepath.Clean(p), root) {
+		return "", false
+	}
+	return p, true
+}
 
 type ConfigVersion struct {
 	ID        string `json:"id"`
@@ -30,6 +57,13 @@ type VersionFile struct {
 }
 
 func GetConfigVersions(c *gin.Context) {
+	username := c.GetString("username")
+	if username == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	prefix := versionFilePrefix(username)
+
 	files, err := os.ReadDir(config.ConfigVersionsDir)
 	if err != nil {
 		// If dir doesn't exist, return empty list
@@ -41,14 +75,21 @@ func GetConfigVersions(c *gin.Context) {
 		return
 	}
 
-	var versions []ConfigVersion
+	var versions []ConfigVersion = []ConfigVersion{}
 	for _, f := range files {
 		if f.IsDir() || !strings.HasSuffix(f.Name(), ".json") {
 			continue
 		}
+		name := f.Name()
+		// 只返回当前用户自己的版本；管理员额外兼容旧的纯数字文件。
+		isOwn := strings.HasPrefix(name, prefix)
+		isLegacyAdmin := username == "admin" && versionIDPattern.MatchString(strings.TrimSuffix(name, ".json"))
+		if !isOwn && !isLegacyAdmin {
+			continue
+		}
 
 		// Read file to get label and created time
-		content, err := os.ReadFile(filepath.Join(config.ConfigVersionsDir, f.Name()))
+		content, err := os.ReadFile(filepath.Join(config.ConfigVersionsDir, name))
 		if err != nil {
 			continue
 		}
@@ -112,7 +153,7 @@ func SaveConfigVersion(c *gin.Context) {
 		Data:      currentData,
 	}
 
-	filename := filepath.Join(config.ConfigVersionsDir, id+".json")
+	filename := filepath.Join(config.ConfigVersionsDir, versionFilePrefix(username)+id+".json")
 	if err := utils.WriteJSON(filename, vf); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save version"})
 		return
@@ -136,10 +177,24 @@ func RestoreConfigVersion(c *gin.Context) {
 		return
 	}
 
-	filename := filepath.Join(config.ConfigVersionsDir, payload.ID+".json")
+	// 严格校验版本 ID（纯数字）并仅允许还原「属于当前用户」的版本文件，
+	// 杜绝路径穿越与跨用户 IDOR。
+	filename, ok := resolveVersionFile(username, payload.ID)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid version ID"})
+		return
+	}
+	if _, err := os.Stat(filename); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Version not found"})
+		return
+	}
 	var vf VersionFile
 	if err := utils.ReadJSON(filename, &vf); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Version not found"})
+		return
+	}
+	if vf.Data == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Version data corrupted"})
 		return
 	}
 
@@ -181,18 +236,23 @@ func RestoreConfigVersion(c *gin.Context) {
 }
 
 func DeleteConfigVersion(c *gin.Context) {
+	username := c.GetString("username")
+	if username == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID is required"})
 		return
 	}
 
-	if _, err := strconv.ParseInt(id, 10, 64); err != nil {
+	filename, ok := resolveVersionFile(username, id)
+	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 
-	filename := filepath.Join(config.ConfigVersionsDir, id+".json")
 	if err := os.Remove(filename); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete version"})
 		return

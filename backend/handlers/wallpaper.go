@@ -99,6 +99,12 @@ func isSupportedWallpaperFile(name string) bool {
 		strings.HasSuffix(lower, ".webp") || strings.HasSuffix(lower, ".svg")
 }
 
+// maxWallpaperUploadBytes 单张壁纸大小上限（含移动端壁纸）。
+const maxWallpaperUploadBytes = 20 << 20 // 20 MB
+
+// maxMusicUploadBytes 单个音乐文件大小上限。
+const maxMusicUploadBytes = 200 << 20 // 200 MB
+
 func syncWallpaperMetaWithDir(store map[string]assetMetaEntry, dir string) (bool, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -462,6 +468,13 @@ func uploadBackground(c *gin.Context, dir string, webPrefix string) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf(
 				"Unsupported file type: %s (supported: jpg, jpeg, png, gif, webp, svg)",
 				file.Filename,
+			)})
+			return
+		}
+		if file.Size > maxWallpaperUploadBytes {
+			assetMetaMu.Unlock()
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": fmt.Sprintf(
+				"File too large: %s (max %d MB)", file.Filename, maxWallpaperUploadBytes>>20,
 			)})
 			return
 		}

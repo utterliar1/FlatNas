@@ -236,6 +236,13 @@ func main() {
 		if cc := staticCacheControlForPath(reqPath); cc != "" {
 			c.Header("Cache-Control", cc)
 		}
+		// 上传的 SVG 可内嵌 <script>，若被浏览器直接打开将在同源执行（存储型 XSS）。
+		// 用户上传的壁纸本身是合法 SVG，无法简单拒收，故在「服务端响应」侧加固：
+		// 通过 CSP sandbox 禁用其脚本执行能力，并禁止 MIME 嗅探。
+		if strings.HasSuffix(strings.ToLower(reqPath), ".svg") {
+			c.Header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+			c.Header("X-Content-Type-Options", "nosniff")
+		}
 		c.Next()
 	})
 	r.Static(mountPath(basePath, "/assets"), filepath.Join(config.PublicDir, "assets"))
@@ -321,7 +328,7 @@ func main() {
 		api.GET("/weather", handlers.GetWeather)                                                   // Added Weather
 		api.GET("/custom-scripts", middleware.OptionalAuthMiddleware(), handlers.GetCustomScripts) // Added Custom Scripts
 		api.GET("/config/proxy-status", handlers.GetProxyStatus)
-		api.GET("/widgets/:id", handlers.GetWidget) // Added Widget Data
+		api.GET("/widgets/:id", middleware.OptionalAuthMiddleware(), handlers.GetWidget) // Added Widget Data
 		api.GET("/memo/:id", middleware.AuthMiddleware(), handlers.GetMemo)
 
 		// Icon Routes

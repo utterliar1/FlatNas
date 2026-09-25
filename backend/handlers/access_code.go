@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -140,6 +141,33 @@ func unlockClearAttempts(ip string) {
 	unlockAttemptMu.Unlock()
 }
 
+// requestIsSecure 判断当前请求是否经 TLS（或经可信反代声明 X-Forwarded-Proto: https），
+// 用于决定解锁 Cookie 是否加 Secure 标记：内网 HTTP 场景下若强加 Secure，浏览器将
+// 拒发该 Cookie 导致解锁完全失效，故按实际协议自适应。
+func requestIsSecure(c *gin.Context) bool {
+	if c.Request.TLS != nil {
+		return true
+	}
+	if strings.EqualFold(strings.TrimSpace(c.GetHeader("X-Forwarded-Proto")), "https") {
+		return true
+	}
+	return false
+}
+
+// clientRateKey 返回用于限流的客户端标识：直接取 TCP 连接的对端地址（RemoteAddr）。
+// 相对 c.ClientIP()，它不依赖可被伪造的 X-Forwarded-For / X-Real-IP，攻击者无法
+// 通过轮换伪造头绕过访问码暴力枚举限流。
+func clientRateKey(c *gin.Context) string {
+	addr := strings.TrimSpace(c.Request.RemoteAddr)
+	if addr == "" {
+		return "unknown"
+	}
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		return host
+	}
+	return addr
+}
+
 // --- HTTP handlers ---
 
 // UnlockAccess POST /api/access/unlock  body: {"code": "..."}
@@ -159,7 +187,7 @@ func UnlockAccess(c *gin.Context) {
 		return
 	}
 
-	ip := c.ClientIP()
+	ip := clientRateKey(c)
 	if unlockRateLimited(ip) {
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": "尝试过于频繁，请稍后再试"})
 		return
@@ -180,12 +208,12 @@ func UnlockAccess(c *gin.Context) {
 	if ttl > 0 {
 		maxAge = ttl * 3600
 	}
-	c.SetCookie(unlockCookieName, expectedUnlockCookieValue(), maxAge, "/", "", false, true)
+	c.SetCookie(unlockCookieName, expectedUnlockCookieValue(), maxAge, "/", "", requestIsSecure(c), true)
 	c.JSON(http.StatusOK, gin.H{"success": true, "unlocked": true})
 }
 
 // LockAccess POST /api/access/lock  清除解锁 Cookie，重新隐藏受保护分组。
 func LockAccess(c *gin.Context) {
-	c.SetCookie(unlockCookieName, "", -1, "/", "", false, true)
+	c.SetCookie(unlockCookieName, "", -1, "/", "", requestIsSecure(c), true)
 	c.JSON(http.StatusOK, gin.H{"success": true, "unlocked": false})
 }

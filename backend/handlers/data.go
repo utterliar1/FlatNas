@@ -34,6 +34,12 @@ type getDataCacheEntry struct {
 var getDataCache = map[string]getDataCacheEntry{}
 var getDataCacheMu sync.RWMutex
 var memoFileMu sync.Mutex
+
+// saveDataMu 串行化「读-改-写」保存流程：SaveData 会先读既有文件做版本校验/字段合并，
+// 再整体写回。并发保存（多标签页 / 自动保存与手动保存交叠）会让两个请求读到同一
+// 旧版本，各自 +1 后互相覆盖，造成「版本乒乓」与数据丢失。用全局互斥锁保证
+// 校验与写入的原子性（保存频率低，串行化代价可忽略）。
+var saveDataMu sync.Mutex
 var memoSaveIdempotencyCache = map[string]memoSaveIdempotencyEntry{}
 var memoSaveIdempotencyMu sync.Mutex
 
@@ -330,6 +336,11 @@ func GetData(c *gin.Context) {
 		username = "admin"
 		isGuest = true
 	}
+	// 防御性校验：JWT 中的用户名也须合法，杜绝历史遗留/伪造的非法用户名造成路径穿越
+	if !isGuest && !validUsername(username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid username"})
+		return
+	}
 
 	sysConfig := getCachedSystemConfig()
 	sysInfo, sysStatErr := os.Stat(config.SystemConfigFile)
@@ -417,17 +428,6 @@ func GetData(c *gin.Context) {
 	// Remove password from response
 	delete(userData, "password")
 
-	// 访问码保护：未解锁时整体剔除 protected 分组（对所有人生效，含访客与管理员），
-	// 数据不下发而非仅前端隐藏；过滤必须发生在写缓存之前。
-	if accessProtectionActive() && !accessUnlocked {
-		if groups, ok := userData["groups"].([]interface{}); ok {
-			userData["groups"] = filterProtectedGroups(groups)
-		}
-		if sgs, ok := userData["sharedGroups"].([]interface{}); ok {
-			userData["sharedGroups"] = filterProtectedGroups(sgs)
-		}
-	}
-
 	filterStart := time.Now()
 	if isGuest {
 		// Filter public items manually in the map structure
@@ -473,6 +473,11 @@ func GetData(c *gin.Context) {
 			"lanUrl":        {},
 			"backupLanUrls": {},
 			"lanHost":       {},
+			// appConfig 中的第三方服务密钥：访客不应获取，否则可被滥用/盗刷配额
+			"amapKey":           {},
+			"qweatherProjectId": {},
+			"qweatherKeyId":     {},
+			"qweatherPrivateKey": {},
 		}
 		removeSensitiveFields(userData, sensitiveKeys)
 	}
@@ -498,6 +503,19 @@ func GetData(c *gin.Context) {
 		userData["sharedGroups"] = loadSharedGroups()
 	} else {
 		delete(userData, "sharedGroups")
+	}
+
+	// 访问码保护：未解锁时整体剔除 protected 分组（对所有人生效，含访客与管理员），
+	// 数据不下发而非仅前端隐藏。⚠️ 必须在 sharedGroups 注入「之后」执行：注入会
+	// 用 loadSharedGroups() 整体覆盖 sharedGroups，若过滤发生在前，则「共享 + 隐藏」
+	// 的分组会被注入重新带回，造成保护绕过。同时必须发生在写缓存之前。
+	if accessProtectionActive() && !accessUnlocked {
+		if groups, ok := userData["groups"].([]interface{}); ok {
+			userData["groups"] = filterProtectedGroups(groups)
+		}
+		if sgs, ok := userData["sharedGroups"].([]interface{}); ok {
+			userData["sharedGroups"] = filterProtectedGroups(sgs)
+		}
 	}
 
 	// Align memo widget data with memo files to avoid rollback on full refresh
@@ -579,8 +597,10 @@ func GetVersion(c *gin.Context) {
 
 func GetWidget(c *gin.Context) {
 	username := c.GetString("username")
+	isGuest := false
 	if username == "" {
 		username = "admin"
+		isGuest = true
 	}
 
 	sysConfig := getCachedSystemConfig()
@@ -606,6 +626,12 @@ func GetWidget(c *gin.Context) {
 	for _, w := range widgets {
 		if widgetMap, ok := w.(map[string]interface{}); ok {
 			if wId, ok := widgetMap["id"].(string); ok && wId == id {
+				// 访客仅可取公开组件，避免未认证枚举私有组件数据
+				if isGuest {
+					if isPublic, _ := widgetMap["isPublic"].(bool); !isPublic {
+						continue
+					}
+				}
 				data, _ := widgetMap["data"]
 				c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
 				return
@@ -977,6 +1003,10 @@ func SaveData(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	if !validUsername(username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid username"})
+		return
+	}
 
 	// 1. Bind to map to capture EVERYTHING sent by frontend
 	var payload map[string]interface{}
@@ -992,6 +1022,10 @@ func SaveData(c *gin.Context) {
 	if username == "admin" && sysConfig.AuthMode == "single" {
 		userFile = filepath.Join(config.DataDir, "data.json")
 	}
+
+	// 串行化整个读-改-写流程（详见 saveDataMu 注释）
+	saveDataMu.Lock()
+	defer saveDataMu.Unlock()
 
 	// 2. Read existing data to map to preserve EVERYTHING in file
 	var existingData map[string]interface{}
@@ -1188,9 +1222,13 @@ func ImportData(c *gin.Context) {
 
 func SaveDefault(c *gin.Context) {
 	username := c.GetString("username")
-	// Only allow authenticated users (and maybe check for admin if needed, but for now just auth)
+	// 保存全局默认模板会影响所有新用户，必须为管理员
 	if username == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	if username != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 		return
 	}
 
@@ -1308,7 +1346,12 @@ func UpdateSystemConfig(c *gin.Context) {
 	}
 
 	// 全局访问码（隐藏分组保护）：仅管理员可设置/修改/清除（提交空字符串即清除）
-	if v, ok := payload["accessCode"].(string); ok {
+	if raw, exists := payload["accessCode"]; exists {
+		v, ok := raw.(string)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "accessCode must be a string"})
+			return
+		}
 		v = strings.TrimSpace(v)
 		if len(v) > 128 {
 			v = v[:128]
@@ -1316,11 +1359,19 @@ func UpdateSystemConfig(c *gin.Context) {
 		sysConfig.AccessCode = v
 	}
 
-	// 解锁有效期（小时）：0 = 会话内有效；非法值回退为文件既有设置
+	// 解锁有效期（小时）：0 = 会话内有效；非法类型或越界值一律返回 400，避免静默忽略
+	// 导致管理员误以为设置已生效。
 	if raw, exists := payload["accessUnlockTTL"]; exists {
-		if f, ok := raw.(float64); ok && f >= 0 && f <= 8760 {
-			sysConfig.AccessUnlockTTL = int(f)
+		f, ok := raw.(float64)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "accessUnlockTTL must be a number"})
+			return
 		}
+		if f < 0 || f > 8760 || f != float64(int(f)) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "accessUnlockTTL must be an integer in [0, 8760]"})
+			return
+		}
+		sysConfig.AccessUnlockTTL = int(f)
 	}
 
 	if sysConfig.AuthMode != oldAuthMode {
