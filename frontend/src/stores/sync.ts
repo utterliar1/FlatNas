@@ -1,4 +1,4 @@
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { defineStore } from "pinia";
 import { useWebSocket } from "@vueuse/core";
 import pako from "pako";
@@ -363,7 +363,10 @@ export const useSyncStore = defineStore("sync", () => {
     widgetsStore.updateLastSavedLayout();
     cacheStore.saveToCache(buildCacheSnapshot(data));
     saveStore.hasUnsavedChanges = false;
-    isApplyingServerData = false;
+    // 不能在此同步复位：上面的赋值会触发 flush:'pre' 的深度 watcher，而它们在微任务里
+    // 执行，届时若标记已复位，会把「应用服务端数据」误判为用户编辑 → markDirty →
+    // 触发无意义的自动保存（写风暴 / 多端版本乒乓）。推迟到 nextTick（watcher 之后）复位。
+    nextTick(() => { isApplyingServerData = false; });
   };
 
   // ---- fetchAndProcessData ----
@@ -374,6 +377,15 @@ export const useSyncStore = defineStore("sync", () => {
       const headers: Record<string, string> = {};
       if (auth.token) headers["Authorization"] = `Bearer ${auth.token}`;
       const res = await fetch(`/api/data`, { headers });
+      if (res.status === 401) {
+        // 令牌失效（过期/被清除）：切回访客态并清除无效凭据，避免一直以登录身份
+        // 拿到 401 却静默返回、界面卡在「已登录但无数据」。
+        auth.token = "";
+        auth.username = "";
+        localStorage.removeItem("flat-nas-token");
+        localStorage.removeItem("flat-nas-username");
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
       if (configStore.isServerSyncLocked && saveStore.hasUnsavedChanges) return;
@@ -686,7 +698,20 @@ export const useSyncStore = defineStore("sync", () => {
     localStorage.removeItem("flat-nas-token");
     localStorage.removeItem("flat-nas-username");
     localStorage.removeItem("flat-nas-data-cache");
+    // 清空内存中的用户态数据，避免上一账号的分组/组件/配置在读回访客数据前
+    // 短暂残留（或被后续逻辑误用）。期间抑制脏标记，防止清空动作本身触发自动保存。
+    isApplyingServerData = true;
+    groupsStore.groups = [];
+    groupsStore.sharedGroups = [];
+    groupsStore.groupOrder = [];
+    widgetsStore.widgets = [];
+    rssFeeds.value = [];
+    rssCategories.value = [];
+    saveStore.hasUnsavedChanges = false;
+    saveStore.hasPendingSave = false;
+    saveStore.conflictState.show = false;
     await init();
+    nextTick(() => { isApplyingServerData = false; });
   };
 
   // ---- saveData wrapper ----
@@ -719,7 +744,10 @@ export const useSyncStore = defineStore("sync", () => {
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => {
       autoSaveTimer = null;
-      if (!saveStore.hasUnsavedChanges || saveStore.isSaving || saveStore.conflictState.show) return;
+      if (!saveStore.hasUnsavedChanges || saveStore.conflictState.show) return;
+      // 正在保存（可能是上一次自动/手动保存）：不丢弃本次欠账，改为稍后重排，
+      // 否则这轮改动要等下一次用户操作才会落盘。
+      if (saveStore.isSaving) { scheduleAutosave(); return; }
       void saveData();
     }, delay * 1000);
   };

@@ -19,6 +19,7 @@ import { useWallpaperRotation } from "../composables/useWallpaperRotation";
 import { useDevice } from "../composables/useDevice";
 import { useIconPreloader } from "../composables/useIconPreloader";
 import { generateLayout, type GridLayoutItem } from "../utils/gridLayout";
+import { genId } from "../utils/id";
 import type { NavItem, WidgetConfig, NavGroup } from "@/types";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
 import { isInternalNetwork, getNetworkConfig, computeEffectiveNetworkMode } from "@/utils/network";
@@ -1514,7 +1515,7 @@ const handleSave = async (payload: { item: NavItem; groupId?: string }) => {
         store.updateItem(payload.item);
       }
     } else if (payload.groupId) {
-      store.addItem({ ...payload.item, id: Date.now().toString() }, payload.groupId);
+      store.addItem({ ...payload.item, id: genId() }, payload.groupId);
     }
   }
 
@@ -2789,7 +2790,7 @@ onUnmounted(() => {
                 role="searchbox"
                 aria-label="搜索框"
                 autocomplete="off"
-                autofocus
+                :autofocus="!isMobile"
                 class="h-full pl-6 pr-4 rounded-full bg-transparent border-0 outline-none flatnas-search-input"
                 :style="{ width: 'calc(100% - 33.75%)' }"
                 :placeholder="
@@ -2875,12 +2876,12 @@ onUnmounted(() => {
 
         <VueDraggable
           v-if="isWebPaginationMode"
-          v-model="store.groups"
+          :model-value="displayGroups"
           class="mb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide py-1"
           :group="{ name: 'pagination-groups', pull: false, put: false }"
           :sort="isEditMode && !searchText"
           :disabled="!isEditMode || !!searchText"
-          @end="() => store.markDirty()"
+          @end="onGroupDragEnd"
         >
           <button
             v-for="group in displayGroups"
@@ -3165,7 +3166,7 @@ onUnmounted(() => {
           :move="checkMove"
           :animation="300"
           :forceFallback="true"
-          :disabled="!isEditMode || isWebPaginationMode"
+          :disabled="!isEditMode || isWebPaginationMode || !!searchText"
           @end="onGroupDragEnd"
           class="pb-20 flex flex-col transition-all"
           :style="{ gap: (store.appConfig.groupGap ?? 30) + 'px' }"

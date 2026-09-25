@@ -130,6 +130,18 @@ export const useGroupsStore = defineStore("groups", () => {
     groupOrder.value = rebuildOrderPreservingInvisible(list.map((g) => g.id));
   };
 
+  // 按「自己的分组的完整新顺序」重排 groups，并同步维护混排偏好 groupOrder。
+  // 用于侧边栏等「只展示自己的分组、但需跟随混排顺序」的场景：传入的 orderedOwnIds
+  // 只含自己的分组 id，rebuildOrderPreservingInvisible 会把共享分组/隐藏分组按原有
+  // 相对位置补回完整顺序。
+  const setOwnGroupOrder = (orderedOwnIds: string[]) => {
+    const pos = new Map(orderedOwnIds.map((id, i) => [id, i]));
+    const arr = [...groups.value];
+    arr.sort((a, b) => (pos.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (pos.get(b.id) ?? Number.MAX_SAFE_INTEGER));
+    groups.value = arr;
+    groupOrder.value = rebuildOrderPreservingInvisible(groups.value.map((g) => g.id));
+  };
+
   return {
     groups,
     sharedGroups,
@@ -145,5 +157,6 @@ export const useGroupsStore = defineStore("groups", () => {
     deleteItem,
     reorderGroups,
     applyMergedGroupOrder,
+    setOwnGroupOrder,
   };
 });

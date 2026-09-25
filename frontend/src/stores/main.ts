@@ -147,6 +147,7 @@ export const useMainStore = defineStore("main", () => {
   const cleanInvalidGroups = groupsStore.cleanInvalidGroups;
   const reorderGroups = groupsStore.reorderGroups;
   const applyMergedGroupOrder = groupsStore.applyMergedGroupOrder;
+  const setOwnGroupOrder = groupsStore.setOwnGroupOrder;
 
   // ---- Widgets ----
   const widgets = computed({
@@ -317,6 +318,7 @@ export const useMainStore = defineStore("main", () => {
     cleanInvalidGroups,
     reorderGroups,
     applyMergedGroupOrder,
+    setOwnGroupOrder,
     // Widgets
     widgets,
     mergedWidgets,

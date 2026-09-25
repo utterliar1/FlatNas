@@ -252,13 +252,21 @@ export const useSaveStore = defineStore("save", () => {
 
               if (canAutoMerge) {
                 // 自动合并成功，用合并后的数据重新保存
-                const mergedBody = {
+                const bodyAppConfig =
+                  body.appConfig && typeof body.appConfig === "object"
+                    ? (body.appConfig as Record<string, unknown>)
+                    : {};
+                const mergedBody: Record<string, unknown> = {
                   ...body,
                   widgets: mergedWidgets.map((w: any) => stripWidgetUiState(w)),
                   groups: rd.groups || body.groups,
                   version: v,
                 };
-                if (rd.appConfig) mergedBody.appConfig = { ...body.appConfig, ...rd.appConfig };
+                if (rd.appConfig)
+                  mergedBody.appConfig = {
+                    ...bodyAppConfig,
+                    ...(rd.appConfig as Record<string, unknown>),
+                  };
                 const mr = await fetch("/api/save", { method: "POST", headers: cacheStore.getHeaders(), body: JSON.stringify(mergedBody) });
                 if (mr.ok) {
                   conflictState.value.show = false; hasUnsavedChanges.value = false;
@@ -325,6 +333,9 @@ export const useSaveStore = defineStore("save", () => {
         try {
           const fallbackBody: Record<string, unknown> = {
             groups: groupsStore.groups,
+            // 与正常保存路径保持一致：断网降级保存也必须带上 groupOrder，
+            // 否则离线期间的排序偏好会在队列回放时丢失。
+            groupOrder: Array.isArray(groupsStore.groupOrder) ? groupsStore.groupOrder : [],
             widgets: widgetsStore.widgets.map((w) => stripWidgetUiState(w)),
             appConfig: stripForceNetworkMode(configStore.appConfig as unknown as Record<string, unknown>),
             rssFeeds: rssFeeds.value,

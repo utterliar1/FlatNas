@@ -7,6 +7,7 @@ import { useMainStore } from "../stores/main";
 import { useDevice } from "../composables/useDevice";
 import type { BookmarkCategory, BookmarkItem } from "@/types";
 import { parseBookmarks } from "../utils/bookmark";
+import { genId } from "../utils/id";
 import { VueDraggable } from "vue-draggable-plus";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
 
@@ -77,6 +78,35 @@ const scrollToGroup = (groupId: string) => {
   }
 };
 
+// 侧边栏分组展示顺序跟随混排偏好 groupOrder：自己的分组按其在 groupOrder 中的
+// 相对位置排序（未出现在偏好中的分组保持原相对顺序、排在已排序分组之后）。
+const sidebarGroups = computed(() => {
+  const order = store.groupOrder || [];
+  const pos = new Map<string, number>();
+  order.forEach((id, i) => pos.set(id, i));
+  return [...store.groups].sort((a, b) => {
+    const pa = pos.has(a.id) ? pos.get(a.id)! : Number.MAX_SAFE_INTEGER;
+    const pb = pos.has(b.id) ? pos.get(b.id)! : Number.MAX_SAFE_INTEGER;
+    return pa - pb;
+  });
+});
+
+// 侧边栏分组拖拽排序：显式调用 store 方法写回（原来用 v-model 绑定只读 computed
+// store.groups，写入被 Vue 静默丢弃，拖拽排序完全无效）。按展示顺序（sidebarGroups）
+// 计算新的「自己分组」顺序后交给 store 重排，并保留共享分组/隐藏分组的槽位。
+const onSidebarDragEnd = (evt: { oldIndex?: number; newIndex?: number }) => {
+  const oldIndex = evt.oldIndex ?? -1;
+  const newIndex = evt.newIndex ?? -1;
+  if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+  const list = [...sidebarGroups.value];
+  if (oldIndex >= list.length || newIndex >= list.length) return;
+  const [moved] = list.splice(oldIndex, 1);
+  if (!moved) return;
+  list.splice(newIndex, 0, moved);
+  store.setOwnGroupOrder(list.map((g) => g.id));
+  store.markDirty();
+};
+
 const activeCategory = ref<BookmarkCategory | null>(null);
 const activePath = ref<BookmarkCategory[]>([]);
 
@@ -138,7 +168,7 @@ const confirmAddCategory = () => {
   if (!store.isLogged || !newCategoryTitle.value) return;
 
   const newCat: BookmarkCategory = {
-    id: Date.now().toString(),
+    id: genId(),
     title: newCategoryTitle.value,
     collapsed: false,
     children: [],
@@ -151,7 +181,7 @@ const confirmAddCategory = () => {
     let widget = store.widgets.find((w) => w.type === "bookmarks");
     if (!widget) {
       const newWidget = {
-        id: "w" + Date.now(),
+        id: genId("w"),
         type: "bookmarks",
         enable: true,
         isPublic: false,
@@ -299,7 +329,7 @@ const handleFileUpload = (event: Event) => {
 
         if (!widget) {
           const newWidget = {
-            id: "w" + Date.now(),
+            id: genId("w"),
             type: "bookmarks",
             enable: true,
             isPublic: false,
@@ -334,7 +364,7 @@ const handleFileUpload = (event: Event) => {
             );
             if (!defaultCat) {
               defaultCat = {
-                id: Date.now().toString() + "_default",
+                id: genId() + "_default",
                 title: "默认收藏",
                 collapsed: false,
                 children: [],
@@ -662,7 +692,7 @@ const confirmAddBookmark = async () => {
 
   if (!widget) {
     const newWidget = {
-      id: "w" + Date.now(),
+      id: genId("w"),
       type: "bookmarks",
       enable: true,
       isPublic: false,
@@ -683,7 +713,7 @@ const confirmAddBookmark = async () => {
     targetCategory = categories.find((c) => c.title === "默认收藏");
     if (!targetCategory) {
       targetCategory = {
-        id: Date.now().toString(),
+        id: genId(),
         title: "默认收藏",
         collapsed: false,
         children: [],
@@ -723,7 +753,7 @@ const confirmAddBookmark = async () => {
   }
 
   targetCategory.children.push({
-    id: Date.now().toString(),
+    id: genId(),
     title: title,
     url: finalUrl,
     icon: icon,
@@ -1392,18 +1422,18 @@ const toggle = () => {
       <template v-else>
         <VueDraggable
           v-if="store.groups.length > 0 && store.isLogged"
-          v-model="store.groups"
+          :model-value="store.groups"
           class="space-y-1"
           :animation="150"
           :forceFallback="true"
           :fallback-on-body="true"
           :disabled="isCollapsed"
           handle=".drag-handle"
-          @end="store.markDirty()"
+          @end="onSidebarDragEnd"
           :class="{ 'flex flex-col items-center w-full': isCollapsed }"
         >
           <button
-            v-for="group in store.groups"
+            v-for="group in sidebarGroups"
             :key="group.id"
             @click="scrollToGroup(group.id)"
             class="w-full flex items-center transition-all group relative text-left text-black bg-white/10 backdrop-blur-md border border-white/15 hover:bg-white/25 hover:shadow-md hover:-translate-y-[1px] active:translate-y-0 active:bg-white/15"
@@ -1465,7 +1495,7 @@ const toggle = () => {
           :class="{ 'flex flex-col items-center w-full': isCollapsed }"
         >
           <button
-            v-for="group in store.groups"
+            v-for="group in sidebarGroups"
             :key="group.id"
             @click="scrollToGroup(group.id)"
             class="w-full flex items-center transition-all group relative text-left text-black bg-white/10 backdrop-blur-md border border-white/15 hover:bg-white/25 hover:shadow-md hover:-translate-y-[1px] active:translate-y-0 active:bg-white/15"

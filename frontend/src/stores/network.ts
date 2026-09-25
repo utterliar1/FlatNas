@@ -381,6 +381,11 @@ export const useNetworkStore = defineStore("network", () => {
     if (typeof window !== "undefined") {
       window.addEventListener("beforeunload", () => { configStore.isPageUnloading = true; });
       window.addEventListener("pagehide", () => { configStore.isPageUnloading = true; });
+      // bfcache 场景：页面被「返回」恢复时并不重新执行脚本，若不复位该标记，
+      // isPageUnloading 会永久为 true，导致此后所有保存（save.ts 两处短路）静默失效。
+      window.addEventListener("pageshow", (e) => {
+        if (e.persisted) configStore.isPageUnloading = false;
+      });
     }
   };
 
