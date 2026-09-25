@@ -4,9 +4,11 @@ import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
 import cityData from "@/assets/city-data.json";
 import { useResumeRefresh } from "@/composables/useResumeRefresh";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
+const { t, tm } = useI18n();
 
 // City Data Types
 interface CityNode {
@@ -161,6 +163,7 @@ const weatherType = computed(() => {
   const w = liveWeather.value?.weather || weatherData.value?.casts[0]?.dayweather || "";
   if (!w) return "default";
 
+  // API 返回值匹配：不可 i18n
   if (w.includes("晴")) return "sunny";
   if (w.includes("多云")) return "cloudy";
   if (w.includes("阴")) return "overcast";
@@ -208,7 +211,7 @@ const init = async () => {
   } else if (store.isLogged) {
     isConfiguring.value = true;
   } else {
-    errorMsg.value = "请登录配置天气组件";
+    errorMsg.value = t("settings.amapWeatherConfig.loginRequired");
   }
 
   // Init selectors
@@ -221,7 +224,7 @@ const fetchWeather = async () => {
   const apiKey = localKey || globalKey;
 
   if (!apiKey) {
-    errorMsg.value = "请配置 API Key";
+    errorMsg.value = t("settings.amapWeatherConfig.configApiKey");
     return;
   }
 
@@ -239,7 +242,7 @@ const fetchWeather = async () => {
         city = ipData.adcode;
         // Optionally save detected city? No, keep it dynamic as requested "auto use IP"
       } else {
-        throw new Error(ipData.info || "IP 定位失败");
+        throw new Error(ipData.info || t("settings.amapWeatherConfig.ipLocateFailed"));
       }
     }
 
@@ -265,7 +268,7 @@ const fetchWeather = async () => {
       if (cached?.forecast) {
         weatherData.value = cached.forecast;
       } else {
-        errorMsg.value = forecastData.info || "获取天气预报失败";
+        errorMsg.value = forecastData.info || t("settings.amapWeatherConfig.weatherFetchFailed");
       }
     }
 
@@ -287,10 +290,10 @@ const fetchWeather = async () => {
         if (cached.live) liveWeather.value = cached.live;
         errorMsg.value = "";
       } else {
-        errorMsg.value = e.message || "网络请求失败";
+        errorMsg.value = e.message || t("settings.amapWeatherConfig.networkFailed");
       }
     } else {
-      errorMsg.value = e.message || "网络请求失败";
+      errorMsg.value = e.message || t("settings.amapWeatherConfig.networkFailed");
     }
   } finally {
     loading.value = false;
@@ -299,7 +302,7 @@ const fetchWeather = async () => {
 
 const saveConfig = async () => {
   if (!store.isLogged) {
-    alert("请先登录再配置天气组件");
+    alert(t("settings.amapWeatherConfig.loginToConfig"));
     return;
   }
   // eslint-disable-next-line vue/no-mutating-props
@@ -317,17 +320,12 @@ const saveConfig = async () => {
   fetchWeather();
 };
 
-const weekMap: Record<string, string> = {
-  "1": "周一",
-  "2": "周二",
-  "3": "周三",
-  "4": "周四",
-  "5": "周五",
-  "6": "周六",
-  "7": "周日",
+// 周几映射：API 返回的是数字周数（"1"~"7"），映射为展示文案，可 i18n
+// 复用已有词条 settings.weekdays（索引 0=周日 … 6=周六）
+const formatWeek = (week: string) => {
+  const list = tm("settings.weekdays") as unknown as string[];
+  return list[Number(week) % 7] || week;
 };
-
-const formatWeek = (week: string) => weekMap[week] || week;
 
 let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -416,16 +414,16 @@ watch(
       v-if="isConfiguring"
       class="absolute inset-0 z-20 bg-white/90 p-4 flex flex-col gap-2 overflow-y-auto"
     >
-      <h3 class="font-bold text-gray-700">配置高德天气</h3>
+      <h3 class="font-bold text-gray-700">{{ t("settings.amapWeatherConfig.title") }}</h3>
       <div>
-        <label class="text-xs text-gray-500">选择城市</label>
+        <label class="text-xs text-gray-500">{{ t("settings.amapWeatherConfig.selectCity") }}</label>
         <div class="flex flex-col gap-2">
           <select
             v-model="selectedProvince"
             @change="handleProvinceChange"
             class="w-full border rounded px-2 py-1 text-sm bg-white text-gray-900"
           >
-            <option value="">请选择省份</option>
+            <option value="">{{ t("settings.amapWeatherConfig.selectProvince") }}</option>
             <option v-for="p in provinces" :key="p.value" :value="p.value">
               {{ p.label }}
             </option>
@@ -437,7 +435,7 @@ watch(
             @change="handleCityChange"
             class="w-full border rounded px-2 py-1 text-sm bg-white text-gray-900"
           >
-            <option value="">请选择城市</option>
+            <option value="">{{ t("settings.amapWeatherConfig.selectCityOpt") }}</option>
             <option v-for="c in cities" :key="c.value" :value="c.value">
               {{ c.label }}
             </option>
@@ -449,7 +447,7 @@ watch(
             @change="handleDistrictChange"
             class="w-full border rounded px-2 py-1 text-sm bg-white text-gray-900"
           >
-            <option value="">请选择区县</option>
+            <option value="">{{ t("settings.amapWeatherConfig.selectDistrict") }}</option>
             <option v-for="d in districts" :key="d.value" :value="d.value">
               {{ d.label }}
             </option>
@@ -457,19 +455,23 @@ watch(
         </div>
 
         <div class="text-[10px] text-gray-400 mt-1">
-          当前 Adcode: {{ configForm.city || "自动定位" }}
+          {{
+            t("settings.amapWeatherConfig.currentAdcode", {
+              code: configForm.city || t("settings.amapWeatherConfig.autoLocate"),
+            })
+          }}
         </div>
       </div>
       <!-- API Key input removed as requested, using global setting -->
       <div class="flex gap-2 mt-2">
         <button @click="saveConfig" class="bg-blue-500 text-white px-3 py-1 rounded text-sm flex-1">
-          保存
+          {{ t("common.common.save") }}
         </button>
         <button
           @click="isConfiguring = false"
           class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm"
         >
-          取消
+          {{ t("common.common.cancel") }}
         </button>
       </div>
     </div>
@@ -504,7 +506,7 @@ watch(
       </button>
 
       <div v-if="loading" class="flex-1 flex items-center justify-center text-gray-500 text-sm">
-        加载中...
+        {{ t("common.common.loading") }}
       </div>
 
       <div
@@ -517,7 +519,11 @@ watch(
       <div v-else-if="weatherData" class="flex-1 flex flex-col gap-1 overflow-auto scrollbar-hide">
         <!-- Live Weather Section -->
         <p class="text-xs text-gray-600 pl-2">
-          {{ liveWeather?.reporttime || weatherData?.reporttime?.split(" ")[0] }} 发布
+          {{
+            t("settings.amapWeatherConfig.published", {
+              time: liveWeather?.reporttime || weatherData?.reporttime?.split(" ")[0],
+            })
+          }}
         </p>
         <div
           v-if="liveWeather"
@@ -525,7 +531,7 @@ watch(
         >
           <div class="flex flex-col items-start">
             <h2 class="text-lg font-bold text-gray-800 drop-shadow-sm leading-none">
-              {{ weatherData?.city || "未知城市" }}
+              {{ weatherData?.city || t("settings.amapWeatherConfig.unknownCity") }}
             </h2>
           </div>
           <div class="flex flex-col items-end">
@@ -534,8 +540,15 @@ watch(
               <span class="text-sm text-gray-700 font-medium">{{ liveWeather.weather }}</span>
             </div>
             <div class="flex items-center gap-2 text-xs text-gray-600 mt-1">
-              <span>湿度 {{ liveWeather.humidity }}%</span>
-              <span>{{ liveWeather.winddirection }}风 {{ liveWeather.windpower }}级</span>
+              <span>{{
+                t("settings.amapWeatherConfig.humidity", { percent: liveWeather.humidity })
+              }}</span>
+              <span>{{
+                t("settings.amapWeatherConfig.windFormat", {
+                  dir: liveWeather.winddirection,
+                  power: liveWeather.windpower,
+                })
+              }}</span>
             </div>
           </div>
         </div>
@@ -547,7 +560,7 @@ watch(
         >
           <div class="flex flex-col w-12">
             <span class="font-medium text-gray-700">{{
-              index === 0 ? "今天" : formatWeek(cast.week)
+              index === 0 ? t("settings.amapWeatherConfig.today") : formatWeek(cast.week)
             }}</span>
             <span class="text-[10px] text-gray-500">{{ cast.date.slice(5) }}</span>
           </div>
@@ -555,7 +568,10 @@ watch(
             <span class="text-gray-700 truncate w-full text-center">{{
               cast.dayweather === cast.nightweather
                 ? cast.dayweather
-                : `${cast.dayweather}转${cast.nightweather}`
+                : t("settings.amapWeatherConfig.dayNightFormat", {
+                    day: cast.dayweather,
+                    night: cast.nightweather,
+                  })
             }}</span>
           </div>
           <div class="flex flex-col items-end flex-1">

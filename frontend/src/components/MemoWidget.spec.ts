@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MemoWidget from './MemoWidget.vue';
 import type { WidgetConfig } from '../types';
 import { nextTick } from 'vue';
+import { createAppI18n } from '@/plugins/i18n';
 
 // Hoist mocks
 const { mockPut, mockGet, mockFetch } = vi.hoisted(() => {
@@ -81,7 +82,8 @@ describe('MemoWidget', () => {
     return mount(MemoWidget, {
       props: widgetProps,
       global: {
-        // No plugins needed since we mocked the store module
+        // 组件已接线 useI18n()，必须给 mount 装上 i18n 实例（默认 zh-CN，断言文案不变）
+        plugins: [createAppI18n()],
       }
     });
   };

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
 import { ref, nextTick, watch, onMounted, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useStorage } from "@vueuse/core";
 import type { WidgetConfig, BookmarkItem, BookmarkCategory } from "@/types";
 import { useMainStore } from "../stores/main";
@@ -11,6 +12,7 @@ import { VueDraggable } from "vue-draggable-plus";
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
+const { t } = useI18n();
 
 const searchQuery = ref("");
 
@@ -108,12 +110,15 @@ const handleFileUpload = (event: Event) => {
 
         // 2. 独立书签添加到“默认收藏”
         if (links.length > 0) {
+          // 数据标识：写入用户数据并持久化，禁止 i18n
+          const DEFAULT_BOOKMARK_CATEGORY = "默认收藏";
           let defaultCat = (props.widget.data as BookmarkCategory[]).find(
-            (c) => c.title === "默认收藏",
+            (c) => c.title === DEFAULT_BOOKMARK_CATEGORY,
           );
           if (!defaultCat) {
             defaultCat = {
               id: Date.now().toString() + "_default",
+              // 数据标识：写入用户数据并持久化，禁止 i18n
               title: "默认收藏",
               collapsed: false,
               children: [],
@@ -123,18 +128,18 @@ const handleFileUpload = (event: Event) => {
           defaultCat.children.push(...links);
         }
 
-        alert(`成功导入 ${newItems.length} 个书签`);
+        alert(t("settings.bookmarkWidget.importSuccess", { count: newItems.length }));
         store.markDirty();
         await store.saveSingleWidget(props.widget.id, {
           data: props.widget.data,
           enable: props.widget.enable,
         });
       } else {
-        alert("未找到可导入的书签");
+        alert(t("settings.bookmarkWidget.importNone"));
       }
     } catch (error) {
       console.error("Import failed", error);
-      alert("导入失败，请检查文件格式");
+      alert(t("settings.bookmarkWidget.importFailed"));
     }
   };
   reader.readAsText(file);
@@ -167,7 +172,7 @@ const confirmAddCategory = async () => {
       enable: props.widget.enable,
     });
     if (!success) {
-      alert("添加分类失败，请重试");
+      alert(t("settings.bookmarkWidget.addCategoryFailed"));
       props.widget.data.pop();
       await store.fetchData();
     }
@@ -311,7 +316,7 @@ const deleteItem = async (catId: string, linkId?: string) => {
   if (catIndex === -1) return;
 
   if (linkId) {
-    if (!confirm("确定删除这个书签吗？")) return;
+    if (!confirm(t("settings.bookmarkWidget.confirmDelete"))) return;
     const childIndex = props.widget.data[catIndex].children.findIndex(
       (c: BookmarkItem | BookmarkCategory) => c.id === linkId,
     );
@@ -327,7 +332,7 @@ const deleteItem = async (catId: string, linkId?: string) => {
     enable: props.widget.enable,
   });
   if (!success) {
-    alert("删除失败，请重试");
+    alert(t("settings.bookmarkWidget.deleteFailed"));
     await store.fetchData();
   }
 };
@@ -338,7 +343,7 @@ const openUrl = (url: string) => {
   // Security Rule: Intercept unlogged users
   if (!store.isLogged) {
     if (isInternalDomain(url)) {
-      alert("为了您的安全，未登录状态下禁止访问内网资源");
+      alert(t("settings.bookmarkWidget.loginRequiredForLan"));
       return;
     }
     const targetUrl = processSecurityUrl(url);
@@ -376,13 +381,13 @@ const handleScrollIsolation = (e: WheelEvent) => {
       class="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/10 shrink-0"
     >
       <div class="font-bold text-sm flex items-center gap-2 text-white">
-        📑 收藏夹
+        {{ t("settings.bookmarkWidget.title") }}
       </div>
       <div class="flex-1 mx-4">
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="搜索书签..."
+          :placeholder="t('settings.bookmarkWidget.searchPlaceholder')"
           class="w-full text-xs px-2 py-1 rounded-md border border-white/20 focus:outline-none focus:border-white/40 bg-white/10 text-white placeholder-white/50"
         />
       </div>
@@ -400,15 +405,15 @@ const handleScrollIsolation = (e: WheelEvent) => {
         <button
           @click="triggerImport"
           class="text-xs bg-white/10 text-white/70 px-2 py-0.5 rounded hover:bg-white/20"
-          title="导入浏览器收藏夹HTML"
+          :title="t('settings.bookmarkWidget.importTooltip')"
         >
-          导入
+          {{ t("settings.bookmarkWidget.importBtn") }}
         </button>
         <button
           @click="addCategory"
           class="text-xs bg-white/10 text-white/70 px-2 py-0.5 rounded hover:bg-white/20"
         >
-          + 分类
+          {{ t("settings.bookmarkWidget.addCategory") }}
         </button>
       </div>
     </div>
@@ -418,12 +423,14 @@ const handleScrollIsolation = (e: WheelEvent) => {
         v-if="isAddingCategory"
         class="mb-4 p-3 bg-white/5 rounded-xl border border-white/10 animate-fade-in min-w-0 w-full"
       >
-        <div class="text-xs font-bold text-white/80 mb-2">添加新分类</div>
+        <div class="text-xs font-bold text-white/80 mb-2">
+          {{ t("settings.bookmarkWidget.addCategoryTitle") }}
+        </div>
         <div class="flex gap-2 items-center">
           <input
             ref="categoryInputRef"
             v-model="newCategoryTitle"
-            placeholder="分类名称"
+            :placeholder="t('settings.bookmarkWidget.categoryNamePlaceholder')"
             class="min-w-0 flex-1 text-sm px-3 py-2 rounded-lg border bg-white/10 text-white placeholder-white/50 focus:outline-none focus:border-white/40"
             @keyup.enter="confirmAddCategory"
           />
@@ -431,13 +438,13 @@ const handleScrollIsolation = (e: WheelEvent) => {
             @click="confirmAddCategory"
             class="text-white text-xs px-4 py-2 rounded-lg hover:bg-white/30 whitespace-nowrap bg-white/20"
           >
-            确定
+            {{ t("common.common.ok") }}
           </button>
           <button
             @click="cancelAddCategory"
             class="text-white/70 text-xs px-4 py-2 rounded-lg hover:bg-white/20 whitespace-nowrap bg-white/10"
           >
-            取消
+            {{ t("common.common.cancel") }}
           </button>
         </div>
       </div>
@@ -463,13 +470,13 @@ const handleScrollIsolation = (e: WheelEvent) => {
               @click="startAdd($event, cat)"
               class="text-white/70 hover:text-white text-xs font-bold"
             >
-              + 添加
+              {{ t("settings.bookmarkWidget.add") }}
             </button>
             <button
               @click.stop="deleteItem(cat.id)"
               class="text-white/50 hover:text-white/80 text-xs"
             >
-              删除分类
+              {{ t("settings.bookmarkWidget.deleteCategory") }}
             </button>
           </div>
         </div>
@@ -528,14 +535,14 @@ const handleScrollIsolation = (e: WheelEvent) => {
                 <button
                   @click.stop="startEdit($event, cat, link as BookmarkItem)"
                   class="text-white/60 hover:text-white px-1 py-0.5 text-xs"
-                  title="编辑"
+                  :title="t('common.common.edit')"
                 >
                   ✎
                 </button>
                 <button
                   @click.stop="deleteItem(cat.id, link.id)"
                   class="text-white/50 hover:text-white/80 px-1 py-0.5 text-xs"
-                  title="删除"
+                  :title="t('common.common.delete')"
                 >
                   ×
                 </button>
@@ -547,7 +554,7 @@ const handleScrollIsolation = (e: WheelEvent) => {
             v-if="(cat.children || []).length === 0 && activeCategoryId !== cat.id"
             class="text-sm text-white/50 py-2 px-4 border border-dashed border-white/10 rounded-lg select-none"
           >
-            (空文件夹)
+            {{ t("settings.bookmarkWidget.emptyFolder") }}
           </div>
         </div>
       </div>
@@ -562,13 +569,17 @@ const handleScrollIsolation = (e: WheelEvent) => {
   >
     <div>
       <div class="text-xs font-bold text-white/80 mb-2">
-        {{ editingLinkId ? "编辑书签" : "添加新书签" }}
+        {{
+          editingLinkId
+            ? t("settings.bookmarkWidget.editBookmark")
+            : t("settings.bookmarkWidget.addNewBookmark")
+        }}
       </div>
       <div class="grid grid-cols-1 gap-3 mb-3">
         <div class="flex gap-2">
           <input
             v-model="newUrl"
-            placeholder="网址 (例如: www.example.com)"
+            :placeholder="t('settings.bookmarkWidget.urlPlaceholder')"
             class="flex-1 text-sm px-3 py-2 rounded-lg border bg-white/10 text-white placeholder-white/50 focus:bg-white/10 outline-none transition-all"
             @blur="autoFetchIcon"
           />
@@ -576,18 +587,18 @@ const handleScrollIsolation = (e: WheelEvent) => {
             @click="autoFetchIcon"
             :disabled="isFetching"
             class="px-3 bg-white/10 text-white/80 text-xs rounded-lg font-bold hover:bg-white/20 transition-colors flex items-center gap-1"
-            title="自动获取标题和图标"
+            :title="t('settings.bookmarkWidget.autoFetch')"
           >
             <span
               v-if="isFetching"
               class="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"
             ></span>
-            {{ isFetching ? "获取中" : "⚡" }}
+            {{ isFetching ? t("settings.bookmarkWidget.fetching") : "⚡" }}
           </button>
         </div>
         <input
           v-model="newTitle"
-          placeholder="标题 (自动获取)"
+          :placeholder="t('settings.bookmarkWidget.titlePlaceholder')"
           class="w-full text-sm px-3 py-2 rounded-lg border bg-white/10 text-white placeholder-white/50 focus:bg-white/10 outline-none transition-all"
         />
         <div class="flex gap-2 items-center">
@@ -603,7 +614,7 @@ const handleScrollIsolation = (e: WheelEvent) => {
           </div>
           <input
             v-model="newIcon"
-            placeholder="图标地址 (自动获取)"
+            :placeholder="t('settings.bookmarkWidget.iconPlaceholder')"
             class="flex-1 text-sm px-3 py-2 rounded-lg border bg-white/10 text-white placeholder-white/50 focus:bg-white/10 outline-none transition-all"
           />
         </div>
@@ -613,13 +624,13 @@ const handleScrollIsolation = (e: WheelEvent) => {
           @click="cancelEdit"
           class="text-sm text-white/70 hover:bg-white/10 px-3 py-1.5 rounded transition-colors"
         >
-          取消
+          {{ t("common.common.cancel") }}
         </button>
         <button
           @click="confirmSubmit"
           class="text-sm bg-white/20 text-white px-4 py-1.5 rounded hover:bg-white/30 shadow-md transition-all"
         >
-          {{ editingLinkId ? "保存" : "添加" }}
+          {{ editingLinkId ? t("common.common.save") : t("common.common.add") }}
         </button>
       </div>
     </div>

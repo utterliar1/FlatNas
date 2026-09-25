@@ -3,9 +3,11 @@
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
+const { t } = useI18n();
 
 // Default style
 if (!props.widget.data) {
@@ -107,7 +109,7 @@ const hourDeg = computed(() => hours.value * 30);
     <button
       @click.stop="toggleStyle"
       class="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-black/10 active:scale-95"
-      title="切换风格"
+      :title="t('settings.clockWidget.switchStyle')"
       :class="widget.data?.style === 'digital' ? 'text-white' : 'text-gray-600'"
     >
       <svg

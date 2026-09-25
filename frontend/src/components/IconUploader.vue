@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { VueCropper } from "vue-cropper";
 import "vue-cropper/dist/index.css";
 import WallpaperLibrary from "./WallpaperLibrary.vue";
 import { useMainStore } from "../stores/main";
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -51,7 +54,7 @@ const onFileChange = (event: Event) => {
   if (!file) return;
 
   if (file.size > 5 * 1024 * 1024) {
-    alert("图片太大啦，请上传小于 5MB 的图片");
+    alert(t("settings.iconUploader.imageTooLarge"));
     return;
   }
 
@@ -137,7 +140,11 @@ const confirmCrop = () => {
       >
         <span class="text-2xl text-gray-400 mb-1 group-hover:text-blue-500">+</span>
         <span class="text-xs text-gray-500 group-hover:text-blue-600">{{
-          uploadOnly ? "点击上传" : crop ? "点击上传 / 裁剪" : "从壁纸库选择"
+          uploadOnly
+            ? t("settings.iconUploader.clickUpload")
+            : crop
+              ? t("settings.iconUploader.clickUploadOrCrop")
+              : t("settings.iconUploader.selectFromLibrary")
         }}</span>
       </div>
     </div>
@@ -152,7 +159,7 @@ const confirmCrop = () => {
         class="bg-white w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px]"
       >
         <div class="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-          <h3 class="font-bold text-gray-700">裁剪图片</h3>
+          <h3 class="font-bold text-gray-700">{{ t("settings.iconUploader.cropImage") }}</h3>
           <button @click="showCropper = false" class="text-gray-400 hover:text-gray-600 text-xl">
             &times;
           </button>
@@ -194,13 +201,13 @@ const confirmCrop = () => {
             @click="showCropper = false"
             class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors"
           >
-            取消
+            {{ t("common.common.cancel") }}
           </button>
           <button
             @click="confirmCrop"
             class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
           >
-            确认使用
+            {{ t("settings.editModal.confirmCrop") }}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { CustomScript } from "@/types";
 import { VueDraggable as Draggable } from "vue-draggable-plus";
 import { useMainStore } from "@/stores/main";
@@ -16,6 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const store = useMainStore();
+const { t } = useI18n();
 const list = ref<CustomScript[]>(props.modelValue || []);
 const activeId = ref<string | null>(null);
 const deleteConfirmId = ref<string | null>(null);
@@ -80,6 +82,7 @@ const addItem = () => {
   const id = Date.now().toString();
   list.value.push({
     id,
+    // 数据标识：写入用户数据并持久化，禁止 i18n
     name: `新脚本 ${list.value.length + 1}`,
     content: "",
     enable: true,
@@ -144,7 +147,7 @@ const toggleProxy = (item: CustomScript) => {
           d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
         />
       </svg>
-      <span class="font-bold text-lg">释放文件以添加</span>
+      <span class="font-bold text-lg">{{ t("settings.scriptManager.dropToAdd") }}</span>
     </div>
     <div class="space-y-2">
       <Draggable
@@ -191,7 +194,7 @@ const toggleProxy = (item: CustomScript) => {
               <!-- Proxy Switch -->
               <label
                 class="relative inline-flex items-center cursor-pointer mr-1"
-                title="通过本地网络"
+                :title="t('settings.scriptManager.useProxyNetwork')"
               >
                 <input
                   type="checkbox"
@@ -202,7 +205,9 @@ const toggleProxy = (item: CustomScript) => {
                 <div
                   class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-500"
                 ></div>
-                <span class="ml-1 text-xs text-gray-500 font-medium">通过本地网络</span>
+                <span class="ml-1 text-xs text-gray-500 font-medium">{{
+                  t("settings.scriptManager.useProxyNetwork")
+                }}</span>
               </label>
 
               <!-- Enable Switch -->
@@ -227,12 +232,16 @@ const toggleProxy = (item: CustomScript) => {
                     ? 'bg-red-500 text-white w-20 justify-center'
                     : 'text-gray-400 hover:text-red-500 hover:bg-red-50 w-8 justify-center'
                 "
-                :title="deleteConfirmId === element.id ? '点击确认删除' : '删除'"
+                :title="
+                  deleteConfirmId === element.id
+                    ? t('settings.scriptManager.clickToConfirmDelete')
+                    : t('common.common.delete')
+                "
               >
                 <span
                   v-if="deleteConfirmId === element.id"
                   class="text-xs font-bold whitespace-nowrap"
-                  >确认?</span
+                  >{{ t("settings.scriptManager.confirmQuestion") }}</span
                 >
                 <svg
                   v-else
@@ -274,16 +283,20 @@ const toggleProxy = (item: CustomScript) => {
           <!-- Editor Body -->
           <div v-if="activeId === element.id" class="p-4 border-t border-gray-100 space-y-3">
             <div>
-              <label class="text-xs font-bold text-gray-500 mb-1 block">名称</label>
+              <label class="text-xs font-bold text-gray-500 mb-1 block">{{
+                t("settings.scriptManager.nameLabel")
+              }}</label>
               <input
                 v-model="element.name"
                 @change="updateList"
                 class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm"
-                placeholder="脚本名称"
+                :placeholder="t('settings.scriptManager.namePlaceholder')"
               />
             </div>
             <div>
-              <label class="text-xs font-bold text-gray-500 mb-1 block">代码内容</label>
+              <label class="text-xs font-bold text-gray-500 mb-1 block">{{
+                t("settings.scriptManager.codeLabel")
+              }}</label>
               <textarea
                 v-model="element.content"
                 @change="updateList"
@@ -314,7 +327,7 @@ const toggleProxy = (item: CustomScript) => {
             d="M12 4v16m8-8H4"
           />
         </svg>
-        添加新脚本
+        {{ t("settings.scriptManager.addScript") }}
       </button>
     </div>
   </div>

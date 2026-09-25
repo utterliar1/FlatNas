@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
 import type { WidgetConfig } from "@/types";
 import { VueDraggable } from "vue-draggable-plus";
 import { useResumeRefresh } from "@/composables/useResumeRefresh";
 
 defineProps<{ widget: WidgetConfig; isEditMode?: boolean }>();
+
+const { t } = useI18n();
 
 interface HotItem {
   title: string;
@@ -14,7 +17,6 @@ interface HotItem {
 
 interface TabConfig {
   id: "weibo" | "news" | "bilibili";
-  label: string;
   icon: string;
   activeClass: string;
   barClass: string;
@@ -24,7 +26,6 @@ interface TabConfig {
 const tabs = ref<TabConfig[]>([
   {
     id: "weibo",
-    label: "微博",
     icon: "🔥",
     activeClass: "text-white bg-white/15",
     barClass: "bg-white/60",
@@ -32,7 +33,6 @@ const tabs = ref<TabConfig[]>([
   },
   {
     id: "news",
-    label: "中新网",
     icon: "🗞️",
     activeClass: "text-white bg-white/15",
     barClass: "bg-white/60",
@@ -40,13 +40,19 @@ const tabs = ref<TabConfig[]>([
   },
   {
     id: "bilibili",
-    label: "B站",
     icon: "📺",
     activeClass: "text-white bg-white/15",
     barClass: "bg-white/60",
     indexClass: "text-white bg-white/15",
   },
 ]);
+
+// Tab 标题为展示文案，用 computed 保证切换语言时重算
+const tabLabels = computed<Record<TabConfig["id"], string>>(() => ({
+  weibo: t("settings.hotWidget.weibo"),
+  news: t("settings.hotWidget.chinanews"),
+  bilibili: t("settings.hotWidget.bilibili"),
+}));
 
 // 缓存不同 Tab 的数据，避免来回切换时重复请求
 const cache = ref<Record<string, { data: HotItem[]; ts: number }>>({});
@@ -104,7 +110,9 @@ const fetchHot = async (type: "weibo" | "news" | "bilibili", force = false) => {
     if (list.value.length === 0) {
       list.value = [
         {
-          title: controller.signal.aborted ? "请求超时，请重试" : "加载失败，请重试",
+          title: controller.signal.aborted
+            ? t("settings.hotWidget.timeout")
+            : t("settings.hotWidget.failed"),
           url: "#",
           hot: "",
         },
@@ -200,7 +208,7 @@ const handleScrollIsolation = (e: WheelEvent) => {
         "
       >
         <span class="text-sm">{{ tab.icon }}</span>
-        <span>{{ tab.label }}</span>
+        <span>{{ tabLabels[tab.id] }}</span>
         <div
           v-if="activeTab === tab.id"
           class="absolute bottom-0 left-0 right-0 h-0.5"
@@ -215,7 +223,7 @@ const handleScrollIsolation = (e: WheelEvent) => {
           v-if="loading && list.length === 0"
           class="p-8 text-center text-white/60 text-xs animate-pulse"
         >
-          加载中...
+          {{ t("common.common.loading") }}
         </div>
         <div v-else class="flex flex-col py-1">
           <a
@@ -229,7 +237,7 @@ const handleScrollIsolation = (e: WheelEvent) => {
               class="text-xs font-bold min-w-[1.25rem] h-5 flex items-center justify-center rounded mt-0.5 transition-colors"
               :class="
                 index < 3
-                  ? tabs.find((t) => t.id === activeTab)?.indexClass
+                  ? tabs.find((tab) => tab.id === activeTab)?.indexClass
                   : 'text-white/60 bg-white/10'
               "
             >

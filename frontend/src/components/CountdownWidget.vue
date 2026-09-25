@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
+const { t } = useI18n();
 
 // Initialize data structure
 const initData = () => {
@@ -13,6 +15,7 @@ const initData = () => {
   if (w && !w.data) {
     w.data = {
       targetDate: "",
+      // 数据标识：写入用户数据并持久化，禁止 i18n
       title: "重要时刻",
       style: "card",
     };
@@ -30,6 +33,7 @@ const formData = ref({
 const openConfig = () => {
   const data = props.widget.data || {
     targetDate: "",
+    // 数据标识：写入用户数据并持久化，禁止 i18n
     title: "重要时刻",
     style: "card",
   };
@@ -73,11 +77,11 @@ const timeLeft = ref({ days: 0, hours: 0, minutes: 0, seconds: 0, daysCeil: 0 })
 const isExpired = ref(false);
 let timer: ReturnType<typeof setInterval> | null = null;
 
-const styles = [
-  { label: "卡片风格", value: "card" },
-  { label: "极简文字", value: "simple" },
-  { label: "霓虹光效", value: "neon" },
-];
+const styles = computed(() => [
+  { label: t("settings.countdownWidget.styleCard"), value: "card" },
+  { label: t("settings.countdownWidget.styleSimple"), value: "simple" },
+  { label: t("settings.countdownWidget.styleNeon"), value: "neon" },
+]);
 
 const isSmall = computed(
   () => (props.widget.colSpan ?? 1) <= 1 && (props.widget.rowSpan ?? 1) <= 1,
@@ -162,7 +166,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
           @mousedown.stop
         >
           <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-            <div class="font-bold text-lg">倒计时设置</div>
+            <div class="font-bold text-lg">{{ t("settings.countdownWidget.configTitle") }}</div>
             <button @click="saveConfig" class="text-gray-400 hover:text-gray-600">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -182,18 +186,18 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
           <div class="p-5 flex flex-col gap-4">
             <div>
               <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5"
-                >标题</label
+                >{{ t("settings.countdownWidget.titleLabel") }}</label
               >
               <input
                 v-model="formData.title"
                 class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                placeholder="例如：春节"
+                :placeholder="t('settings.countdownWidget.titlePlaceholder')"
               />
             </div>
 
             <div>
               <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5"
-                >目标时间</label
+                >{{ t("settings.countdownWidget.targetTime") }}</label
               >
               <input
                 type="datetime-local"
@@ -204,7 +208,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
 
             <div>
               <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5"
-                >风格</label
+                >{{ t("settings.countdownWidget.styleLabel") }}</label
               >
               <div class="grid grid-cols-3 gap-2">
                 <button
@@ -231,7 +235,11 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
               class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
               :class="{ 'opacity-60 cursor-not-allowed': store.isSaving }"
             >
-              {{ store.isSaving ? '保存中...' : '保存设置' }}
+              {{
+                store.isSaving
+                  ? t("settings.countdownWidget.saving")
+                  : t("settings.countdownWidget.saveBtn")
+              }}
             </button>
           </div>
         </div>
@@ -259,7 +267,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
           />
         </svg>
       </div>
-      <span class="text-xs font-bold text-white/90">点击配置倒计时</span>
+      <span class="text-xs font-bold text-white/90">{{ t("settings.countdownWidget.clickToConfig") }}</span>
     </div>
 
     <!-- Display Content -->
@@ -268,7 +276,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
       <button
         @click.stop="openConfig"
         class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-black/10 active:scale-95 z-20"
-        title="设置"
+        :title="t('settings.countdownWidget.settings')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -286,7 +294,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
 
       <!-- Title -->
       <div class="text-xs font-medium opacity-80 mb-1 uppercase tracking-wider truncate max-w-full">
-        {{ widget.data.title || "倒计时" }}
+        {{ widget.data.title || t("settings.countdownWidget.title") }}
       </div>
 
       <!-- Card Style -->
@@ -302,7 +310,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
           >
             {{ displayDays }}
           </div>
-          <span class="text-[10px] opacity-80 mt-0.5">天</span>
+          <span class="text-[10px] opacity-80 mt-0.5">{{ t("settings.countdownWidget.dayUnit") }}</span>
         </div>
 
         <template v-if="!isSmall">
@@ -313,7 +321,9 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
             >
               {{ formatNum(timeLeft.hours) }}
             </div>
-            <span class="text-[10px] opacity-80 mt-0.5">时</span>
+            <span class="text-[10px] opacity-80 mt-0.5">{{
+              t("settings.countdownWidget.hourUnit")
+            }}</span>
           </div>
           <div class="text-xl font-bold -mt-3">:</div>
           <div class="flex flex-col items-center">
@@ -322,7 +332,9 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
             >
               {{ formatNum(timeLeft.minutes) }}
             </div>
-            <span class="text-[10px] opacity-80 mt-0.5">分</span>
+            <span class="text-[10px] opacity-80 mt-0.5">{{
+              t("settings.countdownWidget.minuteUnit")
+            }}</span>
           </div>
         </template>
       </div>
@@ -331,9 +343,13 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
       <div v-else-if="widget.data.style === 'simple'" class="flex flex-col items-center">
         <div class="font-bold font-mono text-blue-600" :class="isSmall ? 'text-5xl' : 'text-4xl'">
           {{ displayDays
-          }}<span class="text-sm font-normal text-gray-400 ml-1" v-if="!isSmall">天</span>
+          }}<span class="text-sm font-normal text-gray-400 ml-1" v-if="!isSmall">{{
+            t("settings.countdownWidget.dayUnit")
+          }}</span>
         </div>
-        <div v-if="isSmall" class="text-xs text-gray-400">天</div>
+        <div v-if="isSmall" class="text-xs text-gray-400">
+          {{ t("settings.countdownWidget.dayUnit") }}
+        </div>
         <div v-else class="text-sm font-mono text-gray-500 mt-1">
           {{ formatNum(timeLeft.hours) }}:{{ formatNum(timeLeft.minutes) }}:{{
             formatNum(timeLeft.seconds)
@@ -369,7 +385,7 @@ const formatNum = (num: number) => num.toString().padStart(2, "0");
         v-if="isExpired"
         class="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10"
       >
-        <span class="text-xl font-bold text-white">🎉 已到达</span>
+        <span class="text-xl font-bold text-white">{{ t("settings.countdownWidget.arrived") }}</span>
       </div>
     </div>
   </div>

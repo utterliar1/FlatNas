@@ -385,7 +385,13 @@
     "fillRssUrlFirst": "追加する前にRSSアドレスを入力してください。",
     "pasteTextFirst": "インポートするRSSテキストを貼り付けてください。",
     "importResult": "{created}件追加、{updated}件更新、{skipped}件スキップ",
-    "titlePlaceholder": "タイトル"
+    "titlePlaceholder": "タイトル",
+    "feedUrlPlaceholder": "RSS アドレス",
+    "importInvalidLines": "、無効 {count} 行",
+    "importNoNewTitles": "、新しいリモートタイトルは取得できませんでした",
+    "importPlaceholder": "例：\n36Kr https://www.36kr.com/feed\nSspai,https://sspai.com/feed\nCoolshell | https://coolshell.cn/feed\nhttps://example.com/rss.xml",
+    "importTitlesUpdated": "、{count} 件の実際のタイトルを自動更新しました",
+    "newCategoryPlaceholder": "新しいカテゴリ"
   },
   "searchSettings": {
     "title": "検索エンジン設定",
@@ -644,7 +650,25 @@
     "modalConfirm": "确定",
     "note": "注",
     "statusLabel": "状态",
-    "amapApiKey": "高德 API Key"
+    "amapApiKey": "高德 API Key",
+    "autoSave10s": "変更後 10 秒（推奨）",
+    "autoSave30s": "変更後 30 秒",
+    "autoSave3s": "変更後 3 秒",
+    "autoSaveLabel": "自動保存",
+    "autoSaveOff": "オフ（手動保存のみ）",
+    "configSaveHint": "グループアイコン・順序・ウィジェット配置などの変更は上記の遅延後に自動保存されます。ページの更新や閉じる前にも未保存の変更を書き込むよう試みます。",
+    "configSaveSection": "💾 設定の保存",
+    "customWeatherSourcePlaceholder": "既定では内蔵ソースを使用。URL を入力するとカスタマイズできます",
+    "dashboardTitle": "FlatNas ダッシュボードシステム",
+    "manualSaveClean": "今すぐ保存（最新です）",
+    "manualSaveDirty": "今すぐ保存（未保存の変更あり）",
+    "qweatherConsole": "QWeather コンソール",
+    "qweatherKeyIdPlaceholder": "Key ID を入力",
+    "qweatherPrivateKeyPlaceholder": "Private Key を入力（-----BEGIN PRIVATE KEY----- の開始行と終了行を含める必要があります）",
+    "qweatherProjectIdPlaceholder": "Project ID を入力",
+    "clickToDownloadHelper": "{link} をクリックして制限を解除",
+    "qweatherGuide": "{console} にアクセスして JWT 認証情報を取得してください。",
+    "customWeatherSourceDescFull": "入力すると、そのアドレスへ直接リクエストして天気データを取得します。レスポンス形式には次を含める必要があります：{format}"
   },
   "networkIndicator": {
     "online": "オンライン",
@@ -913,19 +937,35 @@
   },
   "iconUploader": {
     "imageTooLarge": "画像が大きすぎます。5MB未満の画像をアップロードしてください。",
-    "iconLoadError": "アイコンの読み込みに失敗しました。文字にフォールバックします。"
+    "iconLoadError": "アイコンの読み込みに失敗しました。文字にフォールバックします。",
+    "clickUpload": "クリックしてアップロード",
+    "clickUploadOrCrop": "クリックしてアップロード / トリミング",
+    "cropImage": "画像をトリミング",
+    "selectFromLibrary": "壁紙ライブラリから選択"
   },
   "miniPlayer": {
     "loading": "読み込み中...",
     "noMusic": "音楽なし",
-    "fetchFailed": "取得失敗"
+    "fetchFailed": "取得失敗",
+    "next": "次の曲",
+    "paused": "一時停止中",
+    "playing": "再生中",
+    "prev": "前の曲"
   },
   "groupSelector": {
     "selectGroup": "グループ選択",
     "switchGroup": "グループ切替"
   },
   "scriptManager": {
-    "newScript": "新しいスクリプト {index}"
+    "newScript": "新しいスクリプト {index}",
+    "addScript": "新しいスクリプトを追加",
+    "clickToConfirmDelete": "クリックして削除を確定",
+    "codeLabel": "コード",
+    "confirmQuestion": "確認?",
+    "dropToAdd": "ファイルをドロップして追加",
+    "nameLabel": "名前",
+    "namePlaceholder": "スクリプト名",
+    "useProxyNetwork": "ローカルネットワーク経由"
   },
   "proxyToggle": {
     "proxy": "プロキシ"
@@ -941,7 +981,62 @@
     "uploading": "アップロード中...",
     "uploadSuccess": "アップロード成功",
     "uploadFailed": "アップロード失敗",
-    "dragToSort": "ドラッグして並べ替え"
+    "dragToSort": "ドラッグして並べ替え",
+    "apiHint1": "ここに画像 URL を直接入力するか、サードパーティのランダム壁紙 API を利用できます。",
+    "apiHintRefresh": "設定後、ページを更新するたびに API の応答に応じて異なる画像が表示される場合があります（API の挙動によります）。",
+    "apiTab": "API",
+    "applySuccess": "設定しました",
+    "applyToMobile": "モバイル壁紙に適用",
+    "applyToPc": "PC 壁紙に適用",
+    "blur": "ぼかし",
+    "blurRadius": "ぼかし半径",
+    "cannotDeleteDefault": "既定の壁紙は削除できません",
+    "customApiTitle": "カスタム壁紙 API",
+    "defaultWallpaper": "既定の壁紙",
+    "downloadToMobileLibrary": "モバイル壁紙ライブラリにダウンロード",
+    "downloadToPcLibrary": "PC 壁紙ライブラリにダウンロード",
+    "dragToSelect": "ドラッグして選択",
+    "emptyHint": "壁紙がありません。先にアップロードしてください",
+    "enableMobileWallpaper": "モバイル壁紙を有効化",
+    "enableMobileWallpaperTooltip": "オンにするとモバイル端末はモバイル壁紙を優先し、オフにすると PC 壁紙を使用します",
+    "enableRotation": "ローテーションを有効化",
+    "imageInvalid": "画像が無効になりました",
+    "imageUrlLabel": "画像 URL / API アドレス",
+    "imageUrlPlaceholder": "https://example.com/image.jpg または ランダム画像 API",
+    "jsonApiBold": "JSON 形式 API",
+    "lanApiBold": "LAN / 自前 API",
+    "largeFileConfirm": "ファイルが 10MB を超えています。メモリ使用量が増える可能性があります。アップロードを続けますか？",
+    "lockCurrentTooltip": "現在の壁紙を固定（PC とモバイルの自動ローテーションを停止します）",
+    "locked": "固定中",
+    "mask": "マスク",
+    "maskOpacity": "マスクの濃さ",
+    "minute": "分",
+    "mobilePreview": "モバイルプレビュー",
+    "mobileWallpaperEnabled": "モバイル壁紙は有効です",
+    "modeRandomTooltip": "再生方式：ランダム（ローテーション有効時のみ反映）",
+    "modeSequentialTooltip": "再生方式：順番（ローテーション有効時のみ反映）",
+    "pcPreview": "PC プレビュー",
+    "presetBing": "Bing デイリー壁紙",
+    "presetLoliconPc": "ランダム二次元 (PC)",
+    "presetLoliconPe": "ランダム二次元 (モバイル)",
+    "presetPicsum": "ランダム風景 (Picsum)",
+    "previewHint": "上のプリセットまたは更新ボタンをクリックしてプレビューを取得",
+    "random": "ランダム",
+    "refreshPreviewTooltip": "プレビューを更新 (タイムスタンプを付加)",
+    "requestFailed": "リクエストに失敗しました。ネットワークを確認してください",
+    "resolvingProxy": "プロキシ経由で取得し、壁紙の一貫性を最適化しています...",
+    "rotating": "ローテーション中",
+    "rotationIntervalMinutes": "ローテーション間隔（分）",
+    "savedToMobileLibrary": "モバイル壁紙ライブラリに保存しました",
+    "savedToPcLibrary": "PC 壁紙ライブラリに保存しました",
+    "saving": "保存中...",
+    "sequential": "順番",
+    "setAsDefault": "既定の壁紙に設定",
+    "stopAndLock": "停止して固定",
+    "tip": "ヒント",
+    "willAutoRemove": "自動的に削除されます",
+    "apiHintJson": "{jsonApi}（Unsplash/Bing など）に対応。画像リンクは自動で解析・抽出されます。",
+    "apiHintLan": "{lanApi}（http://192.168.x.x など）に対応。LAN アクセスの制限を受けません。"
   },
   "loginModal": {
     "registerTitle": "👤 新規ユーザー登録",
@@ -984,7 +1079,10 @@
     "configApiKey": "API Keyを設定してください",
     "ipLocateFailed": "IP位置情報取得失敗",
     "weatherFetchFailed": "天気予報取得失敗",
-    "networkFailed": "ネットワークリクエスト失敗"
+    "networkFailed": "ネットワークリクエスト失敗",
+    "dayNightFormat": "{day}のち{night}",
+    "loginRequired": "ログインして天気ウィジェットを設定してください",
+    "windFormat": "{dir}の風 {power}級"
   },
   "weekdays": [
     "日",
@@ -1071,7 +1169,15 @@
     "send": "送信",
     "noPreviewSupport": "このファイルタイプはプレビューに対応していません。「ダウンロード」を使用してください。",
     "placeholder": "Shift+Enterで改行",
-    "placeholderSmall": "貼り付け/ドロップ (Shift+Enter)"
+    "placeholderSmall": "貼り付け/ドロップ (Shift+Enter)",
+    "deleteFailed": "削除に失敗しました",
+    "downloadFailed": "ダウンロードに失敗しました",
+    "downloadSelected": "選択した項目をダウンロード ({count})",
+    "largeFileConfirm": "大きなファイルを検出しました（{size}）。時間がかかり、通信量やメモリを多く消費する可能性があります。ダウンロードを続けますか？",
+    "loadFailed": "読み込みに失敗しました",
+    "networkInterrupted": "ネットワークが中断しました。復旧を待っています",
+    "sendFailed": "送信に失敗しました",
+    "uploadFailed": "アップロードに失敗しました"
   },
   "calendarWidget": {
     "switchView": "ビュー切替",
@@ -1093,7 +1199,14 @@
     "journalistDay": "記者",
     "firefighterDay": "消防",
     "memorialDay": "記念",
-    "firstDay": "1日"
+    "firstDay": "1日",
+    "weekShortSun": "日",
+    "weekShortMon": "月",
+    "weekShortTue": "火",
+    "weekShortWed": "水",
+    "weekShortThu": "木",
+    "weekShortFri": "金",
+    "weekShortSat": "土"
   },
   "clockWidget": {
     "switchStyle": "スタイル切替"
@@ -1140,7 +1253,10 @@
     "clickToConfig": "クリックしてカウントダウンを設定",
     "settings": "設定",
     "title": "カウントダウン",
-    "arrived": "🎉 到達"
+    "arrived": "🎉 到達",
+    "dayUnit": "日",
+    "hourUnit": "時間",
+    "minuteUnit": "分"
   },
   "countupWidget": {
     "defaultTitle": "カウントアップ",
@@ -1202,7 +1318,12 @@
     "save": "保存",
     "saved": "保存済み",
     "switchMode": "モード切替",
-    "blankMemo": "空白メモ"
+    "blankMemo": "空白メモ",
+    "saveFailAuth": "ログイン状態が無効です",
+    "saveFailConflictData": "バージョン競合データが無効です",
+    "saveFailNetworkRetry": "ネットワークエラー、再試行中",
+    "saveFailServerPage": "サーバーが異常なページを返しました",
+    "saveFailServerStatus": "サーバーエラー（{status}）"
   },
   "clockWeatherWidget": {
     "settingsBtn": "都市設定",
@@ -1237,7 +1358,8 @@
     "chinanews": "中国新聞網",
     "loading": "読み込み中...",
     "timeout": "リクエストタイムアウト、再試行してください",
-    "failed": "読み込み失敗、再試行してください"
+    "failed": "読み込み失敗、再試行してください",
+    "bilibili": "B站"
   },
   "iframeWidget": {
     "blocked": "⚠️ アクセス拒否",
@@ -1280,11 +1402,25 @@
     "back": "戻る",
     "switchEffect": "エフェクト切替",
     "noLyrics": "歌詞なし",
-    "title": "道理魚音楽"
+    "title": "道理魚音楽",
+    "audioUnsupported": "音声ソースが非対応または権限がありません",
+    "connectFailed": "接続に失敗しました",
+    "loadFailed": "読み込みに失敗しました",
+    "noSongs": "曲がありません。API 設定またはお気に入りを確認してください",
+    "playError": "再生エラー",
+    "requestFailed": "リクエストに失敗しました",
+    "trackMissing": "曲が存在しないためスキップしました",
+    "unnamedPlaylist": "無題のプレイリスト"
   },
   "iconSelectionModal": {
     "title": "アイコン選択",
-    "loading": "読み込み中..."
+    "loading": "読み込み中...",
+    "autoSelectIn": "{n}秒後に自動選択",
+    "cancelLink": "リンク解除",
+    "loadMore": "さらに読み込む（{n} 件）",
+    "localIcons": "📁 ローカルアイコン",
+    "matchCount": "（{n} 件一致）",
+    "remoteIcons": "🌐 ネットワークアイコン"
   },
   "accessCode": {
     "titleManage": "アクセスコードの管理",
@@ -1340,5 +1476,20 @@
     "promptFull": "シンプルな HTML/CSS カードコンポーネントを書いてください。\n機能：[ここに要件を入力、例：現在の日付と一言名言を表示]\n要件：\n1. コンテナは幅高さに自動適応、内容は中央揃え。\n2. モダンでシンプルなスタイル、角丸デザイン。\n3. HTML と CSS をそれぞれ提供（JS は任意）。",
     "promptPreview": "シンプルな HTML/CSS カードコンポーネントを書いてください...",
     "editWidgetTooltip": "コンポーネントを編集"
+  },
+  "statusMonitor": {
+    "jsHeap": "JS ヒープ",
+    "keysIdle": "キー/アイドル",
+    "managed": "管理対象",
+    "objectUrl": "オブジェクト URL",
+    "unavailable": "利用不可",
+    "unmanaged": "非管理対象"
+  },
+  "memoToolbar": {
+    "bold": "太字",
+    "code": "コード",
+    "italic": "斜体",
+    "quote": "引用",
+    "unorderedList": "リスト"
   }
 }

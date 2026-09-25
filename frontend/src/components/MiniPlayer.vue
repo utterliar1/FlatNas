@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useStorage } from "@vueuse/core";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 
+const { t } = useI18n();
 const store = useMainStore();
 const isPlaying = ref(false);
 const audioRef = ref<HTMLAudioElement | null>(null);
 const musicVolume = useStorage<number>("flat-nas-music-volume", 0.7);
 const musicList = ref<string[]>([]);
-const currentSongName = ref("加载中...");
+const currentSongName = ref(t("settings.miniPlayer.loading"));
 const titleWrapRef = ref<HTMLElement | null>(null);
 const titleTextRef = ref<HTMLElement | null>(null);
 const marqueeEnabled = ref(false);
@@ -32,7 +34,11 @@ const historyIndex = ref(-1);
 
 // 🎶 智能 URL 处理
 const getMusicUrl = (fileName: string) => {
-  if (!fileName || fileName === "加载中..." || fileName === "无音乐")
+  if (
+    !fileName ||
+    fileName === t("settings.miniPlayer.loading") ||
+    fileName === t("settings.miniPlayer.noMusic")
+  )
     return undefined;
   // Support nested paths by encoding each segment separately
   const url = `/music/${fileName
@@ -61,10 +67,10 @@ const fetchMusicList = async () => {
         }, 1000);
       }
     } else {
-      currentSongName.value = "无音乐";
+      currentSongName.value = t("settings.miniPlayer.noMusic");
     }
   } catch {
-    currentSongName.value = "获取失败";
+    currentSongName.value = t("settings.miniPlayer.fetchFailed");
   }
 };
 
@@ -342,13 +348,17 @@ watch(
       <div class="flex items-center w-full pr-0">
         <span
           class="text-[12px] opacity-70 origin-left truncate w-auto mr-auto"
-          >{{ isPlaying ? "正在播放" : "已暂停" }}</span
+          >{{
+            isPlaying
+              ? t("settings.miniPlayer.playing")
+              : t("settings.miniPlayer.paused")
+          }}</span
         >
         <div class="flex items-center gap-0.5 flex-shrink-0 origin-right">
           <button
             @click="playPrev"
             class="w-6 h-6 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-            title="上一首"
+            :title="t('settings.miniPlayer.prev')"
             :disabled="historyIndex <= 0"
           >
             <svg
@@ -365,7 +375,7 @@ watch(
           <button
             @click="playNext"
             class="w-6 h-6 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-all"
-            title="下一首"
+            :title="t('settings.miniPlayer.next')"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

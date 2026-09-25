@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch, type ComponentPublicInstance } from "vue";
+import { useI18n } from "vue-i18n";
 import { useStorage } from "@vueuse/core";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "@/stores/main";
@@ -39,6 +40,7 @@ type UploadQueueItem = {
 type LinkifiedPart = { kind: "text"; text: string } | { kind: "link"; text: string; href: string };
 
 const props = defineProps<{ widget: WidgetConfig }>();
+const { t } = useI18n();
 const store = useMainStore();
 const TRANSFER_POLL_INTERVAL_MS = 10000;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -348,7 +350,7 @@ const fetchItems = async (options: { silent?: boolean } = {}) => {
     hasLoadedOnce.value = true;
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    error.value = msg || "加载失败";
+    error.value = msg || t("settings.fileTransferWidget.loadFailed");
     hasLoadedOnce.value = true;
   } finally {
     if (!silent) loading.value = false;
@@ -667,7 +669,7 @@ const uploadQueueItem = async (q: UploadQueueItem) => {
       startNextUploads();
     },
     onError: (err) => {
-      const msg = err.message || "上传失败";
+      const msg = err.message || t("settings.fileTransferWidget.uploadFailed");
       q.status = "failed";
       q.error = msg;
       activeUploaders.delete(q.id);
@@ -677,7 +679,7 @@ const uploadQueueItem = async (q: UploadQueueItem) => {
     onPause: (reason) => {
       if (q.status === "uploading") q.status = "paused";
       if (reason === "network_error") {
-        q.error = "网络中断，等待恢复";
+        q.error = t("settings.fileTransferWidget.networkInterrupted");
       }
     },
     onResume: () => {
@@ -693,7 +695,7 @@ const uploadQueueItem = async (q: UploadQueueItem) => {
   } catch (e: unknown) {
     if (q.status === "uploading") {
       q.status = "failed";
-      q.error = e instanceof Error ? e.message : "上传失败";
+      q.error = e instanceof Error ? e.message : t("settings.fileTransferWidget.uploadFailed");
     }
     activeUploaders.delete(q.id);
     uploadingCount.value = Math.max(0, uploadingCount.value - 1);
@@ -723,7 +725,7 @@ const sendText = async () => {
     await scrollToBottom();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    error.value = msg || "发送失败";
+    error.value = msg || t("settings.fileTransferWidget.sendFailed");
   } finally {
     composerRef.value?.focus();
   }
@@ -766,7 +768,7 @@ const downloadItem = async (item?: TransferItem | null) => {
   if (!item || item.type !== "file") return;
   if (isMobile.value && item.file.size >= LARGE_DOWNLOAD_CONFIRM_BYTES) {
     const ok = confirm(
-      `检测到文件较大（${formatBytes(item.file.size)}），可能耗时且占用较多流量/内存，是否继续下载？`,
+      t("settings.fileTransferWidget.largeFileConfirm", { size: formatBytes(item.file.size) }),
     );
     if (!ok) return;
   }
@@ -826,6 +828,10 @@ const downloadItem = async (item?: TransferItem | null) => {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 };
 
+const onDownloadError = (e: unknown) => {
+  error.value = (e as Error).message || t("settings.fileTransferWidget.downloadFailed");
+};
+
 const deleteItem = async (id: string) => {
   if (!store.isLogged) return;
   try {
@@ -850,7 +856,7 @@ const deleteItem = async (id: string) => {
     if (previewItem.value?.id === id) closePreview();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    error.value = msg || "删除失败";
+    error.value = msg || t("settings.fileTransferWidget.deleteFailed");
   }
 };
 
@@ -874,7 +880,7 @@ const downloadSelected = async () => {
         await downloadItem(it);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        error.value = msg || "下载失败";
+        error.value = msg || t("settings.fileTransferWidget.downloadFailed");
       }
     }
   }
@@ -1020,7 +1026,7 @@ onBeforeUnmount(() => {
       <div
         class="w-[92%] h-[92%] rounded-2xl border-2 border-dashed border-blue-300/70 bg-blue-500/10 backdrop-blur-sm flex items-center justify-center"
       >
-        <div class="text-sm font-bold text-white/90">松开鼠标即可上传</div>
+        <div class="text-sm font-bold text-white/90">{{ t("settings.fileTransferWidget.dropHint") }}</div>
       </div>
     </div>
 
@@ -1034,8 +1040,8 @@ onBeforeUnmount(() => {
 
     <div v-if="!isSmallLayout" class="border-b border-white/10 px-3 py-2">
       <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 leading-tight">
-        <div class="text-sm font-bold text-white">文件传输助手</div>
-        <div class="text-[11px] text-white/70">支持拖拽、多选、断点续传</div>
+        <div class="text-sm font-bold text-white">{{ t("settings.fileTransferWidget.title") }}</div>
+        <div class="text-[11px] text-white/70">{{ t("settings.fileTransferWidget.desc") }}</div>
       </div>
 
       <div class="mt-2 flex items-center justify-between gap-2 flex-wrap">
@@ -1045,21 +1051,21 @@ onBeforeUnmount(() => {
             class="px-2.5 py-1 text-xs rounded-lg font-medium"
             :class="activeTab === 'chat' ? 'bg-white/20 text-white shadow-sm' : 'text-white/70'"
           >
-            聊天
+            {{ t("settings.fileTransferWidget.tabChat") }}
           </button>
           <button
             @click="activeTab = 'files'"
             class="px-2.5 py-1 text-xs rounded-lg font-medium"
             :class="activeTab === 'files' ? 'bg-white/20 text-white shadow-sm' : 'text-white/70'"
           >
-            文件
+            {{ t("settings.fileTransferWidget.tabFiles") }}
           </button>
           <button
             @click="activeTab = 'photos'"
             class="px-2.5 py-1 text-xs rounded-lg font-medium"
             :class="activeTab === 'photos' ? 'bg-white/20 text-white shadow-sm' : 'text-white/70'"
           >
-            图片
+            {{ t("settings.fileTransferWidget.tabImages") }}
           </button>
         </div>
 
@@ -1074,14 +1080,14 @@ onBeforeUnmount(() => {
             :disabled="!store.isLogged"
             @click="openFilePicker"
           >
-            添加文件
+            {{ t("settings.fileTransferWidget.addFile") }}
           </button>
           <button
             v-if="activeTab === 'files' && selectedCount > 0"
             class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30"
             @click="deleteSelected"
           >
-            删除选中 ({{ selectedCount }})
+            {{ t("settings.fileTransferWidget.deleteSelected", { count: selectedCount }) }}
           </button>
         </div>
       </div>
@@ -1112,14 +1118,14 @@ onBeforeUnmount(() => {
             <div class="text-[11px] text-white/60">
               {{
                 q.status === "uploading"
-                  ? "上传中"
+                  ? t("settings.fileTransferWidget.uploading")
                   : q.status === "paused"
-                    ? "已暂停"
+                    ? t("settings.fileTransferWidget.paused")
                     : q.status === "failed"
-                      ? "失败"
+                      ? t("settings.fileTransferWidget.failed")
                       : q.status === "completed"
-                        ? "完成"
-                        : "等待中"
+                        ? t("settings.fileTransferWidget.completed")
+                        : t("settings.fileTransferWidget.waiting")
               }}
               <span v-if="q.error" class="text-red-200 ml-2">{{ q.error }}</span>
             </div>
@@ -1129,20 +1135,20 @@ onBeforeUnmount(() => {
                 class="px-2 py-1 text-[11px] rounded-lg bg-white/10 text-white hover:bg-white/15"
                 @click="pauseUpload(q)"
               >
-                暂停
+                {{ t("settings.fileTransferWidget.pause") }}
               </button>
               <button
                 v-if="q.status === 'paused' || q.status === 'failed'"
                 class="px-2 py-1 text-[11px] rounded-lg bg-blue-500/20 text-blue-100 hover:bg-blue-500/30"
                 @click="resumeUpload(q)"
               >
-                继续
+                {{ t("settings.fileTransferWidget.resume") }}
               </button>
               <button
                 class="px-2 py-1 text-[11px] rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30"
                 @click="removeQueueItem(q)"
               >
-                移除
+                {{ t("settings.fileTransferWidget.remove") }}
               </button>
             </div>
           </div>
@@ -1173,7 +1179,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          复制
+          {{ t("common.common.copy") }}
         </button>
         <button
           class="w-full text-left px-2.5 py-1.5 text-[13px] hover:bg-white/10 transition-colors"
@@ -1186,7 +1192,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          添加文件
+          {{ t("settings.fileTransferWidget.addFile") }}
         </button>
         <button
           class="w-full text-left px-2.5 py-1.5 text-[13px] hover:bg-white/10 transition-colors text-white"
@@ -1197,7 +1203,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          {{ multiSelectMode ? "退出多选" : "多选" }}
+          {{ multiSelectMode ? t("settings.fileTransferWidget.exitMultiSelect") : t("settings.fileTransferWidget.multiSelect") }}
         </button>
         <button
           v-if="multiSelectMode"
@@ -1209,7 +1215,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          {{ isAllSelected ? "取消全选" : "全选" }}
+          {{ isAllSelected ? t("settings.fileTransferWidget.deselectAll") : t("settings.fileTransferWidget.selectAll") }}
         </button>
         <button
           class="w-full text-left px-2.5 py-1.5 text-[13px] hover:bg-white/10 transition-colors"
@@ -1222,7 +1228,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          删除选中 ({{ selectedCount }})
+          {{ t("settings.fileTransferWidget.deleteSelected", { count: selectedCount }) }}
         </button>
         <button
           class="w-full text-left px-2.5 py-1.5 text-[13px] hover:bg-white/10 transition-colors"
@@ -1235,7 +1241,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          下载选中 ({{ selectedCount }})
+          {{ t("settings.fileTransferWidget.downloadSelected", { count: selectedCount }) }}
         </button>
         <button
           class="w-full text-left px-2.5 py-1.5 text-[13px] hover:bg-white/10 transition-colors"
@@ -1248,7 +1254,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          清空选择
+          {{ t("settings.fileTransferWidget.clearSelection") }}
         </button>
 
         <div v-if="contextMenuTargetId" class="h-px bg-white/10"></div>
@@ -1264,7 +1270,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          {{ contextMenuTargetId && selectedIds[contextMenuTargetId] ? "取消选择" : "选择" }}
+          {{ contextMenuTargetId && selectedIds[contextMenuTargetId] ? t("settings.fileTransferWidget.deselect") : t("settings.fileTransferWidget.select") }}
         </button>
         <button
           v-if="contextMenuTargetId"
@@ -1277,7 +1283,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          删除此条
+          {{ t("settings.fileTransferWidget.deleteItem") }}
         </button>
         <button
           v-if="contextMenuTargetId && findItemById(contextMenuTargetId)?.type === 'file'"
@@ -1291,7 +1297,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          预览
+          {{ t("settings.fileTransferWidget.preview") }}
         </button>
         <button
           v-if="contextMenuTargetId && findItemById(contextMenuTargetId)?.type === 'file'"
@@ -1305,7 +1311,7 @@ onBeforeUnmount(() => {
             }
           "
         >
-          下载
+          {{ t("settings.fileTransferWidget.download") }}
         </button>
       </div>
     </OverlayMotion>
@@ -1314,7 +1320,7 @@ onBeforeUnmount(() => {
       <div v-if="!store.isLogged" class="h-full flex items-center justify-center text-white/70">
         <div class="text-center px-6">
           <div class="text-3xl mb-2">🔒</div>
-          <div class="text-sm font-bold text-white">登录后使用文件传输助手</div>
+          <div class="text-sm font-bold text-white">{{ t("settings.fileTransferWidget.loginToUse") }}</div>
         </div>
       </div>
 
@@ -1333,14 +1339,14 @@ onBeforeUnmount(() => {
           @contextmenu.prevent.stop="onListContextMenu"
         >
           <template v-if="loading && !hasLoadedOnce">
-            <div class="px-3 py-2 text-xs text-white/60">加载中...</div>
+            <div class="px-3 py-2 text-xs text-white/60">{{ t("common.common.loading") }}</div>
           </template>
 
           <template v-else-if="activeTab === 'chat'">
             <div v-if="!groupedChatItems.length" class="text-center text-white/70 text-sm py-10">
               <div class="text-3xl mb-2">💬</div>
-              <div class="font-bold text-white">把文件和文字发到这里</div>
-              <div class="text-xs text-white/60 mt-1">支持拖拽上传；支持复制粘贴图片/文件</div>
+              <div class="font-bold text-white">{{ t("settings.fileTransferWidget.sendHint") }}</div>
+              <div class="text-xs text-white/60 mt-1">{{ t("settings.fileTransferWidget.dragHint") }}</div>
             </div>
 
             <div v-else class="space-y-2">
@@ -1461,7 +1467,7 @@ onBeforeUnmount(() => {
           <template v-else-if="activeTab === 'files'">
             <div v-if="!items.length" class="text-center text-white/70 text-sm py-10">
               <div class="text-3xl mb-2">📁</div>
-              <div class="font-bold text-white">暂无文件</div>
+              <div class="font-bold text-white">{{ t("settings.fileTransferWidget.noFiles") }}</div>
             </div>
 
             <div v-else class="space-y-2">
@@ -1529,7 +1535,7 @@ onBeforeUnmount(() => {
                     class="px-2 py-1 text-[11px] rounded-lg bg-white/10 text-white hover:bg-white/15"
                     @click="openPreview(it)"
                   >
-                    预览
+                    {{ t("settings.fileTransferWidget.preview") }}
                   </button>
                   <button
                     v-if="it.type === 'file'"
@@ -1539,18 +1545,18 @@ onBeforeUnmount(() => {
                         try {
                           await downloadItem(it);
                         } catch (e) {
-                          error = (e as Error).message || '下载失败';
+                          onDownloadError(e);
                         }
                       }
                     "
                   >
-                    下载
+                    {{ t("settings.fileTransferWidget.download") }}
                   </button>
                   <button
                     class="px-2 py-1 text-[11px] rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30"
                     @click="deleteItem(it.id)"
                   >
-                    删除
+                    {{ t("common.common.delete") }}
                   </button>
                 </div>
               </div>
@@ -1560,7 +1566,7 @@ onBeforeUnmount(() => {
           <template v-else>
             <div v-if="!items.length" class="text-center text-white/70 text-sm py-10">
               <div class="text-3xl mb-2">🖼️</div>
-              <div class="font-bold text-white">暂无图片</div>
+              <div class="font-bold text-white">{{ t("settings.fileTransferWidget.noImages") }}</div>
             </div>
 
             <div v-else class="flex flex-wrap gap-2">
@@ -1596,7 +1602,7 @@ onBeforeUnmount(() => {
               ref="composerRef"
               v-model="composerText"
               rows="1"
-              :placeholder="isSmallLayout ? '粘贴/拖入 (Shift+Enter)' : 'Shift+Enter 换行'"
+              :placeholder="isSmallLayout ? t('settings.fileTransferWidget.placeholderSmall') : t('settings.fileTransferWidget.placeholder')"
               class="resize-none rounded-xl border border-white/20 bg-white/10 outline-none text-white placeholder-white/50 focus:border-blue-400"
               :class="
                 isSmallLayout
@@ -1638,7 +1644,7 @@ onBeforeUnmount(() => {
               class="px-3 py-2 text-xs font-bold rounded-xl bg-blue-500 text-white hover:bg-blue-600"
               @click="sendText"
             >
-              发送
+              {{ t("settings.fileTransferWidget.send") }}
             </button>
           </div>
         </div>
@@ -1659,7 +1665,7 @@ onBeforeUnmount(() => {
           <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <div class="min-w-0">
               <div class="text-sm font-bold text-white truncate">
-                {{ previewItem.type === "file" ? previewItem.file.name : "预览" }}
+                {{ previewItem.type === "file" ? previewItem.file.name : t("settings.fileTransferWidget.preview") }}
               </div>
               <div v-if="previewItem.type === 'file'" class="text-[11px] text-white/60">
                 {{ formatBytes(previewItem.file.size) }} · {{ previewItem.file.type || "unknown" }}
@@ -1674,12 +1680,12 @@ onBeforeUnmount(() => {
                     try {
                       await downloadItem(previewItem);
                     } catch (e) {
-                      error = (e as Error).message || '下载失败';
+                      onDownloadError(e);
                     }
                   }
                 "
               >
-                下载
+                {{ t("settings.fileTransferWidget.download") }}
               </button>
               <button
                 class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-500/20 text-red-100 hover:bg-red-500/30"
@@ -1689,13 +1695,13 @@ onBeforeUnmount(() => {
                   }
                 "
               >
-                删除
+                {{ t("common.common.delete") }}
               </button>
               <button
                 class="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-500 text-white hover:bg-blue-600"
                 @click="closePreview"
               >
-                关闭
+                {{ t("common.common.close") }}
               </button>
             </div>
           </div>
@@ -1715,7 +1721,7 @@ onBeforeUnmount(() => {
                 v-else
                 class="rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-white/80"
               >
-                该文件类型暂不支持直接预览，请使用“下载”。
+                {{ t("settings.fileTransferWidget.noPreviewSupport") }}
               </div>
             </div>
           </div>

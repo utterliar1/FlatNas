@@ -385,7 +385,13 @@
     "fillRssUrlFirst": "Veuillez saisir l'URL RSS avant d'ajouter.",
     "pasteTextFirst": "Veuillez d'abord coller le texte RSS à importer.",
     "importResult": "{created} ajouté(s), {updated} mis à jour, {skipped} ignoré(s)",
-    "titlePlaceholder": "Titre"
+    "titlePlaceholder": "Titre",
+    "feedUrlPlaceholder": "Adresse RSS",
+    "importInvalidLines": ", {count} lignes non valides",
+    "importNoNewTitles": ", aucun nouveau titre distant récupéré",
+    "importPlaceholder": "Exemple :\n36Kr https://www.36kr.com/feed\nSspai,https://sspai.com/feed\nCoolshell | https://coolshell.cn/feed\nhttps://example.com/rss.xml",
+    "importTitlesUpdated": ", {count} titres réels mis à jour automatiquement",
+    "newCategoryPlaceholder": "Nouvelle catégorie"
   },
   "searchSettings": {
     "title": "Paramètres du moteur de recherche",
@@ -644,7 +650,25 @@
     "modalConfirm": "确定",
     "note": "注",
     "statusLabel": "状态",
-    "amapApiKey": "高德 API Key"
+    "amapApiKey": "高德 API Key",
+    "autoSave10s": "10 secondes après modification (recommandé)",
+    "autoSave30s": "30 secondes après modification",
+    "autoSave3s": "3 secondes après modification",
+    "autoSaveLabel": "Enregistrement automatique",
+    "autoSaveOff": "Désactivé (enregistrement manuel uniquement)",
+    "configSaveHint": "Les modifications des icônes de groupe, de l'ordre, de la disposition des widgets, etc. sont enregistrées automatiquement après le délai ci-dessus ; les modifications non enregistrées sont aussi sauvegardées avant l'actualisation ou la fermeture de la page.",
+    "configSaveSection": "💾 Enregistrement de la configuration",
+    "customWeatherSourcePlaceholder": "Utilise la source intégrée par défaut ; saisissez une URL pour la personnaliser",
+    "dashboardTitle": "Système de tableau de bord FlatNas",
+    "manualSaveClean": "Enregistrer maintenant (à jour)",
+    "manualSaveDirty": "Enregistrer maintenant (modifications non enregistrées)",
+    "qweatherConsole": "Console QWeather",
+    "qweatherKeyIdPlaceholder": "Saisissez le Key ID",
+    "qweatherPrivateKeyPlaceholder": "Saisissez la Private Key (doit inclure l'en-tête et le pied -----BEGIN PRIVATE KEY-----)",
+    "qweatherProjectIdPlaceholder": "Saisissez le Project ID",
+    "clickToDownloadHelper": "Cliquez sur {link} pour lever la restriction",
+    "qweatherGuide": "Rendez-vous sur {console} pour obtenir vos identifiants JWT.",
+    "customWeatherSourceDescFull": "Si renseigné, les données météo sont demandées directement à cette adresse. Le format de réponse doit inclure : {format}"
   },
   "networkIndicator": {
     "online": "En ligne",
@@ -913,19 +937,35 @@
   },
   "iconUploader": {
     "imageTooLarge": "Image trop volumineuse, veuillez télécharger une image de moins de 5 Mo",
-    "iconLoadError": "Échec du chargement de l'icône, repli sur le texte"
+    "iconLoadError": "Échec du chargement de l'icône, repli sur le texte",
+    "clickUpload": "Cliquez pour téléverser",
+    "clickUploadOrCrop": "Cliquez pour téléverser / rogner",
+    "cropImage": "Rogner l'image",
+    "selectFromLibrary": "Choisir dans la bibliothèque"
   },
   "miniPlayer": {
     "loading": "Chargement...",
     "noMusic": "Aucune musique",
-    "fetchFailed": "Échec de récupération"
+    "fetchFailed": "Échec de récupération",
+    "next": "Suivant",
+    "paused": "En pause",
+    "playing": "En lecture",
+    "prev": "Précédent"
   },
   "groupSelector": {
     "selectGroup": "Sélectionner le groupe",
     "switchGroup": "Changer de groupe"
   },
   "scriptManager": {
-    "newScript": "Nouveau script {index}"
+    "newScript": "Nouveau script {index}",
+    "addScript": "Ajouter un nouveau script",
+    "clickToConfirmDelete": "Cliquez pour confirmer la suppression",
+    "codeLabel": "Code",
+    "confirmQuestion": "Confirmer ?",
+    "dropToAdd": "Déposez les fichiers pour les ajouter",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Nom du script",
+    "useProxyNetwork": "Via le réseau local"
   },
   "proxyToggle": {
     "proxy": "Proxy"
@@ -941,7 +981,62 @@
     "uploading": "Téléchargement...",
     "uploadSuccess": "Téléchargement réussi",
     "uploadFailed": "Échec du téléchargement",
-    "dragToSort": "Glisser pour trier"
+    "dragToSort": "Glisser pour trier",
+    "apiHint1": "Vous pouvez saisir directement l'URL d'une image ou utiliser une API de fonds d'écran aléatoires tierce.",
+    "apiHintRefresh": "Après configuration, chaque actualisation de la page peut renvoyer une image différente selon l'API.",
+    "apiTab": "API",
+    "applySuccess": "Appliqué avec succès",
+    "applyToMobile": "Appliquer au fond mobile",
+    "applyToPc": "Appliquer au fond PC",
+    "blur": "Flou",
+    "blurRadius": "Rayon de flou",
+    "cannotDeleteDefault": "Le fond d'écran par défaut ne peut pas être supprimé",
+    "customApiTitle": "API de fonds d'écran personnalisée",
+    "defaultWallpaper": "Fond d'écran par défaut",
+    "downloadToMobileLibrary": "Télécharger vers la bibliothèque mobile",
+    "downloadToPcLibrary": "Télécharger vers la bibliothèque PC",
+    "dragToSelect": "Glissez pour sélectionner",
+    "emptyHint": "Aucun fond d'écran, veuillez d'abord en téléverser",
+    "enableMobileWallpaper": "Activer le fond mobile",
+    "enableMobileWallpaperTooltip": "Activé, les mobiles utilisent le fond mobile ; désactivé, ils utilisent le fond PC",
+    "enableRotation": "Activer la rotation",
+    "imageInvalid": "L'image n'est plus disponible",
+    "imageUrlLabel": "URL de l'image / adresse de l'API",
+    "imageUrlPlaceholder": "https://example.com/image.jpg ou API d'images aléatoires",
+    "jsonApiBold": "API au format JSON",
+    "lanApiBold": "API LAN / auto-hébergée",
+    "largeFileConfirm": "Le fichier dépasse 10 Mo et peut consommer trop de mémoire. Continuer le téléversement ?",
+    "lockCurrentTooltip": "Verrouiller le fond actuel (arrête la rotation automatique sur PC et mobile)",
+    "locked": "Verrouillé",
+    "mask": "Masque",
+    "maskOpacity": "Opacité du masque",
+    "minute": "min",
+    "mobilePreview": "Aperçu mobile",
+    "mobileWallpaperEnabled": "Fond mobile activé",
+    "modeRandomTooltip": "Mode de lecture : aléatoire (effectif uniquement si la rotation est activée)",
+    "modeSequentialTooltip": "Mode de lecture : séquentiel (effectif uniquement si la rotation est activée)",
+    "pcPreview": "Aperçu PC",
+    "presetBing": "Fond quotidien Bing",
+    "presetLoliconPc": "Anime aléatoire (PC)",
+    "presetLoliconPe": "Anime aléatoire (mobile)",
+    "presetPicsum": "Paysage aléatoire (Picsum)",
+    "previewHint": "Cliquez sur un préréglage ci-dessus ou sur actualiser pour obtenir un aperçu",
+    "random": "Aléatoire",
+    "refreshPreviewTooltip": "Actualiser l'aperçu (ajoute un horodatage)",
+    "requestFailed": "Échec de la requête, vérifiez le réseau",
+    "resolvingProxy": "Récupération via proxy et optimisation de la cohérence du fond...",
+    "rotating": "Rotation en cours",
+    "rotationIntervalMinutes": "Intervalle de rotation (minutes)",
+    "savedToMobileLibrary": "Enregistré dans la bibliothèque mobile",
+    "savedToPcLibrary": "Enregistré dans la bibliothèque PC",
+    "saving": "Enregistrement...",
+    "sequential": "Séquentiel",
+    "setAsDefault": "Définir comme fond par défaut",
+    "stopAndLock": "Arrêter et verrouiller",
+    "tip": "Astuce",
+    "willAutoRemove": "Sera supprimé automatiquement",
+    "apiHintJson": "Prend en charge {jsonApi} (ex. Unsplash/Bing) ; le lien de l'image est analysé et extrait automatiquement.",
+    "apiHintLan": "Prend en charge {lanApi} (ex. http://192.168.x.x) ; plus limité par l'accès au réseau local."
   },
   "loginModal": {
     "registerTitle": "👤 Inscription nouvel utilisateur",
@@ -984,7 +1079,10 @@
     "configApiKey": "Veuillez configurer la clé API",
     "ipLocateFailed": "Localisation IP échouée",
     "weatherFetchFailed": "Récupération météo échouée",
-    "networkFailed": "Requête réseau échouée"
+    "networkFailed": "Requête réseau échouée",
+    "dayNightFormat": "{day} à {night}",
+    "loginRequired": "Connectez-vous pour configurer le widget météo",
+    "windFormat": "vent {dir}, force {power}"
   },
   "weekdays": [
     "Dim",
@@ -1071,7 +1169,15 @@
     "send": "Envoyer",
     "noPreviewSupport": "Ce type de fichier ne supporte pas l'aperçu. Utilisez \"Télécharger\".",
     "placeholder": "Shift+Enter pour nouvelle ligne",
-    "placeholderSmall": "Coller/Déposer (Shift+Enter)"
+    "placeholderSmall": "Coller/Déposer (Shift+Enter)",
+    "deleteFailed": "Échec de la suppression",
+    "downloadFailed": "Échec du téléchargement",
+    "downloadSelected": "Télécharger la sélection ({count})",
+    "largeFileConfirm": "Fichier volumineux détecté ({size}) ; cela peut prendre du temps et consommer beaucoup de données/mémoire. Continuer le téléchargement ?",
+    "loadFailed": "Échec du chargement",
+    "networkInterrupted": "Réseau interrompu, en attente de rétablissement",
+    "sendFailed": "Échec de l'envoi",
+    "uploadFailed": "Échec du téléversement"
   },
   "calendarWidget": {
     "switchView": "Changer de vue",
@@ -1093,7 +1199,14 @@
     "journalistDay": "Journaliste",
     "firefighterDay": "Pompier",
     "memorialDay": "Mémorial",
-    "firstDay": "1er"
+    "firstDay": "1er",
+    "weekShortSun": "Di",
+    "weekShortMon": "Lu",
+    "weekShortTue": "Ma",
+    "weekShortWed": "Me",
+    "weekShortThu": "Je",
+    "weekShortFri": "Ve",
+    "weekShortSat": "Sa"
   },
   "clockWidget": {
     "switchStyle": "Changer de style"
@@ -1140,7 +1253,10 @@
     "clickToConfig": "Cliquer pour configurer",
     "settings": "Paramètres",
     "title": "Compte à rebours",
-    "arrived": "🎉 Arrivé"
+    "arrived": "🎉 Arrivé",
+    "dayUnit": "jours",
+    "hourUnit": "heures",
+    "minuteUnit": "min"
   },
   "countupWidget": {
     "defaultTitle": "Compteur ascendant",
@@ -1202,7 +1318,12 @@
     "save": "Sauvegarder",
     "saved": "Sauvegardé",
     "switchMode": "Changer de mode",
-    "blankMemo": "Mémo vide"
+    "blankMemo": "Mémo vide",
+    "saveFailAuth": "État de connexion non valide",
+    "saveFailConflictData": "Données de conflit de version non valides",
+    "saveFailNetworkRetry": "Erreur réseau, nouvelle tentative",
+    "saveFailServerPage": "Le serveur a renvoyé une page d'erreur",
+    "saveFailServerStatus": "Erreur serveur ({status})"
   },
   "clockWeatherWidget": {
     "settingsBtn": "Définir la ville",
@@ -1237,7 +1358,8 @@
     "chinanews": "China News",
     "loading": "Chargement...",
     "timeout": "Délai dépassé, veuillez réessayer",
-    "failed": "Échec du chargement, veuillez réessayer"
+    "failed": "Échec du chargement, veuillez réessayer",
+    "bilibili": "Bilibili"
   },
   "iframeWidget": {
     "blocked": "⚠️ Accès refusé",
@@ -1280,11 +1402,25 @@
     "back": "Retour",
     "switchEffect": "Changer d'effet",
     "noLyrics": "Aucune parole",
-    "title": "Musique Daoli Fish"
+    "title": "Musique Daoli Fish",
+    "audioUnsupported": "Source audio non prise en charge ou non autorisée",
+    "connectFailed": "Échec de la connexion",
+    "loadFailed": "Échec du chargement",
+    "noSongs": "Aucun morceau, vérifiez la configuration de l'API ou les favoris",
+    "playError": "Erreur de lecture",
+    "requestFailed": "Échec de la requête",
+    "trackMissing": "Le morceau n'existe pas, ignoré",
+    "unnamedPlaylist": "Liste de lecture sans nom"
   },
   "iconSelectionModal": {
     "title": "Sélectionner une icône",
-    "loading": "Chargement..."
+    "loading": "Chargement...",
+    "autoSelectIn": "Sélection automatique dans {n}s",
+    "cancelLink": "Dissocier",
+    "loadMore": "Charger plus ({n})",
+    "localIcons": "📁 Icônes locales",
+    "matchCount": "({n} correspondances)",
+    "remoteIcons": "🌐 Icônes réseau"
   },
   "accessCode": {
     "titleManage": "Gérer le code d'accès",
@@ -1340,5 +1476,20 @@
     "promptFull": "Écris-moi un composant de carte HTML/CSS épuré.\nFonction : [indique ici tes besoins, ex. afficher la date du jour et une citation]\nExigences :\n1. Le conteneur s'adapte à la largeur/hauteur, contenu centré.\n2. Style moderne et minimaliste, design arrondi.\n3. Fournis le HTML et le CSS séparément (JS facultatif).",
     "promptPreview": "Écris-moi un composant de carte HTML/CSS épuré...",
     "editWidgetTooltip": "Modifier le widget"
+  },
+  "statusMonitor": {
+    "jsHeap": "Tas JS",
+    "keysIdle": "Clés/Inactif",
+    "managed": "Géré",
+    "objectUrl": "URL d'objets",
+    "unavailable": "Indisponible",
+    "unmanaged": "Non géré"
+  },
+  "memoToolbar": {
+    "bold": "Gras",
+    "code": "Code",
+    "italic": "Italique",
+    "quote": "Citation",
+    "unorderedList": "Liste"
   }
 }

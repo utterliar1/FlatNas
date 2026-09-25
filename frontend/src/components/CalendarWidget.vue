@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
 import { Lunar, Solar, HolidayUtil } from "lunar-javascript";
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
+const { t, locale } = useI18n();
 
 // Default to 'day' if not set
 if (!props.widget.data) {
@@ -47,13 +49,38 @@ onUnmounted(() => {
 
 // Day View Data
 const dayNum = computed(() => now.value.getDate());
-const weekDay = computed(
-  () => ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][now.value.getDay()],
+// 星期展示文案（索引 0 = 周日，与 Date.getDay() 对齐）
+const weekDays = computed(() => [
+  t("settings.calendarWidget.sunday"),
+  t("settings.calendarWidget.monday"),
+  t("settings.calendarWidget.tuesday"),
+  t("settings.calendarWidget.wednesday"),
+  t("settings.calendarWidget.thursday"),
+  t("settings.calendarWidget.friday"),
+  t("settings.calendarWidget.saturday"),
+]);
+// 月视图表头的单字星期文案
+const weekShortDays = computed(() => [
+  t("settings.calendarWidget.weekShortSun"),
+  t("settings.calendarWidget.weekShortMon"),
+  t("settings.calendarWidget.weekShortTue"),
+  t("settings.calendarWidget.weekShortWed"),
+  t("settings.calendarWidget.weekShortThu"),
+  t("settings.calendarWidget.weekShortFri"),
+  t("settings.calendarWidget.weekShortSat"),
+]);
+const weekDay = computed(() => weekDays.value[now.value.getDay()]);
+// 月份标签：用 Intl 按当前语言格式化（zh 得「9月」，en 得「Sep」）
+// 说明：不用「数字 + 固定后缀」的写法——拉丁语言没有可拼接的月份后缀。
+const monthLabel = computed(() =>
+  new Intl.DateTimeFormat(locale.value, { month: "short" }).format(now.value),
 );
 const yearMonth = computed(
   () => `${now.value.getFullYear()}.${now.value.getMonth() + 1}.${now.value.getDate()}`,
 );
 
+// 农历日期串由 lunar-javascript 直接产出中文（如「二月初一」「乙巳蛇年」），
+// 拼接用的「月」「年」属于该中文串本身，非可本地化文案，保持原样。
 const lunarDate = computed(() => {
   const d = Lunar.fromDate(now.value);
   return `${d.getMonthInChinese()}月${d.getDayInChinese()}`;
@@ -64,19 +91,20 @@ const lunarYear = computed(() => {
   return `${d.getYearInGanZhi()}${d.getYearShengXiao()}年`;
 });
 
-const MEMORIAL_DAYS: Record<string, string> = {
-  "1-10": "警察",
-  "4-15": "全民",
-  "4-24": "航天",
-  "5-4": "五四",
-  "7-1": "建党",
-  "8-19": "医师",
-  "9-3": "抗战",
-  "9-30": "烈士",
-  "11-8": "记者",
-  "11-9": "消防",
-  "12-13": "公祭",
-};
+// 纪念日短标签为展示文案，非持久化数据
+const MEMORIAL_DAYS = computed<Record<string, string>>(() => ({
+  "1-10": t("settings.calendarWidget.policeDay"),
+  "4-15": t("settings.calendarWidget.nationalDay"),
+  "4-24": t("settings.calendarWidget.aerospaceDay"),
+  "5-4": t("settings.calendarWidget.youthDay"),
+  "7-1": t("settings.calendarWidget.partyDay"),
+  "8-19": t("settings.calendarWidget.doctorDay"),
+  "9-3": t("settings.calendarWidget.warDay"),
+  "9-30": t("settings.calendarWidget.martyrDay"),
+  "11-8": t("settings.calendarWidget.journalistDay"),
+  "11-9": t("settings.calendarWidget.firefighterDay"),
+  "12-13": t("settings.calendarWidget.memorialDay"),
+}));
 
 // Month View Data
 const currentMonth = ref(new Date());
@@ -137,7 +165,7 @@ const calendarDays = computed(() => {
 
     if (!label) {
       const k = `${month + 1}-${i}`;
-      const m = MEMORIAL_DAYS[k];
+      const m = MEMORIAL_DAYS.value[k];
       if (m) {
         label = m;
         origin = "solarFest";
@@ -151,6 +179,7 @@ const calendarDays = computed(() => {
 
     if (!label) {
       let lunarStr = lunar.getDayInChinese();
+      // 与库产出的固定中文（getDayInChinese()）比较，非本地化值，禁止改成 t()
       if (lunarStr === "初一") lunarStr = lunar.getMonthInChinese() + "月";
       label = lunarStr;
       origin = "none";
@@ -158,6 +187,7 @@ const calendarDays = computed(() => {
 
     // Remove trailing '节' when the origin is a festival/holiday label
     if (origin === "solarFest" || origin === "lunarFest" || origin === "holiday") {
+      // 库产出的中文标签（如「春节」）去尾字，正则不参与 i18n
       label = label.replace(/节$/, "");
     }
 
@@ -222,7 +252,7 @@ const isHovered = ref(false);
     <button
       @click.stop="toggleStyle"
       class="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-black/10 active:scale-95"
-      title="切换视图"
+      :title="t('settings.calendarWidget.switchView')"
       :class="widget.data?.style !== 'day' ? 'text-white/70' : 'text-white'"
     >
       <svg
@@ -255,7 +285,7 @@ const isHovered = ref(false);
         class="w-1/3 h-full flex flex-col items-start justify-center border-r border-white/10 bg-black/5 flex-shrink-0 pl-4"
       >
         <div class="text-sm md:text-base font-bold shadow-text opacity-90 mb-1">
-          {{ now.getMonth() + 1 }}月
+          {{ monthLabel }}
         </div>
         <div class="text-4xl md:text-5xl font-bold shadow-text leading-none">
           {{ dayNum }}
@@ -333,7 +363,7 @@ const isHovered = ref(false);
       <div
         class="grid grid-cols-7 gap-0.5 md:gap-1 text-center text-[10px] md:text-[12px] leading-none text-white/60"
       >
-        <div v-for="d in ['日', '一', '二', '三', '四', '五', '六']" :key="d" class="font-medium">
+        <div v-for="d in weekShortDays" :key="d" class="font-medium">
           {{ d }}
         </div>
       </div>

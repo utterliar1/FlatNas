@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
 import { useMainStore } from "@/stores/main";
 import { useDebounceFn } from "@vueuse/core";
+import { useI18n } from "vue-i18n";
 import type { WidgetConfig } from "@/types";
 import { acquireObjectUrl, releaseObjectUrl } from "@/utils/objectUrlRuntime";
 import daoliyuLogo from "@/assets/daoliyu.svg";
@@ -12,6 +13,7 @@ interface LyricLine {
 }
 
 const props = defineProps<{ widget: WidgetConfig }>();
+const { t } = useI18n();
 const store = useMainStore();
 
 const ICON_PREV = "\u23EE\uFE0E";
@@ -76,12 +78,12 @@ type VisualMode = "lyrics" | "spectrum" | "abstract" | "vinyl";
 const visualMode = ref<VisualMode>("lyrics");
 const showVisualModeMenu = ref(false);
 
-const visualModeOptions = [
-  { id: "lyrics", label: "歌词", icon: "📝" },
-  { id: "spectrum", label: "频谱分析", icon: "📊" },
-  { id: "abstract", label: "抽象动画", icon: "✨" },
-  { id: "vinyl", label: "封面与黑胶", icon: "💿" },
-];
+const visualModeOptions = computed(() => [
+  { id: "lyrics", label: t("settings.musicWidget.tabLyrics"), icon: "📝" },
+  { id: "spectrum", label: t("settings.musicWidget.tabSpectrum"), icon: "📊" },
+  { id: "abstract", label: t("settings.musicWidget.tabAbstract"), icon: "✨" },
+  { id: "vinyl", label: t("settings.musicWidget.tabVinyl"), icon: "💿" },
+]);
 
 const toggleVisualMode = (mode: VisualMode) => {
   visualMode.value = mode;
@@ -265,7 +267,7 @@ const fetchPlayerState = async () => {
 
 const playAll = async () => {
   if (tracks.value.length === 0) {
-    error.value = "列表为空，无法播放";
+    error.value = t("settings.musicWidget.listEmpty");
     return;
   }
 
@@ -295,7 +297,9 @@ const playAll = async () => {
   } catch (e) {
     console.error("Play all failed", e);
     error.value =
-      "播放全部失败: " + (e instanceof Error ? e.message : String(e));
+      t("settings.musicWidget.allFailed") +
+      ": " +
+      (e instanceof Error ? e.message : String(e));
   } finally {
     loading.value = false;
   }
@@ -567,7 +571,8 @@ const fetchBrowseTracks = async () => {
     browseTracks.value = next;
   } catch (e) {
     browseTracks.value = [];
-    miniError.value = (e as Error).message || "加载失败";
+    miniError.value =
+      (e as Error).message || t("settings.musicWidget.loadFailed");
   } finally {
     miniLoading.value = false;
   }
@@ -611,7 +616,7 @@ const fetchPlaylists = async () => {
         const i = item as RawItem;
         return {
           id: i.id,
-          name: i.name || i.title || "未命名歌单",
+          name: i.name || i.title || t("settings.musicWidget.unnamedPlaylist"),
           coverUrl: resolveUrl(i.coverUrl || i.cover),
         };
       });
@@ -836,11 +841,12 @@ const fetchTracks = async () => {
     }
 
     if (tracks.value.length === 0) {
-      error.value = "暂无歌曲，请检查 API 配置或收藏";
+      error.value = t("settings.musicWidget.noSongs");
     }
   } catch (e) {
     console.error("Fetch tracks failed", e);
-    error.value = `加载失败: ${(e as Error).message}`;
+    error.value =
+      t("settings.musicWidget.loadFailed") + ": " + (e as Error).message;
     tracks.value = [];
   } finally {
     loading.value = false;
@@ -866,10 +872,10 @@ const setLibraryMode = (mode: string) => {
 
 const getModeName = (mode: string) => {
   const map: Record<string, string> = {
-    songs: "歌曲",
-    playlists: "歌单",
-    artists: "艺人",
-    albums: "专辑",
+    songs: t("settings.musicWidget.songs"),
+    playlists: t("settings.musicWidget.playlists"),
+    artists: t("settings.musicWidget.artists"),
+    albums: t("settings.musicWidget.albums"),
   };
   return map[mode] || mode;
 };
@@ -910,7 +916,9 @@ const loadViaBlob = async (trackId: string, startTime = 0, autoPlay = true) => {
     try {
       res = await authedJson(url);
     } catch (e) {
-      throw new Error(`连接失败: ${(e as Error).message}`);
+      throw new Error(
+        `${t("settings.musicWidget.connectFailed")}: ${(e as Error).message}`,
+      );
     }
 
     if (res.ok) {
@@ -938,7 +946,9 @@ const loadViaBlob = async (trackId: string, startTime = 0, autoPlay = true) => {
   if (!res || !res.ok) {
     if (lastErr)
       throw new Error(`Stream API Error ${lastErr.status}: ${lastErr.detail}`);
-    throw new Error("Stream API Error: 请求失败");
+    throw new Error(
+      `Stream API Error: ${t("settings.musicWidget.requestFailed")}`,
+    );
   }
 
   const contentType = res.headers.get("content-type") || "";
@@ -1268,7 +1278,7 @@ const playTrack = async (
         ) {
           playerState.value.isPlaying = false;
         }
-        error.value = `播放出错: ${msg}`;
+        error.value = `${t("settings.musicWidget.playError")}: ${msg}`;
       }
     }
   }
@@ -1510,14 +1520,14 @@ const onAudioError = () => {
       if (msg.includes("TRACK_NOT_FOUND")) {
         const track = tracks.value.find((t) => t.id === trackId);
         if (track) void handleMissingTrack(track);
-        error.value = "歌曲不存在，已跳过";
+        error.value = t("settings.musicWidget.trackMissing");
         return;
       }
-      error.value = "音频源不支持或无权限";
+      error.value = t("settings.musicWidget.audioUnsupported");
     });
     return;
   }
-  error.value = "音频源不支持或无权限";
+  error.value = t("settings.musicWidget.audioUnsupported");
 };
 
 const onSeek = (e: Event) => {
@@ -1758,7 +1768,11 @@ watch(syncPlayerState, (enabled) => {
               <button
                 class="aplayer-pic-btn"
                 @click.stop="togglePlay"
-                :title="playerState.isPlaying ? '暂停' : '播放'"
+                :title="
+                  playerState.isPlaying
+                    ? t('settings.musicWidget.pause')
+                    : t('settings.musicWidget.play')
+                "
                 :style="
                   currentCoverUrl
                     ? { backgroundImage: `url('${currentCoverUrl}')` }
@@ -1781,7 +1795,9 @@ watch(syncPlayerState, (enabled) => {
                     'aplayer-marquee': (currentTrack?.title || '').length > 15,
                   }"
                 >
-                  {{ currentTrack?.title || "选择播放" }}
+                  {{
+                    currentTrack?.title || t("settings.musicWidget.selectPlay")
+                  }}
                   <span
                     v-if="(currentTrack?.title || '').length > 15"
                     class="ml-8"
@@ -1817,14 +1833,14 @@ watch(syncPlayerState, (enabled) => {
                   <button
                     class="aplayer-btn"
                     @click.stop="prevTrack"
-                    title="上一首"
+                    :title="t('settings.musicWidget.prev')"
                   >
                     {{ ICON_PREV }}
                   </button>
                   <button
                     class="aplayer-btn"
                     @click.stop="nextTrack()"
-                    title="下一首"
+                    :title="t('settings.musicWidget.next')"
                   >
                     {{ ICON_NEXT }}
                   </button>
@@ -1836,10 +1852,10 @@ watch(syncPlayerState, (enabled) => {
                     @click.stop="toggleMode"
                     :title="
                       playerState.playbackMode === 'random'
-                        ? '随机播放'
+                        ? t('settings.musicWidget.random')
                         : playerState.playbackMode === 'single'
-                          ? '单曲循环'
-                          : '顺序播放'
+                          ? t('settings.musicWidget.loopOne')
+                          : t('settings.musicWidget.sequential')
                     "
                   >
                     {{
@@ -1855,7 +1871,7 @@ watch(syncPlayerState, (enabled) => {
                     <button
                       class="aplayer-btn"
                       @click.stop="miniVolumeOpen = !miniVolumeOpen"
-                      title="音量"
+                      :title="t('settings.musicWidget.volume')"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -1934,7 +1950,11 @@ watch(syncPlayerState, (enabled) => {
               <button
                 class="aplayer-pic-btn"
                 @click.stop="togglePlay"
-                :title="playerState.isPlaying ? '暂停' : '播放'"
+                :title="
+                  playerState.isPlaying
+                    ? t('settings.musicWidget.pause')
+                    : t('settings.musicWidget.play')
+                "
                 :style="
                   currentCoverUrl
                     ? { backgroundImage: `url('${currentCoverUrl}')` }
@@ -1957,7 +1977,9 @@ watch(syncPlayerState, (enabled) => {
                     'aplayer-marquee': (currentTrack?.title || '').length > 15,
                   }"
                 >
-                  {{ currentTrack?.title || "选择播放" }}
+                  {{
+                    currentTrack?.title || t("settings.musicWidget.selectPlay")
+                  }}
                   <span
                     v-if="(currentTrack?.title || '').length > 15"
                     class="ml-8"
@@ -1986,14 +2008,14 @@ watch(syncPlayerState, (enabled) => {
                   <button
                     class="aplayer-btn"
                     @click.stop="prevTrack"
-                    title="上一首"
+                    :title="t('settings.musicWidget.prev')"
                   >
                     {{ ICON_PREV }}
                   </button>
                   <button
                     class="aplayer-btn"
                     @click.stop="nextTrack()"
-                    title="下一首"
+                    :title="t('settings.musicWidget.next')"
                   >
                     {{ ICON_NEXT }}
                   </button>
@@ -2005,10 +2027,10 @@ watch(syncPlayerState, (enabled) => {
                     @click.stop="toggleMode"
                     :title="
                       playerState.playbackMode === 'random'
-                        ? '随机播放'
+                        ? t('settings.musicWidget.random')
                         : playerState.playbackMode === 'single'
-                          ? '单曲循环'
-                          : '顺序播放'
+                          ? t('settings.musicWidget.loopOne')
+                          : t('settings.musicWidget.sequential')
                     "
                   >
                     {{
@@ -2024,7 +2046,7 @@ watch(syncPlayerState, (enabled) => {
                     <button
                       class="aplayer-btn"
                       @click.stop="miniVolumeOpen = !miniVolumeOpen"
-                      title="音量"
+                      :title="t('settings.musicWidget.volume')"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -2091,13 +2113,19 @@ watch(syncPlayerState, (enabled) => {
 
           <div v-show="miniListOpen" class="aplayer-list" @click.stop>
             <div class="aplayer-list-body">
-              <div v-if="miniLoading" class="aplayer-list-state">加载中...</div>
+              <div v-if="miniLoading" class="aplayer-list-state">
+                {{ t("common.common.loading") }}
+              </div>
               <div v-else-if="miniError" class="aplayer-list-state is-error">
                 {{ miniError }}
               </div>
 
               <div v-else class="aplayer-list-state">
-                已加载全部歌曲（{{ browseTracks.length }}）
+                {{
+                  t("settings.musicWidget.allLoaded", {
+                    count: browseTracks.length,
+                  })
+                }}
               </div>
             </div>
           </div>
@@ -2136,10 +2164,13 @@ watch(syncPlayerState, (enabled) => {
                 <div
                   class="font-bold text-white truncate text-sm leading-tight"
                 >
-                  {{ currentTrack?.title || "道理鱼音乐" }}
+                  {{ currentTrack?.title || t("settings.musicWidget.title") }}
                 </div>
                 <div class="text-xs text-white/60 truncate leading-tight">
-                  {{ currentAlbumArtistText || (currentTrack ? "" : "未播放") }}
+                  {{
+                    currentAlbumArtistText ||
+                    (currentTrack ? "" : t("settings.musicWidget.notPlaying"))
+                  }}
                 </div>
               </div>
 
@@ -2149,10 +2180,10 @@ watch(syncPlayerState, (enabled) => {
                 class="absolute bottom-1 right-2 flex items-center justify-center text-[12px] scale-[1.8] transition-all duration-200 ease-out text-white/50 hover:text-white/90"
                 :title="
                   playerState.playbackMode === 'random'
-                    ? '随机播放'
+                    ? t('settings.musicWidget.random')
                     : playerState.playbackMode === 'single'
-                      ? '循环播放'
-                      : '顺序播放'
+                      ? t('settings.musicWidget.loop')
+                      : t('settings.musicWidget.sequential')
                 "
               >
                 {{
@@ -2214,7 +2245,9 @@ watch(syncPlayerState, (enabled) => {
               @change="fetchTracks"
               class="w-full bg-black/20 text-white/90 text-xs rounded px-2 py-1 outline-none border border-white/10 focus:border-blue-500/50 hover:bg-black/30 transition-colors"
             >
-              <option :value="null" class="text-black">请选择歌单...</option>
+              <option :value="null" class="text-black">
+                {{ t("settings.musicWidget.selectPlaylist") }}
+              </option>
               <option
                 v-for="p in playlists"
                 :key="p.id"
@@ -2232,7 +2265,7 @@ watch(syncPlayerState, (enabled) => {
             @wheel.stop
           >
             <div v-if="loading" class="p-4 text-center text-xs text-white/40">
-              加载中...
+              {{ t("common.common.loading") }}
             </div>
             <div v-else-if="error" class="p-4 text-center text-xs text-red-400">
               {{ error }}
@@ -2310,7 +2343,7 @@ watch(syncPlayerState, (enabled) => {
                   <button
                     @click="currentArtistId = null"
                     class="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 transition-colors text-xs"
-                    title="返回"
+                    :title="t('settings.musicWidget.back')"
                   >
                     ←
                   </button>
@@ -2330,7 +2363,7 @@ watch(syncPlayerState, (enabled) => {
                     <span class="text-xs font-bold text-white truncate">
                       {{
                         artists.find((a) => a.id === currentArtistId)?.name ||
-                        "艺人歌单"
+                        t("settings.musicWidget.artistPlaylist")
                       }}
                     </span>
                   </div>
@@ -2338,7 +2371,7 @@ watch(syncPlayerState, (enabled) => {
                     @click="playAll"
                     class="text-[10px] bg-blue-500 hover:bg-blue-600 text-white px-2 py-0.5 rounded shadow-sm transition-colors"
                   >
-                    播放全部
+                    {{ t("settings.musicWidget.playAll") }}
                   </button>
                 </div>
 
@@ -2349,7 +2382,7 @@ watch(syncPlayerState, (enabled) => {
                   <button
                     @click="currentAlbumId = null"
                     class="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 transition-colors text-xs"
-                    title="返回"
+                    :title="t('settings.musicWidget.back')"
                   >
                     ←
                   </button>
@@ -2368,7 +2401,7 @@ watch(syncPlayerState, (enabled) => {
                     <span class="text-xs font-bold text-white truncate">
                       {{
                         albums.find((a) => a.id === currentAlbumId)?.title ||
-                        "专辑歌单"
+                        t("settings.musicWidget.albumPlaylist")
                       }}
                     </span>
                   </div>
@@ -2376,7 +2409,7 @@ watch(syncPlayerState, (enabled) => {
                     @click="playAll"
                     class="text-[10px] bg-blue-500 hover:bg-blue-600 text-white px-2 py-0.5 rounded shadow-sm transition-colors"
                   >
-                    播放全部
+                    {{ t("settings.musicWidget.playAll") }}
                   </button>
                 </div>
 
@@ -2448,7 +2481,7 @@ watch(syncPlayerState, (enabled) => {
             <button
               @click="showVisualModeMenu = !showVisualModeMenu"
               class="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/60 transition-all border border-white/10"
-              title="切换播放效果"
+              :title="t('settings.musicWidget.switchEffect')"
             >
               {{
                 visualModeOptions.find((o) => o.id === visualMode)?.icon || "🎨"
@@ -2518,7 +2551,9 @@ watch(syncPlayerState, (enabled) => {
               class="h-full flex flex-col items-center justify-center text-white/40 gap-2"
             >
               <span class="text-2xl opacity-50">📝</span>
-              <span class="text-xs">暂无歌词</span>
+              <span class="text-xs">{{
+                t("settings.musicWidget.noLyrics")
+              }}</span>
             </div>
           </div>
 
@@ -2559,9 +2594,9 @@ watch(syncPlayerState, (enabled) => {
                   </div>
                 </div>
                 <div v-else class="flex flex-col items-center gap-1">
-                  <span class="text-xs font-medium text-white/60"
-                    >频谱分析</span
-                  >
+                  <span class="text-xs font-medium text-white/60">{{
+                    t("settings.musicWidget.tabSpectrum")
+                  }}</span>
                   <span class="text-[10px] opacity-50">Spectrum Analyzer</span>
                 </div>
               </div>
@@ -2607,7 +2642,9 @@ watch(syncPlayerState, (enabled) => {
                 </div>
               </div>
               <div v-else class="flex flex-col items-center gap-1">
-                <span class="text-xs font-medium text-white/60">抽象动画</span>
+                <span class="text-xs font-medium text-white/60">{{
+                  t("settings.musicWidget.tabAbstract")
+                }}</span>
                 <span class="text-[10px] opacity-50"
                   >Abstract Visualizations</span
                 >
@@ -2705,9 +2742,9 @@ watch(syncPlayerState, (enabled) => {
                 </div>
               </div>
               <div v-else class="flex flex-col items-center gap-1">
-                <span class="text-xs font-medium text-white/60"
-                  >封面与黑胶</span
-                >
+                <span class="text-xs font-medium text-white/60">{{
+                  t("settings.musicWidget.tabVinyl")
+                }}</span>
                 <span class="text-[10px] opacity-50"
                   >Cover Art &amp; Vinyl</span
                 >

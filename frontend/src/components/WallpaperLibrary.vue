@@ -6,6 +6,7 @@ import { cacheImage, getCachedImage } from "@/utils/imageCache";
 import { v4 as uuidv4 } from "uuid";
 import { acquireObjectUrl, releaseObjectUrl } from "@/utils/objectUrlRuntime";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
+import { useI18n, I18nT } from "vue-i18n";
 
 const props = defineProps<{
   show: boolean;
@@ -14,12 +15,14 @@ const props = defineProps<{
 
 const emit = defineEmits(["update:show", "select"]);
 const store = useMainStore();
+const { t } = useI18n();
 
 /** GET / multipart：只带 Bearer，不设 Content-Type（避免破坏 FormData） */
 const authHeadersOnly = (): Record<string, string> => {
   const h: Record<string, string> = {};
-  const t = store.token || localStorage.getItem("flat-nas-token");
-  if (t) h["Authorization"] = `Bearer ${t}`;
+  // 注意：变量名不要用 t，否则会遮蔽 i18n 的 t()
+  const token = store.token || localStorage.getItem("flat-nas-token");
+  if (token) h["Authorization"] = `Bearer ${token}`;
   return h;
 };
 
@@ -268,7 +271,7 @@ const handleUpload = (event: Event) => {
   const hasLargeFile = pendingFiles.value.some((f) => f.size > 10 * 1024 * 1024);
 
   if (hasLargeFile) {
-    confirmMessage.value = "检测到文件超过 10MB，可能导致内存占用过高，是否继续上传？";
+    confirmMessage.value = t("settings.wallpaperLibrary.largeFileConfirm");
     confirmAction.value = executeUpload;
     showConfirmModal.value = true;
   } else {
@@ -305,11 +308,11 @@ const executeUpload = async () => {
       await fetchWallpapers();
       store.refreshResources(); // 刷新资源版本号，更新图片缓存
     } else {
-      alert("上传失败");
+      alert(t("settings.wallpaperLibrary.uploadFailed"));
     }
   } catch (e) {
     console.error(e);
-    alert("上传出错");
+    alert(t("settings.messages.uploadError"));
   } finally {
     uploading.value = false;
     pendingFiles.value = [];
@@ -318,10 +321,10 @@ const executeUpload = async () => {
 
 const handleDelete = (name: string, type: "pc" | "mobile") => {
   if (name === DEFAULT_WALLPAPER) {
-    alert("默认壁纸无法删除");
+    alert(t("settings.wallpaperLibrary.cannotDeleteDefault"));
     return;
   }
-  confirmMessage.value = "确定要删除这张壁纸吗？";
+  confirmMessage.value = t("settings.wallpaperLibrary.confirmDelete");
   confirmAction.value = () => executeDelete(name, type);
   showConfirmModal.value = true;
 };
@@ -374,7 +377,7 @@ const executeDelete = async (name: string, type: "pc" | "mobile") => {
       await fetchWallpapers();
       store.refreshResources();
     } else {
-      alert("删除失败");
+      alert(t("settings.messages.deleteFailed"));
     }
   } catch (e) {
     console.error(e);
@@ -431,7 +434,9 @@ const stopAndLockRotation = () => {
 };
 
 const lockButtonLabel = computed(() =>
-  isWallpaperLocked.value ? "已锁定" : "停止并锁定",
+  isWallpaperLocked.value
+    ? t("settings.wallpaperLibrary.locked")
+    : t("settings.wallpaperLibrary.stopAndLock"),
 );
 
 const customApiUrl = ref("");
@@ -445,16 +450,28 @@ const previewRequestId = ref(0);
 const previewObjectUrl = ref("");
 const previewKey = "wallpaper-preview";
 
-const presetApis = [
+const presetApis = computed(() => [
   {
-    name: "Bing 每日壁纸",
+    name: t("settings.wallpaperLibrary.presetBing"),
     url: "https://bing.biturl.top/?resolution=1920&format=image&index=0&mkt=zh-CN",
     autoUpdate: true,
   },
-  { name: "随机风景 (Picsum)", url: "https://picsum.photos/1920/1080", autoUpdate: false },
-  { name: "随机二次元 (PC)", url: "https://www.loliapi.com/acg/pc/", autoUpdate: false },
-  { name: "随机二次元 (PE)", url: "https://www.loliapi.com/acg/pe/", autoUpdate: false },
-];
+  {
+    name: t("settings.wallpaperLibrary.presetPicsum"),
+    url: "https://picsum.photos/1920/1080",
+    autoUpdate: false,
+  },
+  {
+    name: t("settings.wallpaperLibrary.presetLoliconPc"),
+    url: "https://www.loliapi.com/acg/pc/",
+    autoUpdate: false,
+  },
+  {
+    name: t("settings.wallpaperLibrary.presetLoliconPe"),
+    url: "https://www.loliapi.com/acg/pe/",
+    autoUpdate: false,
+  },
+]);
 
 const setPreviewUrl = (url: string) => {
   if (previewObjectUrl.value) {
@@ -741,7 +758,7 @@ const applyCustomApi = async (type: "pc" | "mobile", apply: boolean = true) => {
 
     // Now apply configuration
     if (apply) {
-      const preset = presetApis.find(
+      const preset = presetApis.value.find(
         (p) => p.url === currentGeneratorUrl.value || p.url === sourceUrl,
       );
       const enableScheduler = preset ? preset.autoUpdate : false;
@@ -778,7 +795,7 @@ const applyCustomApi = async (type: "pc" | "mobile", apply: boolean = true) => {
       }
       store.refreshResources();
       store.markDirty();
-      alert("设置成功");
+      alert(t("settings.wallpaperLibrary.applySuccess"));
     } else {
       if (uploadedFilename) {
         prependWallpaperToList(uploadedFilename, type);
@@ -789,11 +806,15 @@ const applyCustomApi = async (type: "pc" | "mobile", apply: boolean = true) => {
       }
       store.refreshResources();
       activeTab.value = type;
-      alert(type === "pc" ? "已保存到 PC 壁纸库" : "已保存到手机壁纸库");
+      alert(
+        type === "pc"
+          ? t("settings.wallpaperLibrary.savedToPcLibrary")
+          : t("settings.wallpaperLibrary.savedToMobileLibrary"),
+      );
     }
   } catch (e) {
     console.error(e);
-    alert("请求出错，请检查网络");
+    alert(t("settings.wallpaperLibrary.requestFailed"));
     // Fallback logic as requested: "Failure -> Default icon"
     if (type === "pc") {
       store.appConfig.background = `/${DEFAULT_WALLPAPER}`;
@@ -838,7 +859,7 @@ onBeforeUnmount(() => {
         >
           <div class="flex items-center gap-4">
             <h3 class="text-lg font-bold text-gray-800">
-              {{ title || "壁纸库" }}
+              {{ title || t("settings.sections.wallpaperLibrary") }}
             </h3>
 
             <div class="flex items-center bg-gray-100 rounded-lg p-1">
@@ -851,7 +872,7 @@ onBeforeUnmount(() => {
                     : 'text-gray-500 hover:text-gray-700'
                 "
               >
-                PC 壁纸
+                {{ t("settings.wallpaperLibrary.pcWallpapers") }}
                 <span class="px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600 text-[10px]">{{
                   wallpapers.length
                 }}</span>
@@ -865,7 +886,7 @@ onBeforeUnmount(() => {
                     : 'text-gray-500 hover:text-gray-700'
                 "
               >
-                手机壁纸
+                {{ t("settings.wallpaperLibrary.mobileWallpapers") }}
                 <span class="px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600 text-[10px]">{{
                   mobileWallpapers.length
                 }}</span>
@@ -879,7 +900,7 @@ onBeforeUnmount(() => {
                     : 'text-gray-500 hover:text-gray-700'
                 "
               >
-                API 接口
+                {{ t("settings.wallpaperLibrary.apiTab") }}
               </button>
             </div>
           </div>
@@ -896,7 +917,7 @@ onBeforeUnmount(() => {
         <div
           class="px-4 py-3 md:px-6 bg-white border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0"
         >
-          <div class="text-xs text-gray-400 hidden md:block">请拖动选择</div>
+          <div class="text-xs text-gray-400 hidden md:block">{{ t("settings.wallpaperLibrary.dragToSelect") }}</div>
           <div class="flex flex-wrap gap-2 md:gap-3 items-center w-full md:w-auto">
             <!-- Rotation Controls -->
             <div
@@ -912,11 +933,15 @@ onBeforeUnmount(() => {
                 "
                 :title="
                   currentRotationMode === 'random'
-                    ? '播放方式：随机（仅轮播开启后生效）'
-                    : '播放方式：顺序（仅轮播开启后生效）'
+                    ? t('settings.wallpaperLibrary.modeRandomTooltip')
+                    : t('settings.wallpaperLibrary.modeSequentialTooltip')
                 "
               >
-                <span>{{ currentRotationMode === "random" ? "随机" : "顺播" }}</span>
+                <span>{{
+                  currentRotationMode === "random"
+                    ? t("settings.wallpaperLibrary.random")
+                    : t("settings.wallpaperLibrary.sequential")
+                }}</span>
               </button>
               <div class="h-4 w-px bg-gray-300"></div>
               <div class="flex items-center gap-1 px-1">
@@ -929,7 +954,11 @@ onBeforeUnmount(() => {
                       : 'text-gray-600 hover:bg-white'
                   "
                 >
-                  <span>{{ currentRotationEnabled ? "轮播中" : "开启轮播" }}</span>
+                  <span>{{
+                    currentRotationEnabled
+                      ? t("settings.wallpaperLibrary.rotating")
+                      : t("settings.wallpaperLibrary.enableRotation")
+                  }}</span>
                 </button>
                 <input
                   v-if="!currentRotationEnabled"
@@ -937,9 +966,11 @@ onBeforeUnmount(() => {
                   v-model="currentRotationInterval"
                   min="5"
                   class="w-10 text-xs border border-gray-200 rounded px-1 py-0.5 text-center outline-none focus:border-blue-500"
-                  title="轮播间隔(分钟)"
+                  :title="t('settings.wallpaperLibrary.rotationIntervalMinutes')"
                 />
-                <span v-if="!currentRotationEnabled" class="text-[10px] text-gray-400">分</span>
+                <span v-if="!currentRotationEnabled" class="text-[10px] text-gray-400">{{
+                  t("settings.wallpaperLibrary.minute")
+                }}</span>
               </div>
             </div>
 
@@ -952,7 +983,7 @@ onBeforeUnmount(() => {
                   ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-blue-200'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               "
-              title="锁定当前壁纸（会停止 PC 与手机端自动轮播）"
+              :title="t('settings.wallpaperLibrary.lockCurrentTooltip')"
             >
               <span>{{ lockButtonLabel }}</span>
             </button>
@@ -962,7 +993,7 @@ onBeforeUnmount(() => {
               class="flex items-center gap-2 mr-2 bg-gray-50 p-1 rounded-lg border border-gray-100"
             >
               <div class="flex items-center gap-1 px-1">
-                <span class="text-[13px] text-gray-500">模糊</span>
+                <span class="text-[13px] text-gray-500">{{ t("settings.wallpaperLibrary.blur") }}</span>
                 <input
                   type="range"
                   v-model.number="store.appConfig.backgroundBlur"
@@ -970,12 +1001,12 @@ onBeforeUnmount(() => {
                   max="20"
                   step="1"
                   class="w-16 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                  title="模糊半径"
+                  :title="t('settings.wallpaperLibrary.blurRadius')"
                 />
               </div>
               <div class="w-px h-3 bg-gray-300"></div>
               <div class="flex items-center gap-1 px-1">
-                <span class="text-[13px] text-gray-500">遮罩</span>
+                <span class="text-[13px] text-gray-500">{{ t("settings.wallpaperLibrary.mask") }}</span>
                 <input
                   type="range"
                   v-model.number="store.appConfig.backgroundMask"
@@ -983,7 +1014,7 @@ onBeforeUnmount(() => {
                   max="1"
                   step="0.1"
                   class="w-16 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                  title="遮罩浓度"
+                  :title="t('settings.wallpaperLibrary.maskOpacity')"
                 />
               </div>
             </div>
@@ -993,7 +1024,7 @@ onBeforeUnmount(() => {
               class="flex items-center gap-2 mr-2 bg-gray-50 p-1 rounded-lg border border-gray-100"
             >
               <div class="flex items-center gap-1 px-1">
-                <span class="text-[13px] text-gray-500">模糊</span>
+                <span class="text-[13px] text-gray-500">{{ t("settings.wallpaperLibrary.blur") }}</span>
                 <input
                   type="range"
                   v-model.number="store.appConfig.mobileBackgroundBlur"
@@ -1001,12 +1032,12 @@ onBeforeUnmount(() => {
                   max="20"
                   step="1"
                   class="w-16 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-400"
-                  title="模糊半径"
+                  :title="t('settings.wallpaperLibrary.blurRadius')"
                 />
               </div>
               <div class="w-px h-3 bg-gray-300"></div>
               <div class="flex items-center gap-1 px-1">
-                <span class="text-[13px] text-gray-500">遮罩</span>
+                <span class="text-[13px] text-gray-500">{{ t("settings.wallpaperLibrary.mask") }}</span>
                 <input
                   type="range"
                   v-model.number="store.appConfig.mobileBackgroundMask"
@@ -1014,7 +1045,7 @@ onBeforeUnmount(() => {
                   max="1"
                   step="0.1"
                   class="w-16 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-400"
-                  title="遮罩浓度"
+                  :title="t('settings.wallpaperLibrary.maskOpacity')"
                 />
               </div>
             </div>
@@ -1030,10 +1061,12 @@ onBeforeUnmount(() => {
                   ? 'bg-green-500 text-white hover:bg-green-600 shadow-green-200'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               "
-              title="开启后，手机端将优先使用手机壁纸；关闭后，手机端将使用 PC 端壁纸"
+              :title="t('settings.wallpaperLibrary.enableMobileWallpaperTooltip')"
             >
               <span>{{
-                store.appConfig.enableMobileWallpaper ? "已启用手机壁纸" : "启用手机壁纸"
+                store.appConfig.enableMobileWallpaper
+                  ? t("settings.wallpaperLibrary.mobileWallpaperEnabled")
+                  : t("settings.wallpaperLibrary.enableMobileWallpaper")
               }}</span>
             </button>
 
@@ -1041,15 +1074,15 @@ onBeforeUnmount(() => {
               @click="fetchWallpapers"
               class="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
             >
-              刷新
+              {{ t("common.common.refresh") }}
             </button>
             <button
               @click="triggerUpload"
               class="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 transition-all flex items-center gap-1"
               :disabled="uploading"
             >
-              <span v-if="uploading">上传中...</span>
-              <span v-else>上传壁纸</span>
+              <span v-if="uploading">{{ t("settings.wallpaperLibrary.uploading") }}</span>
+              <span v-else>{{ t("settings.wallpaperLibrary.uploadWallpaper") }}</span>
             </button>
             <input
               ref="fileInput"
@@ -1072,9 +1105,9 @@ onBeforeUnmount(() => {
             <div
               class="w-10 h-10 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"
             ></div>
-            <span class="text-sm font-bold bg-white/80 px-4 py-1.5 rounded-full shadow-sm"
-              >正在通过代理获取并优化壁纸一致性...</span
-            >
+            <span class="text-sm font-bold bg-white/80 px-4 py-1.5 rounded-full shadow-sm">{{
+              t("settings.wallpaperLibrary.resolvingProxy")
+            }}</span>
           </div>
 
           <div
@@ -1084,7 +1117,7 @@ onBeforeUnmount(() => {
             <div
               class="w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-2"
             ></div>
-            <span class="text-xs">加载中...</span>
+            <span class="text-xs">{{ t("common.common.loading") }}</span>
           </div>
 
           <div
@@ -1095,7 +1128,7 @@ onBeforeUnmount(() => {
             class="h-full flex flex-col items-center justify-center text-gray-400"
           >
             <span class="text-4xl mb-2">🖼️</span>
-            <span class="text-sm">暂无壁纸，请先上传</span>
+            <span class="text-sm">{{ t("settings.wallpaperLibrary.emptyHint") }}</span>
           </div>
 
           <VueDraggable
@@ -1129,8 +1162,10 @@ onBeforeUnmount(() => {
                 class="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center bg-red-50 text-red-500 border-2 border-red-200 border-dashed"
               >
                 <span class="text-2xl">⚠️</span>
-                <span class="text-xs font-medium">图片已失效</span>
-                <span class="text-[10px] opacity-70">将自动移除</span>
+                <span class="text-xs font-medium">{{ t("settings.wallpaperLibrary.imageInvalid") }}</span>
+                <span class="text-[10px] opacity-70">{{
+                  t("settings.wallpaperLibrary.willAutoRemove")
+                }}</span>
                 <div class="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin"></div>
               </div>
 
@@ -1152,7 +1187,7 @@ onBeforeUnmount(() => {
                 v-if="index === 0"
                 class="absolute top-2 left-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm z-10 flex items-center gap-1"
               >
-                <span>默认壁纸</span>
+                <span>{{ t("settings.wallpaperLibrary.defaultWallpaper") }}</span>
               </div>
 
               <!-- Hover Overlay -->
@@ -1165,14 +1200,14 @@ onBeforeUnmount(() => {
                 class="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-lg font-bold opacity-0 group-hover:opacity-100 transition-opacity z-10"
                 @click="selectWallpaper(img, activeTab === 'pc' ? 'pc' : 'mobile')"
               >
-                设为默认壁纸
+                {{ t("settings.wallpaperLibrary.setAsDefault") }}
               </div>
 
               <!-- Delete Button -->
               <button
                 @click.stop="handleDelete(img, activeTab === 'pc' ? 'pc' : 'mobile')"
                 class="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm z-20"
-                title="删除"
+                :title="t('common.common.delete')"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1196,20 +1231,30 @@ onBeforeUnmount(() => {
           <div v-if="activeTab === 'api'" class="space-y-6 p-1">
             <div class="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm leading-relaxed">
               <ul class="list-disc list-inside space-y-1">
-                <li>在此处可以直接输入图片的 URL 地址，或使用第三方随机壁纸 API。</li>
+                <li>{{ t("settings.wallpaperLibrary.apiHint1") }}</li>
                 <li>
-                  支持 <b>JSON 格式 API</b>（如 Unsplash/Bing），系统会自动解析并提取图片链接。
+                  <i18n-t keypath="settings.wallpaperLibrary.apiHintJson" tag="span">
+                    <template #jsonApi
+                      ><b>{{ t("settings.wallpaperLibrary.jsonApiBold") }}</b></template
+                    >
+                  </i18n-t>
                 </li>
-                <li>支持 <b>局域网/自建 API</b>（如 http://192.168.x.x），不再受内网访问限制。</li>
+                <li>
+                  <i18n-t keypath="settings.wallpaperLibrary.apiHintLan" tag="span">
+                    <template #lanApi
+                      ><b>{{ t("settings.wallpaperLibrary.lanApiBold") }}</b></template
+                    >
+                  </i18n-t>
+                </li>
               </ul>
               <div class="mt-2 text-xs opacity-80">
-                设置后，每次刷新页面可能会根据 API 返回不同的图片（取决于 API 行为）。
+                {{ t("settings.wallpaperLibrary.apiHintRefresh") }}
               </div>
             </div>
 
             <div class="border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
               <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <span>🔗</span> 自定义壁纸接口
+                <span>🔗</span> {{ t("settings.wallpaperLibrary.customApiTitle") }}
               </h4>
 
               <div class="space-y-4">
@@ -1217,7 +1262,9 @@ onBeforeUnmount(() => {
                 <div v-if="customApiUrl" class="grid grid-cols-2 gap-4">
                   <!-- PC Preview -->
                   <div class="space-y-2">
-                    <div class="text-[10px] text-gray-500 text-center font-bold">PC 端预览</div>
+                    <div class="text-[10px] text-gray-500 text-center font-bold">
+                      {{ t("settings.wallpaperLibrary.pcPreview") }}
+                    </div>
                     <div
                       class="relative h-48 w-full rounded-lg overflow-hidden border border-gray-200 bg-gray-100 group"
                     >
@@ -1233,7 +1280,7 @@ onBeforeUnmount(() => {
                         v-else
                         class="absolute inset-0 flex items-center justify-center text-xs text-gray-400"
                       >
-                        点击上方预设或刷新按钮获取预览
+                        {{ t("settings.wallpaperLibrary.previewHint") }}
                       </div>
                       <!-- Mask Preview -->
                       <div
@@ -1249,7 +1296,7 @@ onBeforeUnmount(() => {
                       class="bg-gray-50 p-2 rounded-lg border border-gray-100 flex items-center justify-center gap-4"
                     >
                       <div class="flex items-center gap-1">
-                        <span class="text-[10px] text-gray-500">模糊</span>
+                        <span class="text-[10px] text-gray-500">{{ t("settings.wallpaperLibrary.blur") }}</span>
                         <input
                           type="range"
                           v-model.number="store.appConfig.backgroundBlur"
@@ -1261,7 +1308,7 @@ onBeforeUnmount(() => {
                       </div>
                       <div class="w-px h-3 bg-gray-300"></div>
                       <div class="flex items-center gap-1">
-                        <span class="text-[10px] text-gray-500">遮罩</span>
+                        <span class="text-[10px] text-gray-500">{{ t("settings.wallpaperLibrary.mask") }}</span>
                         <input
                           type="range"
                           v-model.number="store.appConfig.backgroundMask"
@@ -1276,7 +1323,7 @@ onBeforeUnmount(() => {
                         @click="applyCustomApi('pc', false)"
                         class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         :disabled="!customApiUrl || applyingApi || resolvingUrl"
-                        title="下载到 PC 壁纸库"
+                        :title="t('settings.wallpaperLibrary.downloadToPcLibrary')"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -1298,7 +1345,9 @@ onBeforeUnmount(() => {
 
                   <!-- Mobile Preview -->
                   <div class="space-y-2">
-                    <div class="text-[10px] text-gray-500 text-center font-bold">手机端预览</div>
+                    <div class="text-[10px] text-gray-500 text-center font-bold">
+                      {{ t("settings.wallpaperLibrary.mobilePreview") }}
+                    </div>
                     <div
                       class="relative h-48 w-full flex justify-center rounded-lg border border-gray-200 bg-gray-100 overflow-hidden"
                     >
@@ -1316,7 +1365,7 @@ onBeforeUnmount(() => {
                           v-else
                           class="absolute inset-0 flex items-center justify-center text-xs text-gray-400"
                         >
-                          点击上方预设或刷新按钮获取预览
+                          {{ t("settings.wallpaperLibrary.previewHint") }}
                         </div>
                         <!-- Mask Preview -->
                         <div
@@ -1333,7 +1382,7 @@ onBeforeUnmount(() => {
                       class="bg-gray-50 p-2 rounded-lg border border-gray-100 flex items-center justify-center gap-4"
                     >
                       <div class="flex items-center gap-1">
-                        <span class="text-[10px] text-gray-500">模糊</span>
+                        <span class="text-[10px] text-gray-500">{{ t("settings.wallpaperLibrary.blur") }}</span>
                         <input
                           type="range"
                           v-model.number="store.appConfig.mobileBackgroundBlur"
@@ -1345,7 +1394,7 @@ onBeforeUnmount(() => {
                       </div>
                       <div class="w-px h-3 bg-gray-300"></div>
                       <div class="flex items-center gap-1">
-                        <span class="text-[10px] text-gray-500">遮罩</span>
+                        <span class="text-[10px] text-gray-500">{{ t("settings.wallpaperLibrary.mask") }}</span>
                         <input
                           type="range"
                           v-model.number="store.appConfig.mobileBackgroundMask"
@@ -1360,7 +1409,7 @@ onBeforeUnmount(() => {
                         @click="applyCustomApi('mobile', false)"
                         class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         :disabled="!customApiUrl || applyingApi || resolvingUrl"
-                        title="下载到 手机壁纸库"
+                        :title="t('settings.wallpaperLibrary.downloadToMobileLibrary')"
                       >
                         <span
                           v-if="applyingApi"
@@ -1387,19 +1436,19 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div>
-                  <label class="block text-xs font-medium text-gray-600 mb-2"
-                    >图片 URL / API 地址</label
-                  >
+                  <label class="block text-xs font-medium text-gray-600 mb-2">{{
+                    t("settings.wallpaperLibrary.imageUrlLabel")
+                  }}</label>
                   <div class="flex gap-2">
                     <input
                       v-model="customApiUrl"
                       class="flex-1 px-4 py-3 border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                      placeholder="https://example.com/image.jpg 或 随机图片API"
+                      :placeholder="t('settings.wallpaperLibrary.imageUrlPlaceholder')"
                     />
                     <button
                       @click="handleRefresh"
                       class="px-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg border border-gray-200 transition-colors disabled:opacity-50"
-                      title="刷新预览 (追加时间戳)"
+                      :title="t('settings.wallpaperLibrary.refreshPreviewTooltip')"
                       :disabled="resolvingUrl"
                     >
                       <span v-if="resolvingUrl" class="inline-block animate-spin">🔄</span>
@@ -1430,7 +1479,11 @@ onBeforeUnmount(() => {
                       v-if="applyingApi"
                       class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
                     ></span>
-                    {{ applyingApi ? "保存中..." : "应用到 PC 壁纸" }}
+                    {{
+                      applyingApi
+                        ? t("settings.wallpaperLibrary.saving")
+                        : t("settings.wallpaperLibrary.applyToPc")
+                    }}
                   </button>
                   <button
                     @click="applyCustomApi('mobile')"
@@ -1442,7 +1495,11 @@ onBeforeUnmount(() => {
                       v-if="applyingApi"
                       class="w-4 h-4 border-2 border-gray-400 border-t-gray-600 rounded-full animate-spin"
                     ></span>
-                    {{ applyingApi ? "保存中..." : "应用到 手机壁纸" }}
+                    {{
+                      applyingApi
+                        ? t("settings.wallpaperLibrary.saving")
+                        : t("settings.wallpaperLibrary.applyToMobile")
+                    }}
                   </button>
                 </div>
               </div>
@@ -1479,7 +1536,9 @@ onBeforeUnmount(() => {
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">提示</h3>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">{{
+              t("settings.wallpaperLibrary.tip")
+            }}</h3>
             <p class="text-sm text-gray-600 leading-relaxed">{{ confirmMessage }}</p>
           </div>
         </div>
@@ -1488,13 +1547,13 @@ onBeforeUnmount(() => {
             @click="closeConfirmModal"
             class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
-            取消
+            {{ t("common.common.cancel") }}
           </button>
           <button
             @click="handleConfirm"
             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >
-            确定
+            {{ t("common.common.ok") }}
           </button>
         </div>
       </div>

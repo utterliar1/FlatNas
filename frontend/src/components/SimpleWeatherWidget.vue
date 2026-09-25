@@ -6,6 +6,9 @@ import type { WidgetConfig } from "@/types";
 import { useWeather } from "@/composables/useWeather";
 import { formatLocationSource } from "@/utils/weather";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
+import { useI18n } from "vue-i18n";
+
+const { t, tm } = useI18n();
 
 const cityData = ref<Record<string, string[]> | null>(null);
 
@@ -88,6 +91,7 @@ const updateTime = () => {
 // 映射天气类型
 const weatherType = computed(() => {
   const text = weather.value.text;
+  // API 返回值匹配：不可 i18n
   if (text.includes("雨")) return "rain";
   if (text.includes("雪")) return "snow";
   if (text.includes("雾") || text.includes("霾")) return "fog";
@@ -103,13 +107,13 @@ const isBrightWeather = computed(() => {
 const networkStatusText = computed(() => {
   switch (networkStatus.value) {
     case "online":
-      return "网络正常";
+      return t("settings.simpleWeatherWidget.networkNormal");
     case "degraded":
-      return "网络波动";
+      return t("settings.simpleWeatherWidget.networkFluctuation");
     case "offline":
-      return "网络离线";
+      return t("settings.simpleWeatherWidget.networkOffline");
     default:
-      return "网络未知";
+      return t("settings.simpleWeatherWidget.networkUnknown");
   }
 });
 
@@ -146,12 +150,12 @@ const showForecast = computed(() => {
 const formatDate = (dateStr: string) => {
   try {
     const date = new Date(dateStr);
-    const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+    const weekdays = tm("settings.weekdays") as unknown as string[];
     const today = new Date();
     if (date.getDate() === today.getDate() && date.getMonth() === today.getMonth()) {
-      return "今天";
+      return t("settings.simpleWeatherWidget.today");
     }
-    return weekdays[date.getDay()];
+    return weekdays[date.getDay()]!;
   } catch {
     return dateStr;
   }
@@ -335,7 +339,7 @@ onMounted(() => {
       <button
         @click.stop="showCityInput = true"
         class="p-1.5 bg-black/10 text-white/70 hover:text-white rounded-full hover:bg-black/30 backdrop-blur-md transition-colors"
-        title="设置城市"
+        :title="t('settings.simpleWeatherWidget.settingsBtn')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -364,11 +368,13 @@ onMounted(() => {
         <div
           class="bg-gray-900/90 p-6 rounded-2xl border border-white/10 shadow-2xl w-full backdrop-blur-xl"
         >
-          <div class="text-lg font-medium mb-4 text-white">设置城市</div>
+          <div class="text-lg font-medium mb-4 text-white">
+            {{ t("settings.simpleWeatherWidget.cityModalTitle") }}
+          </div>
           <input
             v-model="customCityInput"
             @keyup.enter="saveCity"
-            placeholder="输入城市 (为空自动)"
+            :placeholder="t('settings.simpleWeatherWidget.cityPlaceholder')"
             class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/40 text-left outline-none focus:bg-white/20 focus:border-white/40 mb-4 transition-all"
             autofocus
           />
@@ -382,7 +388,7 @@ onMounted(() => {
                 class="text-white/50 hover:text-white transition-colors"
                 :class="{ 'font-bold text-white': !selectedProvince }"
               >
-                省份/地区
+                {{ t("settings.simpleWeatherWidget.provinceBreadcrumb") }}
               </button>
               <span v-if="selectedProvince" class="text-white/30">/</span>
               <span v-if="selectedProvince" class="text-white font-bold">{{
@@ -426,7 +432,7 @@ onMounted(() => {
               </button>
             </div>
             <div v-else class="h-[200px] flex items-center justify-center text-white/40 text-xs">
-              加载中...
+              {{ t("common.common.loading") }}
             </div>
           </div>
 
@@ -435,13 +441,13 @@ onMounted(() => {
               @click="showCityInput = false"
               class="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/80 rounded-lg text-sm transition-colors"
             >
-              取消
+              {{ t("common.common.cancel") }}
             </button>
             <button
               @click="saveCity"
               class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors font-medium shadow-lg shadow-blue-900/20"
             >
-              确定
+              {{ t("common.common.ok") }}
             </button>
           </div>
         </div>

@@ -385,7 +385,13 @@
     "fillRssUrlFirst": "Bitte RSS-URL vor dem Hinzufügen eingeben.",
     "pasteTextFirst": "Bitte zuerst den zu importierenden RSS-Text einfügen.",
     "importResult": "{created} hinzugefügt, {updated} aktualisiert, {skipped} übersprungen",
-    "titlePlaceholder": "Titel"
+    "titlePlaceholder": "Titel",
+    "feedUrlPlaceholder": "RSS-Adresse",
+    "importInvalidLines": ", {count} ungültige Zeilen",
+    "importNoNewTitles": ", keine neuen Remote-Titel abgerufen",
+    "importPlaceholder": "Beispiel:\n36Kr https://www.36kr.com/feed\nSspai,https://sspai.com/feed\nCoolshell | https://coolshell.cn/feed\nhttps://example.com/rss.xml",
+    "importTitlesUpdated": ", {count} echte Titel automatisch aktualisiert",
+    "newCategoryPlaceholder": "Neue Kategorie"
   },
   "searchSettings": {
     "title": "Suchmaschineneinstellungen",
@@ -644,7 +650,25 @@
     "modalConfirm": "确定",
     "note": "注",
     "statusLabel": "状态",
-    "amapApiKey": "高德 API Key"
+    "amapApiKey": "高德 API Key",
+    "autoSave10s": "10 Sekunden nach Änderungen (empfohlen)",
+    "autoSave30s": "30 Sekunden nach Änderungen",
+    "autoSave3s": "3 Sekunden nach Änderungen",
+    "autoSaveLabel": "Automatisch speichern",
+    "autoSaveOff": "Aus (nur manuelles Speichern)",
+    "configSaveHint": "Änderungen an Gruppensymbolen, Reihenfolge, Widget-Layout usw. werden nach der obigen Verzögerung automatisch gespeichert; vor dem Neuladen oder Schließen der Seite wird ebenfalls versucht, ungespeicherte Änderungen zu schreiben.",
+    "configSaveSection": "💾 Konfiguration speichern",
+    "customWeatherSourcePlaceholder": "Standardmäßig wird die integrierte Quelle verwendet; geben Sie eine URL an, um sie anzupassen",
+    "dashboardTitle": "FlatNas Dashboard-System",
+    "manualSaveClean": "Jetzt speichern (aktuell)",
+    "manualSaveDirty": "Jetzt speichern (ungespeicherte Änderungen)",
+    "qweatherConsole": "QWeather-Konsole",
+    "qweatherKeyIdPlaceholder": "Key ID eingeben",
+    "qweatherPrivateKeyPlaceholder": "Private Key eingeben (muss -----BEGIN PRIVATE KEY----- Kopf- und Fußzeile enthalten)",
+    "qweatherProjectIdPlaceholder": "Project ID eingeben",
+    "clickToDownloadHelper": "{link} anklicken, um die Einschränkung aufzuheben",
+    "qweatherGuide": "Rufen Sie {console} auf, um Ihre JWT-Anmeldedaten zu erhalten.",
+    "customWeatherSourceDescFull": "Wenn ausgefüllt, werden Wetterdaten direkt von dieser Adresse angefordert. Das Antwortformat muss enthalten: {format}"
   },
   "networkIndicator": {
     "online": "Online",
@@ -913,19 +937,35 @@
   },
   "iconUploader": {
     "imageTooLarge": "Bild zu groß, bitte laden Sie ein Bild unter 5MB hoch",
-    "iconLoadError": "Icon-Laden fehlgeschlagen, Fallback auf Text"
+    "iconLoadError": "Icon-Laden fehlgeschlagen, Fallback auf Text",
+    "clickUpload": "Zum Hochladen klicken",
+    "clickUploadOrCrop": "Zum Hochladen / Zuschneiden klicken",
+    "cropImage": "Bild zuschneiden",
+    "selectFromLibrary": "Aus Bibliothek wählen"
   },
   "miniPlayer": {
     "loading": "Laden...",
     "noMusic": "Keine Musik",
-    "fetchFailed": "Abruf fehlgeschlagen"
+    "fetchFailed": "Abruf fehlgeschlagen",
+    "next": "Weiter",
+    "paused": "Pausiert",
+    "playing": "Wiedergabe läuft",
+    "prev": "Zurück"
   },
   "groupSelector": {
     "selectGroup": "Gruppe auswählen",
     "switchGroup": "Gruppe wechseln"
   },
   "scriptManager": {
-    "newScript": "Neues Skript {index}"
+    "newScript": "Neues Skript {index}",
+    "addScript": "Neues Skript hinzufügen",
+    "clickToConfirmDelete": "Zum Bestätigen des Löschens klicken",
+    "codeLabel": "Code",
+    "confirmQuestion": "Bestätigen?",
+    "dropToAdd": "Dateien zum Hinzufügen ablegen",
+    "nameLabel": "Name",
+    "namePlaceholder": "Skriptname",
+    "useProxyNetwork": "Über lokales Netzwerk"
   },
   "proxyToggle": {
     "proxy": "Proxy"
@@ -941,7 +981,62 @@
     "uploading": "Hochladen...",
     "uploadSuccess": "Hochladen erfolgreich",
     "uploadFailed": "Hochladen fehlgeschlagen",
-    "dragToSort": "Ziehen zum Sortieren"
+    "dragToSort": "Ziehen zum Sortieren",
+    "apiHint1": "Hier können Sie direkt eine Bild-URL eingeben oder eine Random-Wallpaper-API von Drittanbietern verwenden.",
+    "apiHintRefresh": "Nach dem Festlegen kann bei jedem Neuladen der Seite je nach API ein anderes Bild erscheinen.",
+    "apiTab": "API",
+    "applySuccess": "Erfolgreich übernommen",
+    "applyToMobile": "Auf Mobil-Hintergrund anwenden",
+    "applyToPc": "Auf PC-Hintergrund anwenden",
+    "blur": "Weichzeichnen",
+    "blurRadius": "Weichzeichnungsradius",
+    "cannotDeleteDefault": "Das Standard-Hintergrundbild kann nicht gelöscht werden",
+    "customApiTitle": "Benutzerdefinierte Wallpaper-API",
+    "defaultWallpaper": "Standard-Hintergrundbild",
+    "downloadToMobileLibrary": "In mobile Bibliothek herunterladen",
+    "downloadToPcLibrary": "In PC-Bibliothek herunterladen",
+    "dragToSelect": "Ziehen zum Auswählen",
+    "emptyHint": "Noch keine Hintergrundbilder, bitte zuerst hochladen",
+    "enableMobileWallpaper": "Mobil-Hintergrund aktivieren",
+    "enableMobileWallpaperTooltip": "Wenn aktiviert, bevorzugen Mobilgeräte das Mobil-Hintergrundbild; andernfalls wird das PC-Hintergrundbild verwendet",
+    "enableRotation": "Rotation aktivieren",
+    "imageInvalid": "Bild ist nicht mehr verfügbar",
+    "imageUrlLabel": "Bild-URL / API-Adresse",
+    "imageUrlPlaceholder": "https://example.com/image.jpg oder Random-Bild-API",
+    "jsonApiBold": "JSON-API",
+    "lanApiBold": "LAN-/selbst gehostete API",
+    "largeFileConfirm": "Die Datei ist größer als 10 MB und kann viel Speicher belegen. Upload fortsetzen?",
+    "lockCurrentTooltip": "Aktuelles Hintergrundbild fixieren (stoppt die automatische Rotation auf PC und Mobil)",
+    "locked": "Fixiert",
+    "mask": "Maske",
+    "maskOpacity": "Maskendeckkraft",
+    "minute": "Min.",
+    "mobilePreview": "Mobil-Vorschau",
+    "mobileWallpaperEnabled": "Mobil-Hintergrund aktiviert",
+    "modeRandomTooltip": "Wiedergabemodus: Zufällig (wirkt nur bei aktivierter Rotation)",
+    "modeSequentialTooltip": "Wiedergabemodus: Sequenziell (wirkt nur bei aktivierter Rotation)",
+    "pcPreview": "PC-Vorschau",
+    "presetBing": "Bing-Tagesbild",
+    "presetLoliconPc": "Zufälliges Anime (PC)",
+    "presetLoliconPe": "Zufälliges Anime (Mobil)",
+    "presetPicsum": "Zufällige Landschaft (Picsum)",
+    "previewHint": "Klicken Sie oben auf eine Voreinstellung oder auf Aktualisieren, um eine Vorschau zu erhalten",
+    "random": "Zufällig",
+    "refreshPreviewTooltip": "Vorschau aktualisieren (Zeitstempel anhängen)",
+    "requestFailed": "Anfrage fehlgeschlagen, bitte Netzwerk prüfen",
+    "resolvingProxy": "Abruf über Proxy und Optimierung der Wallpaper-Konsistenz...",
+    "rotating": "Rotation läuft",
+    "rotationIntervalMinutes": "Rotationsintervall (Minuten)",
+    "savedToMobileLibrary": "In mobiler Bibliothek gespeichert",
+    "savedToPcLibrary": "In PC-Bibliothek gespeichert",
+    "saving": "Speichern...",
+    "sequential": "Sequenziell",
+    "setAsDefault": "Als Standard-Hintergrund festlegen",
+    "stopAndLock": "Stoppen und fixieren",
+    "tip": "Hinweis",
+    "willAutoRemove": "Wird automatisch entfernt",
+    "apiHintJson": "Unterstützt {jsonApi} (z. B. Unsplash/Bing); der Bildlink wird automatisch analysiert und extrahiert.",
+    "apiHintLan": "Unterstützt {lanApi} (z. B. http://192.168.x.x); nicht mehr durch LAN-Zugriff eingeschränkt."
   },
   "loginModal": {
     "registerTitle": "👤 Neue Benutzerregistrierung",
@@ -984,7 +1079,10 @@
     "configApiKey": "Bitte API-Schlüssel konfigurieren",
     "ipLocateFailed": "IP-Lokalisierung fehlgeschlagen",
     "weatherFetchFailed": "Wetterabruf fehlgeschlagen",
-    "networkFailed": "Netzwerkanfrage fehlgeschlagen"
+    "networkFailed": "Netzwerkanfrage fehlgeschlagen",
+    "dayNightFormat": "{day} zu {night}",
+    "loginRequired": "Bitte anmelden, um das Wetter-Widget zu konfigurieren",
+    "windFormat": "{dir}wind, Stärke {power}"
   },
   "weekdays": [
     "So",
@@ -1071,7 +1169,15 @@
     "send": "Senden",
     "noPreviewSupport": "Dieser Dateityp unterstützt keine Vorschau. Verwenden Sie \"Download\".",
     "placeholder": "Shift+Enter für Zeilenumbruch",
-    "placeholderSmall": "Einfügen/Ablegen (Shift+Enter)"
+    "placeholderSmall": "Einfügen/Ablegen (Shift+Enter)",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "downloadFailed": "Download fehlgeschlagen",
+    "downloadSelected": "Auswahl herunterladen ({count})",
+    "largeFileConfirm": "Große Datei erkannt ({size}); sie kann lange dauern und viel Datenvolumen/Speicher verbrauchen. Download fortsetzen?",
+    "loadFailed": "Laden fehlgeschlagen",
+    "networkInterrupted": "Netzwerk unterbrochen, warte auf Wiederherstellung",
+    "sendFailed": "Senden fehlgeschlagen",
+    "uploadFailed": "Upload fehlgeschlagen"
   },
   "calendarWidget": {
     "switchView": "Ansicht wechseln",
@@ -1093,7 +1199,14 @@
     "journalistDay": "Journalist",
     "firefighterDay": "Feuerwehr",
     "memorialDay": "Gedenk",
-    "firstDay": "1."
+    "firstDay": "1.",
+    "weekShortSun": "So",
+    "weekShortMon": "Mo",
+    "weekShortTue": "Di",
+    "weekShortWed": "Mi",
+    "weekShortThu": "Do",
+    "weekShortFri": "Fr",
+    "weekShortSat": "Sa"
   },
   "clockWidget": {
     "switchStyle": "Stil wechseln"
@@ -1140,7 +1253,10 @@
     "clickToConfig": "Klicken zum Konfigurieren",
     "settings": "Einstellungen",
     "title": "Countdown",
-    "arrived": "🎉 Angekommen"
+    "arrived": "🎉 Angekommen",
+    "dayUnit": "Tage",
+    "hourUnit": "Std.",
+    "minuteUnit": "Min."
   },
   "countupWidget": {
     "defaultTitle": "Stoppuhr",
@@ -1202,7 +1318,12 @@
     "save": "Speichern",
     "saved": "Gespeichert",
     "switchMode": "Modus wechseln",
-    "blankMemo": "Leere Notiz"
+    "blankMemo": "Leere Notiz",
+    "saveFailAuth": "Ungültiger Anmeldestatus",
+    "saveFailConflictData": "Ungültige Versionskonflikt-Daten",
+    "saveFailNetworkRetry": "Netzwerkfehler, erneuter Versuch",
+    "saveFailServerPage": "Server hat eine Fehlerseite zurückgegeben",
+    "saveFailServerStatus": "Serverfehler ({status})"
   },
   "clockWeatherWidget": {
     "settingsBtn": "Stadt einstellen",
@@ -1237,7 +1358,8 @@
     "chinanews": "China News",
     "loading": "Laden...",
     "timeout": "Anfrage zeitüberschritten, bitte erneut versuchen",
-    "failed": "Laden fehlgeschlagen, bitte erneut versuchen"
+    "failed": "Laden fehlgeschlagen, bitte erneut versuchen",
+    "bilibili": "Bilibili"
   },
   "iframeWidget": {
     "blocked": "⚠️ Zugriff verweigert",
@@ -1280,11 +1402,25 @@
     "back": "Zurück",
     "switchEffect": "Effekt wechseln",
     "noLyrics": "Kein Songtext",
-    "title": "Daoli-Fish-Musik"
+    "title": "Daoli-Fish-Musik",
+    "audioUnsupported": "Audioquelle nicht unterstützt oder nicht erlaubt",
+    "connectFailed": "Verbindung fehlgeschlagen",
+    "loadFailed": "Laden fehlgeschlagen",
+    "noSongs": "Noch keine Titel, bitte API-Konfiguration oder Favoriten prüfen",
+    "playError": "Wiedergabefehler",
+    "requestFailed": "Anfrage fehlgeschlagen",
+    "trackMissing": "Titel existiert nicht, übersprungen",
+    "unnamedPlaylist": "Unbenannte Wiedergabeliste"
   },
   "iconSelectionModal": {
     "title": "Icon auswählen",
-    "loading": "Laden..."
+    "loading": "Laden...",
+    "autoSelectIn": "Automatische Auswahl in {n}s",
+    "cancelLink": "Verknüpfung aufheben",
+    "loadMore": "Mehr laden ({n})",
+    "localIcons": "📁 Lokale Symbole",
+    "matchCount": "({n} Treffer)",
+    "remoteIcons": "🌐 Netzwerksymbole"
   },
   "accessCode": {
     "titleManage": "Zugangscode verwalten",
@@ -1340,5 +1476,20 @@
     "promptFull": "Bitte schreibe mir eine schlanke HTML/CSS-Kartenkomponente.\nFunktion: [hier deine Anforderungen eingeben, z. B. aktuelles Datum und ein Zitat anzeigen]\nAnforderungen:\n1. Container passt sich an Breite/Höhe an, Inhalt zentriert.\n2. Moderner, minimalistischer Stil, abgerundetes Design.\n3. Bitte HTML und CSS getrennt bereitstellen (JS optional).",
     "promptPreview": "Bitte schreibe mir eine schlanke HTML/CSS-Kartenkomponente...",
     "editWidgetTooltip": "Widget bearbeiten"
+  },
+  "statusMonitor": {
+    "jsHeap": "JS-Heap",
+    "keysIdle": "Keys/Idle",
+    "managed": "Verwaltet",
+    "objectUrl": "Objekt-URLs",
+    "unavailable": "Nicht verfügbar",
+    "unmanaged": "Nicht verwaltet"
+  },
+  "memoToolbar": {
+    "bold": "Fett",
+    "code": "Code",
+    "italic": "Kursiv",
+    "quote": "Zitat",
+    "unorderedList": "Liste"
   }
 }

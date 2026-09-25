@@ -7,6 +7,9 @@ import {
   type ObjectUrlRuntimeSnapshot,
 } from "@/utils/objectUrlRuntime";
 import { useStorage, useWindowSize } from "@vueuse/core";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 defineProps<{ widget: WidgetConfig }>();
 const runtimeStats = ref<ObjectUrlRuntimeSnapshot | null>(null);
@@ -144,33 +147,33 @@ onBeforeUnmount(() => {
   >
     <template v-if="runtimeStats">
       <div class="flex items-center justify-between gap-3">
-        <span>对象URL</span>
+        <span>{{ t("settings.statusMonitor.objectUrl") }}</span>
         <span>{{ runtimeStats.objectUrlCount }} · {{ formatBytes(runtimeStats.objectUrlBytes) }}</span>
       </div>
       <div class="flex items-center justify-between gap-3 text-white/80">
-        <span>受管</span>
+        <span>{{ t("settings.statusMonitor.managed") }}</span>
         <span>{{ runtimeStats.managedCount }} · {{ formatBytes(runtimeStats.managedBytes) }}</span>
       </div>
       <div class="flex items-center justify-between gap-3 text-white/80">
-        <span>未托管</span>
+        <span>{{ t("settings.statusMonitor.unmanaged") }}</span>
         <span>{{ runtimeStats.unmanagedCount }} · {{ formatBytes(runtimeStats.unmanagedBytes) }}</span>
       </div>
       <div class="flex items-center justify-between gap-3 text-white/70">
-        <span>键/闲置</span>
+        <span>{{ t("settings.statusMonitor.keysIdle") }}</span>
         <span>{{ runtimeStats.keyCount }} · {{ runtimeStats.idleManagedCount }}</span>
       </div>
       <div class="flex items-center justify-between gap-3">
-        <span>JS 堆</span>
+        <span>{{ t("settings.statusMonitor.jsHeap") }}</span>
         <span v-if="lastSample"
           >{{ formatBytes(lastSample.used) }} / {{ formatBytes(lastSample.total) }} ·
           {{ heapPercent }}</span
         >
-        <span v-else>不可用</span>
+        <span v-else>{{ t("settings.statusMonitor.unavailable") }}</span>
       </div>
       <div class="mt-1 text-white/70">
         {{ sparkline(runtimeStats.samples.map((s) => s.used)) }}
       </div>
     </template>
-    <div v-else class="text-white/70">加载中</div>
+    <div v-else class="text-white/70">{{ t("common.common.loading") }}</div>
   </div>
 </template>

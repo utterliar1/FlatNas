@@ -4,6 +4,7 @@ import { mount, VueWrapper } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import MemoWidget from '../MemoWidget.vue';
+import { createAppI18n } from '@/plugins/i18n';
 
 // Mock IDB
 vi.mock('idb', () => ({
@@ -81,6 +82,10 @@ describe('MemoWidget Conflict Reproduction', () => {
           enable: true,
           isPublic: false
         }
+      },
+      // 组件已接线 useI18n()，必须给 mount 装上 i18n 实例
+      global: {
+        plugins: [createAppI18n()],
       }
     });
 

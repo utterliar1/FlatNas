@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ref, computed } from "vue";
 import SimpleWeatherWidget from "./SimpleWeatherWidget.vue";
+import { createAppI18n } from "@/plugins/i18n";
 
 const { mockSaveSingleWidget, mockFetchWeather } = vi.hoisted(() => ({
   mockSaveSingleWidget: vi.fn(),
@@ -51,6 +52,8 @@ describe("SimpleWeatherWidget", () => {
         },
       },
       global: {
+        // 组件已接线 useI18n()，必须给 mount 装上 i18n 实例（默认 zh-CN，断言文案不变）
+        plugins: [createAppI18n()],
         stubs: {
           Teleport: true,
         },

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import { VueDraggable } from "vue-draggable-plus";
 import type { RssFeed, WidgetConfig } from "@/types";
@@ -7,6 +8,7 @@ import { useResumeRefresh } from "@/composables/useResumeRefresh";
 
 defineProps<{ widget: WidgetConfig }>();
 
+const { t } = useI18n();
 const store = useMainStore();
 
 interface RssItem {
@@ -152,7 +154,9 @@ const fetchFeed = async (feed: RssFeed, force = false) => {
   } catch (error) {
     if (requestId !== activeRequestId) return;
     console.error(`Failed to load RSS: ${feed.title}`, error);
-    errorMsg.value = controller.signal.aborted ? "加载超时，请重试" : "加载失败";
+    errorMsg.value = controller.signal.aborted
+      ? t("settings.rssWidget.timeout")
+      : t("settings.rssWidget.failed");
     if (list.value.length === 0) {
       list.value = [];
     }
@@ -251,7 +255,7 @@ const handleHorizontalScroll = (e: WheelEvent) => {
         v-if="enabledFeeds.length === 0"
         class="w-full py-2.5 text-xs text-white/60 text-center"
       >
-        暂无订阅源
+        {{ t("settings.rssWidget.noSources") }}
       </div>
       <button
         v-for="feed in localFeeds"
@@ -280,14 +284,14 @@ const handleHorizontalScroll = (e: WheelEvent) => {
           class="h-full flex flex-col items-center justify-center text-white/60 p-4 text-center"
         >
           <span class="text-2xl mb-2">📡</span>
-          <span class="text-xs">请在设置中添加并启用 RSS 订阅源</span>
+          <span class="text-xs">{{ t("settings.rssWidget.hint") }}</span>
         </div>
 
         <div
           v-else-if="loading && list.length === 0"
           class="p-8 text-center text-white/60 text-xs animate-pulse"
         >
-          加载中...
+          {{ t("common.common.loading") }}
         </div>
 
         <div v-else-if="errorMsg" class="p-8 text-center text-white/70 text-xs">
@@ -296,7 +300,7 @@ const handleHorizontalScroll = (e: WheelEvent) => {
             @click="fetchFeed(enabledFeeds.find((f) => f.id === activeFeedId)!, true)"
             class="block mx-auto mt-2 text-white/80 hover:text-white hover:underline"
           >
-            重试
+            {{ t("common.common.retry") }}
           </button>
         </div>
 

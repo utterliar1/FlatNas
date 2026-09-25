@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useStorage } from "@vueuse/core";
-import { useI18n } from "vue-i18n";
+import { useI18n, I18nT } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import { useI18nStore, type SupportedLocale } from "@/stores/i18n";
 import type { WidgetConfig, NavGroup, NavItem } from "@/types";
@@ -43,15 +43,17 @@ const onManualSave = async () => {
   }
 };
 
-const LOCALE_LABELS: Record<SupportedLocale, string> = {
-  "zh-CN": "简体中文",
-  "en-US": "English",
-  "ja-JP": "日本語",
-  "de-DE": "Deutsch",
-  "zh-TW": "繁體中文",
-  "fr-FR": "Français",
-  "es-ES": "Español",
+// 语言名以各自语言显示：7 个语言包中 settings.language.* 的译文完全一致，故直接复用
+const LOCALE_LABEL_KEYS: Record<SupportedLocale, string> = {
+  "zh-CN": "settings.language.zhCN",
+  "en-US": "settings.language.enUS",
+  "ja-JP": "settings.language.jaJP",
+  "de-DE": "settings.language.deDE",
+  "zh-TW": "settings.language.zhTW",
+  "fr-FR": "settings.language.frFR",
+  "es-ES": "settings.language.esES",
 };
+const localeLabel = (locale: SupportedLocale) => t(LOCALE_LABEL_KEYS[locale]);
 
 const LOCALE_FLAGS: Record<SupportedLocale, string> = {
   "zh-CN": "🇨🇳",
@@ -221,13 +223,14 @@ const ensureNetworkPresets = () => {
   }
 };
 
-const presetMeta: Record<string, { label: string; desc: string }> = {
-  tailscale: { label: "Tailscale", desc: "自动识别 .ts.net 与 100.64.x.x" },
-  zerotier: { label: "ZeroTier", desc: "自动识别 .zerotier.net" },
-  frp: { label: "FRP", desc: "启用后可叠加你的自定义 FRP 域名规则" },
-  cloudflareTunnel: { label: "Cloudflare Tunnel", desc: "识别 trycloudflare 域名" },
-  ngrok: { label: "ngrok", desc: "识别 ngrok 域名" },
-};
+const presetMeta = computed<Record<string, { label: string; desc: string }>>(() => ({
+  // label 为品牌名，不翻译
+  tailscale: { label: "Tailscale", desc: t("settings.messages.presetDesc.tailscale") },
+  zerotier: { label: "ZeroTier", desc: t("settings.messages.presetDesc.zerotier") },
+  frp: { label: "FRP", desc: t("settings.messages.presetDesc.frp") },
+  cloudflareTunnel: { label: "Cloudflare Tunnel", desc: t("settings.messages.presetDesc.cloudflareTunnel") },
+  ngrok: { label: "ngrok", desc: t("settings.messages.presetDesc.ngrok") },
+}));
 
 const presetKeys = Object.keys(NETWORK_PRESET_RULES);
 
@@ -275,34 +278,34 @@ const cardBorderHoverPreview = computed(() =>
 const styleVariableRows = computed(() => [
   {
     name: "--group-title-color",
-    desc: "分组标题文字颜色",
+    desc: t("settings.messages.styleVariableDesc.groupTitle"),
     value: store.appConfig.groupTitleColor || "#ffffff",
   },
   {
     name: "--card-bg-color",
-    desc: "卡片背景颜色",
+    desc: t("settings.messages.styleVariableDesc.cardBg"),
     value: store.appConfig.cardBgColor || "transparent",
   },
   {
     name: "--card-border-color",
-    desc: "卡片边框颜色",
+    desc: t("settings.messages.styleVariableDesc.cardBorder"),
     value: store.appConfig.cardBorderColor || "transparent",
   },
   {
     name: "--card-border-hover-color",
-    desc: "卡片边框悬停颜色",
+    desc: t("settings.messages.styleVariableDesc.cardBorderHover"),
     value: cardBorderHoverPreview.value,
   },
   {
     name: "--card-title-color",
-    desc: "卡片标题文字颜色",
+    desc: t("settings.messages.styleVariableDesc.cardTitle"),
     value: store.appConfig.cardTitleColor || "#111827",
   },
 ]);
-const styleVariableStatus = {
-  contrast: "待校验",
-  visual: "未配置",
-};
+const styleVariableStatus = computed(() => ({
+  contrast: t("settings.messages.status.pendingVerify"),
+  visual: t("settings.messages.status.notConfigured"),
+}));
 const solidBackgroundColorProxy = computed({
   get: () => store.appConfig.solidBackgroundColor || "#f3f4f6",
   set: (val: string) => {
@@ -372,7 +375,7 @@ const singleOpenWidgets = computed(() =>
 );
 const shouldShowSingleWidgetDiagnostic = computed(() => singleOpenWidgets.value.length <= 2);
 const singleWidgetDiagnosticTypes = computed(() =>
-  singleOpenWidgets.value.map((w) => w.type).join("、") || "无",
+  singleOpenWidgets.value.map((w) => w.type).join("、") || t("common.common.none"),
 );
 
 // Debug Active Tab
@@ -1361,7 +1364,10 @@ const handleFileChange = (event: Event) => {
           ...item,
           isPublic: item.isPublic ?? true,
         }));
-        data.groups = [{ id: Date.now().toString(), title: "默认分组", items: items }];
+        data.groups = [
+          // 数据标识：写入用户数据并持久化，禁止 i18n
+          { id: Date.now().toString(), title: "默认分组", items: items },
+        ];
       }
       if ("password" in data) {
         delete data.password;
@@ -1435,7 +1441,7 @@ const handleFileChange = (event: Event) => {
   reader.readAsText(file);
 };
 
-const saveDefaultBtnText = ref("设为默认模板");
+const saveDefaultBtnText = ref(t("settings.messages.saveDefaultBtnText"));
 
 const handleReset = async () => {
   requestAuth(async () => {
@@ -1457,10 +1463,10 @@ const handleReset = async () => {
       window.location.reload();
     } catch (e: unknown) {
       const err = e as Error;
-      alert("恢复失败: " + (err.message || "未知错误"));
+      alert(`${t("settings.messages.restoreFailed")}: ${err.message || t("settings.messages.weatherUnknown")}`);
       console.error("[SettingsModal][Reset] failed", e);
     }
-  }, "请输入密码以确认恢复初始化");
+  }, t("settings.messages.confirmResetInit"));
 };
 
 const handleSaveAsDefault = async () => {
@@ -1481,16 +1487,16 @@ const handleSaveAsDefault = async () => {
       }
 
       // 移除成功弹窗，使用按钮文字反馈
-      saveDefaultBtnText.value = "保存成功！";
+      saveDefaultBtnText.value = t("settings.messages.saveDefaultSuccessBtn");
       setTimeout(() => {
-        saveDefaultBtnText.value = "设为默认模板";
+        saveDefaultBtnText.value = t("settings.messages.saveDefaultBtnText");
       }, 2000);
     } catch (e: unknown) {
       const err = e as Error;
-      alert("保存失败: " + (err.message || "未知错误"));
+      alert(`${t("settings.messages.saveFailed")}: ${err.message || t("settings.messages.weatherUnknown")}`);
       console.error("[SettingsModal][SaveDefault] failed", e);
     }
-  }, "请输入密码以确认保存默认模板");
+  }, t("settings.messages.confirmSaveDefault"));
 };
 
 const normalizeFileTransferWidgets = () => {
@@ -1552,6 +1558,7 @@ const addCountdownWidget = () => {
     enable: true,
     data: {
       targetDate: "",
+      // 数据标识：写入用户数据并持久化，禁止 i18n
       title: "重要时刻",
       style: "card",
     },
@@ -1570,6 +1577,7 @@ const addCountUpWidget = () => {
     enable: true,
     data: {
       startTime: new Date().toISOString().slice(0, 16),
+      // 数据标识：写入用户数据并持久化，禁止 i18n
       title: "正计时",
       style: "card",
       isRunning: false,
@@ -1895,7 +1903,7 @@ watch(activeTab, (val) => {
                         "
                         class="text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors"
                       >
-                        清除背景
+                        {{ $t('settings.sections.clearBackground') }}
                       </button>
                       <button
                         @click="showWallpaperLibrary = true"
@@ -2301,13 +2309,13 @@ watch(activeTab, (val) => {
                   @click="restoreMissingWidgets"
                   class="text-gray-600 hover:text-gray-900 underline mr-2"
                 >
-                  恢复默认组件
+                  {{ $t('settings.sections.restoreDefaultWidgets') }}
                 </button>
                 <button
                   @click="addCustomCssWidget"
                   class="text-gray-600 hover:text-gray-900 underline mr-2"
                 >
-                  + 自定义组件
+                  {{ $t('settings.sections.addCustomWidget') }}
                 </button>
               </div>
             </div>
@@ -2328,7 +2336,7 @@ watch(activeTab, (val) => {
                   @click="restoreMissingWidgets"
                   class="shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-amber-700"
                 >
-                  恢复默认组件
+                  {{ $t('settings.sections.restoreDefaultWidgets') }}
                 </button>
               </div>
             </div>
@@ -2384,7 +2392,7 @@ watch(activeTab, (val) => {
                       <span
                         v-if="uploadStatus"
                         class="text-xs"
-                        :class="(uploadStatus.includes(t('settings.messages.uploadFailed')) || uploadStatus.includes('失败')) ? 'text-red-500' : 'text-green-500'"
+                        :class="uploadStatus.includes(t('settings.messages.uploadFailed')) ? 'text-red-500' : 'text-green-500'"
                         >{{ uploadStatus }}</span
                       >
                     </div>
@@ -2595,15 +2603,15 @@ watch(activeTab, (val) => {
                           {{
                             w.type === "custom-css"
                               ? (w.data?.title || $t('settings.widgetTypes.custom-css'))
-                              : $t(`settings.widgetTypes.${w.type}`, `未知组件 (${w.type})`)
+                              : $t(`settings.widgetTypes.${w.type}`, $t('settings.sections.unknownWidget', { type: w.type }))
                           }}
                         </span>
                       </template>
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 w-full mt-1">
                       <div class="flex flex-col items-center gap-0.5">
-                        <span class="text-[10px] text-gray-400 scale-90">公开</span>
-                        <label class="relative inline-flex items-center cursor-pointer" title="公开"
+                        <span class="text-[10px] text-gray-400 scale-90">{{ $t('common.common.public') }}</span>
+                        <label class="relative inline-flex items-center cursor-pointer" :title="$t('common.common.public')"
                           ><input type="checkbox" v-model="w.isPublic" class="sr-only peer" @change="store.saveData()" />
                           <div
                             class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-500"
@@ -2611,8 +2619,8 @@ watch(activeTab, (val) => {
                         ></label>
                       </div>
                       <div class="flex flex-col items-center gap-0.5">
-                        <span class="text-[10px] text-gray-400 scale-90">启用</span>
-                        <label class="relative inline-flex items-center cursor-pointer" title="启用"
+                        <span class="text-[10px] text-gray-400 scale-90">{{ $t('common.common.enable') }}</span>
+                        <label class="relative inline-flex items-center cursor-pointer" :title="$t('common.common.enable')"
                           ><input type="checkbox" v-model="w.enable" class="sr-only peer" @change="store.saveData()" />
                           <div
                             class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500"
@@ -2620,8 +2628,8 @@ watch(activeTab, (val) => {
                         ></label>
                       </div>
                       <div class="flex flex-col items-center gap-0.5">
-                        <span class="text-[10px] text-gray-400 scale-90">手机</span>
-                        <label class="relative inline-flex items-center cursor-pointer" title="手机"
+                        <span class="text-[10px] text-gray-400 scale-90">{{ $t('common.common.mobile') }}</span>
+                        <label class="relative inline-flex items-center cursor-pointer" :title="$t('common.common.mobile')"
                           ><input
                             type="checkbox"
                             :checked="!w.hideOnMobile"
@@ -2638,10 +2646,10 @@ watch(activeTab, (val) => {
                         ></label>
                       </div>
                       <div v-if="w.type === 'player'" class="flex flex-col items-center gap-0.5">
-                        <span class="text-[10px] text-gray-400 scale-90">自动</span>
+                        <span class="text-[10px] text-gray-400 scale-90">{{ $t('common.common.auto') }}</span>
                         <label
                           class="relative inline-flex items-center cursor-pointer"
-                          title="自动播放"
+                          :title="$t('settings.sections.autoPlayTitle')"
                           ><input
                             type="checkbox"
                             v-model="store.appConfig.autoPlayMusic"
@@ -2660,7 +2668,7 @@ watch(activeTab, (val) => {
 
             <div class="border-2 border-gray-900 rounded-xl p-4 mt-6 bg-white">
               <h4 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                高级组件配置
+                {{ $t('settings.sections.advancedWidgetConfig') }}
               </h4>
               <div class="space-y-8">
                 <RssSettings />
@@ -2812,18 +2820,22 @@ watch(activeTab, (val) => {
                         @click="confirmTempInput(w, 'lanUrl', `${w.id}-lanUrl`)"
                         class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold hover:bg-yellow-600 transition-colors whitespace-nowrap"
                       >
-                        确定
+                        {{ $t('common.common.ok') }}
                       </button>
                     </div>
                   </div>
                   <p class="text-[10px] text-gray-500 mt-1">
-                    点击<a
-                      href="/flatnas-helper.zip"
-                      download="flatnas-helper.zip"
-                      target="_blank"
-                      class="text-blue-500 underline mx-1"
-                      >{{ $t('settings.extraSections.downloadBrowserPlugin') }}</a
-                    >{{ $t('settings.extraSections.removeRestriction') }}
+                    <i18n-t keypath="settings.extraSections.clickToDownloadHelper" tag="span">
+                      <template #link>
+                        <a
+                          href="/flatnas-helper.zip"
+                          download="flatnas-helper.zip"
+                          target="_blank"
+                          class="text-blue-500 underline mx-1"
+                          >{{ $t('settings.extraSections.downloadBrowserPlugin') }}</a
+                        >
+                      </template>
+                    </i18n-t>
                   </p>
                   <p class="text-[10px] text-gray-400 mt-1">
                     {{ $t('settings.extraSections.networkSwitchHint') }}
@@ -2871,7 +2883,7 @@ watch(activeTab, (val) => {
                       class="text-gray-400 hover:text-gray-900 text-xs underline px-2"
                       :title="$t('settings.extraSections.deleteComponent')"
                     >
-                      删除
+                      {{ $t('common.common.delete') }}
                     </button>
                     <div class="flex flex-col items-end gap-1">
                       <span class="text-[10px] text-gray-400 font-medium">{{ $t('settings.sections.publicAccess') }}</span
@@ -2960,7 +2972,7 @@ watch(activeTab, (val) => {
                       class="text-gray-400 hover:text-gray-900 text-xs underline px-2"
                       :title="$t('settings.extraSections.deleteComponent')"
                     >
-                      删除
+                      {{ $t('common.common.delete') }}
                     </button>
                     <div class="flex flex-col items-end gap-1">
                       <span class="text-[10px] text-gray-400 font-medium">{{ $t('settings.sections.publicAccess') }}</span
@@ -3010,7 +3022,7 @@ watch(activeTab, (val) => {
                 </div>
                 <div class="w-full bg-white/60 p-3 rounded-lg border border-gray-100 space-y-3">
                   <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">标题</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">{{ $t('settings.countdownWidget.titleLabel') }}</label>
                     <input
                       v-model="w.data.title"
                       type="text"
@@ -3019,7 +3031,7 @@ watch(activeTab, (val) => {
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">目标时间</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">{{ $t('settings.countdownWidget.targetTime') }}</label>
                     <input
                       v-model="w.data.targetDate"
                       type="datetime-local"
@@ -3056,7 +3068,7 @@ watch(activeTab, (val) => {
                     <div
                       class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-sm font-medium text-gray-700 shadow-sm"
                     >
-                      正
+                      {{ $t('settings.widgetAbbr.countup') }}
                     </div>
                     <div class="flex flex-col">
                       <span class="font-bold text-gray-700">{{ $t('settings.extraSections.countupSection') }}</span>
@@ -3069,7 +3081,7 @@ watch(activeTab, (val) => {
                       class="text-gray-400 hover:text-gray-900 text-xs underline px-2"
                       :title="$t('settings.extraSections.deleteComponent')"
                     >
-                      删除
+                      {{ $t('common.common.delete') }}
                     </button>
                     <div class="flex flex-col items-end gap-1">
                       <span class="text-[10px] text-gray-400 font-medium">{{ $t('settings.sections.publicAccess') }}</span
@@ -3119,7 +3131,7 @@ watch(activeTab, (val) => {
                 </div>
                 <div class="w-full bg-white/60 p-3 rounded-lg border border-gray-100 space-y-3">
                   <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">标题</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">{{ $t('settings.countupWidget.titleLabel') }}</label>
                     <input
                       v-model="w.data.title"
                       type="text"
@@ -3128,7 +3140,7 @@ watch(activeTab, (val) => {
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">开始时间</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">{{ $t('settings.countupWidget.startTime') }}</label>
                     <input
                       v-model="w.data.startTime"
                       type="datetime-local"
@@ -3152,7 +3164,7 @@ watch(activeTab, (val) => {
               <div class="flex items-start gap-2">
                 <span
                   class="text-xs text-gray-500 font-medium border border-gray-200 rounded px-1.5 py-0.5 mt-0.5"
-                  >注</span
+                  >{{ $t('settings.extraSections.note') }}</span
                 >
                 <p class="text-xs text-gray-600 leading-relaxed">
                   {{ $t('settings.extraSections.domainWhitelistHint') }}
@@ -3277,13 +3289,13 @@ watch(activeTab, (val) => {
                     @click="copyBrowserHelperHandshakeLink"
                     class="px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs rounded-lg transition-colors"
                   >
-                    复制握手链接
+                    {{ $t('settings.extraSections.copyHandshakeLink') }}
                   </button>
                   <button
                     @click="openBrowserHelperHandshakeLink"
                     class="px-3 py-1.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-xs rounded-lg transition-colors"
                   >
-                    打开握手页
+                    {{ $t('settings.extraSections.openHandshakePage') }}
                   </button>
                 </div>
                 <p class="text-[11px] text-gray-500">
@@ -3478,7 +3490,7 @@ watch(activeTab, (val) => {
                       @click="setMusicSize(selectedMusicSize.cols, selectedMusicSize.rows)"
                       class="px-3 py-1 bg-gray-900 text-white text-xs rounded hover:bg-gray-800 transition-colors animate-fade-in"
                     >
-                      确定
+                      {{ $t('common.common.ok') }}
                     </button>
                   </div>
                 </div>
@@ -3493,10 +3505,7 @@ watch(activeTab, (val) => {
                   v-if="store.appConfig.customCssList"
                   v-model="store.appConfig.customCssList"
                   type="css"
-                  placeholder="/* 输入自定义 CSS 代码 */
-.card-item {
-  border-radius: 20px;
-}"
+                  :placeholder="$t('settings.extraSections.customCssInputPlaceholder')"
                   @change="store.updateCustomScripts()"
                 />
                 <div class="text-xs text-gray-500 mt-2">
@@ -3563,11 +3572,7 @@ watch(activeTab, (val) => {
                   v-if="store.appConfig.customJsList"
                   v-model="store.appConfig.customJsList"
                   type="js"
-                  placeholder="// 输入自定义 JS 代码
-console.log('Hello from Custom JS!');
-document.querySelector('.card-item').addEventListener('click', () => {
-  alert('Clicked!');
-});"
+                  :placeholder="$t('settings.extraSections.customJsInputPlaceholder')"
                   @change="store.updateCustomScripts()"
                 />
                 <div class="text-xs text-gray-500 mt-2 flex justify-between items-center">
@@ -3576,7 +3581,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     @click="store.appConfig.customJsDisclaimerAgreed = false"
                     class="text-xs text-gray-500 hover:text-gray-600 underline"
                   >
-                    撤销免责声明并禁用
+                    {{ $t('settings.extraSections.revokeDisclaimer') }}
                   </button>
                 </div>
               </div>
@@ -3674,7 +3679,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     <input
                       v-model="store.appConfig.qweatherProjectId"
                       class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-gray-900 outline-none"
-                      placeholder="请输入 Project ID"
+                      :placeholder="$t('settings.extraSections.qweatherProjectIdPlaceholder')"
                     />
                   </div>
                   <div>
@@ -3682,7 +3687,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     <input
                       v-model="store.appConfig.qweatherKeyId"
                       class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-gray-900 outline-none"
-                      placeholder="请输入 Key ID"
+                      :placeholder="$t('settings.extraSections.qweatherKeyIdPlaceholder')"
                     />
                   </div>
                   <div>
@@ -3690,18 +3695,20 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     <textarea
                       v-model="store.appConfig.qweatherPrivateKey"
                       class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-gray-900 outline-none min-h-[80px]"
-                      placeholder="请输入 Private Key (需包含 -----BEGIN PRIVATE KEY----- 头尾)"
+                      :placeholder="$t('settings.extraSections.qweatherPrivateKeyPlaceholder')"
                     ></textarea>
                   </div>
                   <p class="text-[10px] text-gray-500 mt-1">
-                    请前往
-                    <a
-                      href="https://console.qweather.com/"
-                      target="_blank"
-                      class="text-gray-600 underline hover:text-gray-900"
-                      >和风天气控制台</a
-                    >
-                    获取 JWT 凭证。
+                    <i18n-t keypath="settings.extraSections.qweatherGuide" tag="span">
+                      <template #console>
+                        <a
+                          href="https://console.qweather.com/"
+                          target="_blank"
+                          class="text-gray-600 underline hover:text-gray-900"
+                          >{{ $t('settings.extraSections.qweatherConsole') }}</a
+                        >
+                      </template>
+                    </i18n-t>
                   </p>
                   <div class="flex items-center gap-2 mt-2">
                     <button
@@ -3710,7 +3717,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                       :disabled="isTestingWeather"
                     >
                       <span v-if="isTestingWeather" class="animate-spin text-xs">●</span>
-                      {{ isTestingWeather ? "测试中..." : "测试连接" }}
+                      {{ isTestingWeather ? $t('settings.extraSections.weatherTesting') : $t('settings.sections.testConnection') }}
                     </button>
                     <span
                       v-if="testWeatherResult"
@@ -3723,15 +3730,16 @@ document.querySelector('.card-item').addEventListener('click', () => {
                 </div>
 
                 <div>
-                  <label class="block text-xs font-bold text-gray-600 mb-1">自定义天气源 URL</label>
+                  <label class="block text-xs font-bold text-gray-600 mb-1">{{ $t('settings.extraSections.customWeatherSource') }}</label>
                   <input
                     v-model="store.appConfig.weatherApiUrl"
                     class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-gray-900 outline-none"
-                    placeholder="默认使用内置源，输入 URL 以自定义"
+                    :placeholder="$t('settings.extraSections.customWeatherSourcePlaceholder')"
                   />
                   <p class="text-[10px] text-gray-500 mt-1">
-                    若填写，将直接请求该地址获取天气数据。返回格式需包含：
-                    <code>{ data: { temp, text, city, humidity, today: { min, max } } }</code>
+                    <i18n-t keypath="settings.extraSections.customWeatherSourceDescFull" tag="span">
+                      <template #format><code>{ data: { temp, text, city, humidity, today: { min, max } } }</code></template>
+                    </i18n-t>
                   </p>
                 </div>
               </div>
@@ -3751,11 +3759,11 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     @click="copyWebhookUrl"
                     class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 font-bold transition-colors"
                   >
-                    复制
+                    {{ $t('common.common.copy') }}
                   </button>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">
-                  请在 STUN 穿透配置中，将全局 Webhook 的地址设置为上述地址，并使用以下配置：
+                  {{ $t('settings.extraSections.webhookConfigHint') }}
                 </p>
 
                 <div class="mt-3 space-y-3 bg-white/60 p-3 rounded-lg border border-gray-200">
@@ -3801,7 +3809,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                           : 'text-gray-500'
                       "
                     >
-                      {{ store.luckyStunData.data.stun || "未知" }}
+                      {{ store.luckyStunData.data.stun || $t('settings.extraSections.statusUnknown') }}
                     </div>
                   </div>
                   <div class="bg-white/60 p-3 rounded-lg border border-gray-200">
@@ -3857,7 +3865,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                 @click="handleLogin"
                 class="bg-gray-900 text-white px-10 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors"
               >
-                登 录
+                {{ $t('settings.extraSections.loginBtn') }}
               </button>
             </div>
             <div v-else class="max-w-sm mx-auto w-full">
@@ -3868,13 +3876,13 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     @click="handleExport"
                     class="col-span-2 bg-white text-gray-700 border border-gray-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors"
                   >
-                    📤 导出配置
+                    {{ $t('settings.extraSections.exportConfigBtn') }}
                   </button>
                   <button
                     @click="triggerImport"
                     class="col-span-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors"
                   >
-                    📥 导入配置
+                    {{ $t('settings.extraSections.importConfigBtn') }}
                   </button>
                   <button
                     v-if="hasAdminAccess"
@@ -3887,7 +3895,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     @click="handleReset"
                     class="bg-white text-gray-600 border border-gray-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
                   >
-                    🧹 恢复初始化
+                    {{ $t('settings.extraSections.restoreInitBtn') }}
                   </button>
                   <input
                     ref="fileInput"
@@ -3899,19 +3907,19 @@ document.querySelector('.card-item').addEventListener('click', () => {
                 </div>
               </div>
                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 mb-6">
-                  <h5 class="text-sm font-bold text-gray-900 mb-3">💾 配置保存</h5>
+                  <h5 class="text-sm font-bold text-gray-900 mb-3">{{ $t('settings.extraSections.configSaveSection') }}</h5>
                   <div class="space-y-3">
                     <div class="flex items-center justify-between gap-3">
-                      <span class="text-sm text-gray-700 whitespace-nowrap">自动保存</span>
+                      <span class="text-sm text-gray-700 whitespace-nowrap">{{ $t('settings.extraSections.autoSaveLabel') }}</span>
                       <select
                         v-model.number="autoSaveDelay"
                         class="flex-1 max-w-[220px] px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-gray-800 bg-white"
                         @change="onAutoSaveChange"
                       >
-                        <option :value="0">关闭（仅手动保存）</option>
-                        <option :value="3">改动后 3 秒</option>
-                        <option :value="10">改动后 10 秒（推荐）</option>
-                        <option :value="30">改动后 30 秒</option>
+                        <option :value="0">{{ $t('settings.extraSections.autoSaveOff') }}</option>
+                        <option :value="3">{{ $t('settings.extraSections.autoSave3s') }}</option>
+                        <option :value="10">{{ $t('settings.extraSections.autoSave10s') }}</option>
+                        <option :value="30">{{ $t('settings.extraSections.autoSave30s') }}</option>
                       </select>
                     </div>
                     <button
@@ -3926,14 +3934,14 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     >
                       {{
                         manualSaveBusy || store.isSaving
-                          ? "保存中…"
+                          ? $t('settings.extraSections.saving')
                           : store.hasUnsavedChanges
-                            ? "立即保存（有未保存的更改）"
-                            : "立即保存（已是最新）"
+                            ? $t('settings.extraSections.manualSaveDirty')
+                            : $t('settings.extraSections.manualSaveClean')
                       }}
                     </button>
                     <p class="text-[11px] text-gray-400 leading-relaxed">
-                      分组图标、顺序、组件布局等改动会按上述延迟自动保存；刷新或关闭页面前也会自动尝试落盘未保存的更改。
+                      {{ $t('settings.extraSections.configSaveHint') }}
                     </p>
                   </div>
                 </div>
@@ -3944,8 +3952,13 @@ document.querySelector('.card-item').addEventListener('click', () => {
                   <h5 class="text-sm font-bold text-gray-900 mb-3">{{ $t('settings.extraSections.systemMode') }}</h5>
                 <div class="flex items-center justify-between">
                   <span class="text-sm text-gray-700"
-                    >当前模式：{{
-                      store.systemConfig.authMode === "single" ? $t('settings.extraSections.singleUserMode') : $t('settings.extraSections.multiUserMode')
+                    >{{
+                      $t('settings.extraSections.currentMode', {
+                        mode:
+                          store.systemConfig.authMode === "single"
+                            ? $t('settings.extraSections.singleUserMode')
+                            : $t('settings.extraSections.multiUserMode'),
+                      })
                     }}</span
                   >
                   <button
@@ -3959,7 +3972,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     v-else
                     class="px-4 py-2 rounded-lg text-sm font-bold text-gray-500 bg-gray-100"
                   >
-                    仅管理员可切换
+                    {{ $t('settings.extraSections.adminOnlySwitch') }}
                   </span>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">
@@ -3985,7 +3998,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     @click="saveVersion"
                     class="px-4 py-2 rounded-lg text-sm font-bold text-white transition-all bg-gray-900 hover:bg-gray-800"
                   >
-                    保存为版本
+                    {{ $t('settings.extraSections.saveAsVersion') }}
                   </button>
                 </div>
                 <div class="text-[10px] text-gray-500 mb-2">
@@ -4019,13 +4032,13 @@ document.querySelector('.card-item').addEventListener('click', () => {
                         @click="restoreVersion(v.id)"
                         class="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
                       >
-                        恢复
+                        {{ $t('settings.extraSections.restoreVersion') }}
                       </button>
                       <button
                         @click="deleteVersion(v.id)"
                         class="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
                       >
-                        删除
+                        {{ $t('common.common.delete') }}
                       </button>
                     </div>
                   </div>
@@ -4090,7 +4103,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     @click="handleChangePassword"
                     class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800 transition-colors"
                   >
-                    修改
+                    {{ $t('settings.extraSections.changePassword') }}
                   </button>
                 </div>
               </div>
@@ -4099,20 +4112,20 @@ document.querySelector('.card-item').addEventListener('click', () => {
                 v-if="canManageUsers"
                 class="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-6"
               >
-                <h5 class="text-sm font-bold text-gray-900 mb-3">👥 用户管理 (Admin)</h5>
+                <h5 class="text-sm font-bold text-gray-900 mb-3">{{ $t('settings.extraSections.userManagementSection') }}</h5>
 
                 <!-- Add User -->
                 <div class="flex flex-col gap-2 mb-4">
                   <div class="flex gap-2">
                     <input
                       v-model="newUser"
-                      placeholder="用户名"
+                      :placeholder="$t('settings.extraSections.placeholderUsername')"
                       class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:border-gray-900 outline-none"
                     />
                     <input
                       v-model="newPwd"
                       type="password"
-                      placeholder="密码"
+                      :placeholder="$t('settings.extraSections.placeholderPassword')"
                       class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:border-gray-900 outline-none"
                     />
                   </div>
@@ -4120,7 +4133,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                     @click="handleAddUser"
                     class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors"
                   >
-                    添加用户
+                    {{ $t('settings.extraSections.addUser') }}
                   </button>
                 </div>
 
@@ -4140,14 +4153,14 @@ document.querySelector('.card-item').addEventListener('click', () => {
                       @click="handleDeleteUser(u)"
                       class="text-gray-400 hover:text-gray-600 text-xs font-bold px-2"
                     >
-                      删除
+                      {{ $t('common.common.delete') }}
                     </button>
                   </div>
                 </div>
 
                 <!-- License Management -->
                 <div class="mt-4 pt-4 border-t border-gray-200">
-                  <h6 class="text-xs font-bold text-gray-900 mb-2">🔑 授权密钥 (License Key)</h6>
+                  <h6 class="text-xs font-bold text-gray-900 mb-2">{{ $t('settings.extraSections.licenseKeyManageSection') }}</h6>
                   <div class="flex gap-2">
                     <input
                       v-model="licenseKey"
@@ -4158,11 +4171,11 @@ document.querySelector('.card-item').addEventListener('click', () => {
                       @click="handleUploadLicense"
                       class="bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 whitespace-nowrap transition-colors"
                     >
-                      导入
+                      {{ $t('settings.extraSections.importKey') }}
                     </button>
                   </div>
                   <p class="text-[10px] text-gray-500 mt-1">
-                    导入有效密钥可解除5个用户的注册限制。
+                    {{ $t('settings.extraSections.licenseKeyHint') }}
                   </p>
                 </div>
               </div>
@@ -4171,7 +4184,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                 @click="store.logout"
                 class="w-full text-gray-700 py-3 rounded-xl font-bold border border-gray-200 transition-colors glass-chip selectable-outline"
               >
-                退出登录
+                {{ $t('settings.extraSections.logoutBtn') }}
               </button>
             </div>
           </div>
@@ -4196,7 +4209,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
             <!-- 底部开源项目链接 -->
             <div class="mt-auto pt-4">
               <div class="bg-white/60 border border-gray-100 rounded-xl p-4 flex items-center justify-between">
-                <span class="text-xs text-gray-500">FlatNas 仪表盘系统</span>
+                <span class="text-xs text-gray-500">{{ $t('settings.extraSections.dashboardTitle') }}</span>
                 <div class="flex items-center gap-4">
                   <a
                     href="https://github.com/utterliar1/FlatNas"
@@ -4237,7 +4250,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
                 >
                   <div class="flex items-center gap-3">
                     <span class="text-lg">{{ LOCALE_FLAGS[locale] }}</span>
-                    <span class="font-medium">{{ LOCALE_LABELS[locale] }}</span>
+                    <span class="font-medium">{{ localeLabel(locale) }}</span>
                   </div>
                   <svg
                     v-if="i18nStore.currentLocale === locale"
@@ -4285,8 +4298,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
       </div>
 
       <p class="text-sm text-gray-600 mb-6 leading-relaxed">
-        请先导出配置！<br />
-        切换到多用户模式会导致当前单用户配置丢失（数据隔离），是否确认继续？
+        {{ $t('settings.extraSections.switchModeWarningDesc') }}
       </p>
 
       <div class="flex gap-3">
@@ -4294,7 +4306,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
           @click="showMultiUserWarning = false"
           class="flex-1 px-4 py-2.5 min-h-[44px] bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors"
         >
-          取消
+          {{ $t('common.common.cancel') }}
         </button>
         <button
           @click="
@@ -4303,7 +4315,7 @@ document.querySelector('.card-item').addEventListener('click', () => {
           "
           class="flex-1 px-4 py-2.5 min-h-[44px] bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors shadow-md"
         >
-          确认切换
+          {{ $t('settings.extraSections.confirmSwitch') }}
         </button>
       </div>
     </div>
@@ -4324,13 +4336,13 @@ document.querySelector('.card-item').addEventListener('click', () => {
           @click="showDeleteWidgetConfirm = false"
           class="flex-1 px-4 py-2 min-h-[44px] bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors"
         >
-          取消
+          {{ $t('common.common.cancel') }}
         </button>
         <button
           @click="confirmRemoveWidget"
           class="flex-1 px-4 py-2 min-h-[44px] bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors"
         >
-          删除
+          {{ $t('common.common.delete') }}
         </button>
       </div>
     </div>
@@ -4343,14 +4355,14 @@ document.querySelector('.card-item').addEventListener('click', () => {
     panel-class="max-w-sm"
   >
     <div class="bg-white rounded-xl shadow-xl w-full p-4 border border-gray-100">
-      <div class="text-base font-bold text-gray-900">修改昵称</div>
-      <div class="text-xs text-gray-500 mt-1">将同步更新到道理鱼音乐账户资料</div>
+      <div class="text-base font-bold text-gray-900">{{ $t('settings.sections.changeName') }}</div>
+      <div class="text-xs text-gray-500 mt-1">{{ $t('settings.extraSections.nicknameSyncTip') }}</div>
 
       <input
         v-model="newDisplayName"
         type="text"
         class="mt-3 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-gray-900 outline-none"
-        placeholder="请输入新的昵称"
+        :placeholder="$t('settings.extraSections.placeholderNickname')"
         @keyup.enter="updateDisplayName"
       />
 
@@ -4359,14 +4371,14 @@ document.querySelector('.card-item').addEventListener('click', () => {
           @click="showRenameModal = false"
           class="px-4 py-2 min-h-[44px] text-gray-600 hover:bg-gray-100 rounded-lg text-sm transition-colors"
         >
-          取消
+          {{ $t('common.common.cancel') }}
         </button>
         <button
           @click="updateDisplayName"
           :disabled="isUpdatingProfile"
           class="px-4 py-2 min-h-[44px] bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors"
         >
-          {{ isUpdatingProfile ? "保存中..." : "保存" }}
+          {{ isUpdatingProfile ? $t('settings.extraSections.saving') : $t('settings.extraSections.save') }}
         </button>
       </div>
     </div>

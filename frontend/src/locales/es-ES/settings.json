@@ -385,7 +385,13 @@
     "fillRssUrlFirst": "Por favor, introduzca la URL RSS antes de añadir.",
     "pasteTextFirst": "Por favor, pegue primero el texto RSS a importar.",
     "importResult": "{created} añadido(s), {updated} actualizado(s), {skipped} omitido(s)",
-    "titlePlaceholder": "Título"
+    "titlePlaceholder": "Título",
+    "feedUrlPlaceholder": "Dirección RSS",
+    "importInvalidLines": ", {count} líneas no válidas",
+    "importNoNewTitles": ", no se obtuvieron títulos remotos nuevos",
+    "importPlaceholder": "Ejemplo:\n36Kr https://www.36kr.com/feed\nSspai,https://sspai.com/feed\nCoolshell | https://coolshell.cn/feed\nhttps://example.com/rss.xml",
+    "importTitlesUpdated": ", {count} títulos reales actualizados automáticamente",
+    "newCategoryPlaceholder": "Nueva categoría"
   },
   "searchSettings": {
     "title": "Configuración del motor de búsqueda",
@@ -644,7 +650,25 @@
     "modalConfirm": "确定",
     "note": "注",
     "statusLabel": "状态",
-    "amapApiKey": "高德 API Key"
+    "amapApiKey": "高德 API Key",
+    "autoSave10s": "10 segundos tras los cambios (recomendado)",
+    "autoSave30s": "30 segundos tras los cambios",
+    "autoSave3s": "3 segundos tras los cambios",
+    "autoSaveLabel": "Guardado automático",
+    "autoSaveOff": "Desactivado (solo guardado manual)",
+    "configSaveHint": "Los cambios en iconos de grupo, orden, diseño de widgets, etc. se guardan automáticamente tras el retardo indicado; antes de actualizar o cerrar la página también se intentan volcar los cambios sin guardar.",
+    "configSaveSection": "💾 Guardado de configuración",
+    "customWeatherSourcePlaceholder": "Por defecto se usa la fuente integrada; introduce una URL para personalizarla",
+    "dashboardTitle": "Sistema de panel FlatNas",
+    "manualSaveClean": "Guardar ahora (actualizado)",
+    "manualSaveDirty": "Guardar ahora (cambios sin guardar)",
+    "qweatherConsole": "Consola de QWeather",
+    "qweatherKeyIdPlaceholder": "Introduce el Key ID",
+    "qweatherPrivateKeyPlaceholder": "Introduce la Private Key (debe incluir el inicio y fin -----BEGIN PRIVATE KEY-----)",
+    "qweatherProjectIdPlaceholder": "Introduce el Project ID",
+    "clickToDownloadHelper": "Haz clic en {link} para quitar la restricción",
+    "qweatherGuide": "Ve a {console} para obtener tus credenciales JWT.",
+    "customWeatherSourceDescFull": "Si se indica, los datos meteorológicos se solicitan directamente a esta dirección. El formato de respuesta debe incluir: {format}"
   },
   "networkIndicator": {
     "online": "En línea",
@@ -913,19 +937,35 @@
   },
   "iconUploader": {
     "imageTooLarge": "Imagen demasiado grande, suba una imagen menor a 5MB",
-    "iconLoadError": "Error al cargar icono, retrocediendo a texto"
+    "iconLoadError": "Error al cargar icono, retrocediendo a texto",
+    "clickUpload": "Haz clic para subir",
+    "clickUploadOrCrop": "Haz clic para subir / recortar",
+    "cropImage": "Recortar imagen",
+    "selectFromLibrary": "Seleccionar de la biblioteca"
   },
   "miniPlayer": {
     "loading": "Cargando...",
     "noMusic": "Sin música",
-    "fetchFailed": "Error de obtención"
+    "fetchFailed": "Error de obtención",
+    "next": "Siguiente",
+    "paused": "En pausa",
+    "playing": "Reproduciendo",
+    "prev": "Anterior"
   },
   "groupSelector": {
     "selectGroup": "Seleccionar grupo",
     "switchGroup": "Cambiar grupo"
   },
   "scriptManager": {
-    "newScript": "Nuevo script {index}"
+    "newScript": "Nuevo script {index}",
+    "addScript": "Añadir nuevo script",
+    "clickToConfirmDelete": "Haz clic para confirmar la eliminación",
+    "codeLabel": "Código",
+    "confirmQuestion": "¿Confirmar?",
+    "dropToAdd": "Suelta archivos para añadir",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Nombre del script",
+    "useProxyNetwork": "Vía red local"
   },
   "proxyToggle": {
     "proxy": "Proxy"
@@ -941,7 +981,62 @@
     "uploading": "Subiendo...",
     "uploadSuccess": "Subida exitosa",
     "uploadFailed": "Error de subida",
-    "dragToSort": "Arrastrar para ordenar"
+    "dragToSort": "Arrastrar para ordenar",
+    "apiHint1": "Aquí puede introducir directamente la URL de una imagen o usar una API de fondos aleatorios de terceros.",
+    "apiHintRefresh": "Tras configurarlo, cada actualización de la página puede devolver una imagen distinta según la API.",
+    "apiTab": "API",
+    "applySuccess": "Aplicado correctamente",
+    "applyToMobile": "Aplicar al fondo móvil",
+    "applyToPc": "Aplicar al fondo de PC",
+    "blur": "Desenfoque",
+    "blurRadius": "Radio de desenfoque",
+    "cannotDeleteDefault": "No se puede eliminar el fondo predeterminado",
+    "customApiTitle": "API de fondos personalizada",
+    "defaultWallpaper": "Fondo predeterminado",
+    "downloadToMobileLibrary": "Descargar a la biblioteca móvil",
+    "downloadToPcLibrary": "Descargar a la biblioteca de PC",
+    "dragToSelect": "Arrastra para seleccionar",
+    "emptyHint": "Aún no hay fondos, sube uno primero",
+    "enableMobileWallpaper": "Activar fondo móvil",
+    "enableMobileWallpaperTooltip": "Si se activa, los dispositivos móviles usan el fondo móvil; si se desactiva, usan el fondo de PC",
+    "enableRotation": "Activar rotación",
+    "imageInvalid": "La imagen ya no está disponible",
+    "imageUrlLabel": "URL de imagen / dirección de API",
+    "imageUrlPlaceholder": "https://example.com/image.jpg o API de imágenes aleatorias",
+    "jsonApiBold": "API en formato JSON",
+    "lanApiBold": "API LAN / propia",
+    "largeFileConfirm": "El archivo supera los 10 MB y puede consumir demasiada memoria. ¿Continuar con la subida?",
+    "lockCurrentTooltip": "Bloquear el fondo actual (detiene la rotación automática en PC y móvil)",
+    "locked": "Bloqueado",
+    "mask": "Máscara",
+    "maskOpacity": "Opacidad de la máscara",
+    "minute": "min",
+    "mobilePreview": "Vista previa móvil",
+    "mobileWallpaperEnabled": "Fondo móvil activado",
+    "modeRandomTooltip": "Modo de reproducción: aleatorio (solo se aplica con la rotación activada)",
+    "modeSequentialTooltip": "Modo de reproducción: secuencial (solo se aplica con la rotación activada)",
+    "pcPreview": "Vista previa de PC",
+    "presetBing": "Fondo diario de Bing",
+    "presetLoliconPc": "Anime aleatorio (PC)",
+    "presetLoliconPe": "Anime aleatorio (móvil)",
+    "presetPicsum": "Paisaje aleatorio (Picsum)",
+    "previewHint": "Haz clic en un ajuste predefinido o en actualizar para ver una vista previa",
+    "random": "Aleatorio",
+    "refreshPreviewTooltip": "Actualizar vista previa (añade marca de tiempo)",
+    "requestFailed": "Error en la solicitud, comprueba la red",
+    "resolvingProxy": "Obteniendo a través del proxy y optimizando la coherencia del fondo...",
+    "rotating": "En rotación",
+    "rotationIntervalMinutes": "Intervalo de rotación (minutos)",
+    "savedToMobileLibrary": "Guardado en la biblioteca móvil",
+    "savedToPcLibrary": "Guardado en la biblioteca de PC",
+    "saving": "Guardando...",
+    "sequential": "Secuencial",
+    "setAsDefault": "Establecer como fondo predeterminado",
+    "stopAndLock": "Detener y bloquear",
+    "tip": "Aviso",
+    "willAutoRemove": "Se eliminará automáticamente",
+    "apiHintJson": "Compatible con {jsonApi} (como Unsplash/Bing); el enlace de la imagen se analiza y extrae automáticamente.",
+    "apiHintLan": "Compatible con {lanApi} (como http://192.168.x.x); ya no está limitado por el acceso a la red local."
   },
   "loginModal": {
     "registerTitle": "👤 Registro de nuevo usuario",
@@ -984,7 +1079,10 @@
     "configApiKey": "Configure la clave API",
     "ipLocateFailed": "Error de ubicación IP",
     "weatherFetchFailed": "Error de obtención del clima",
-    "networkFailed": "Error de solicitud de red"
+    "networkFailed": "Error de solicitud de red",
+    "dayNightFormat": "{day} a {night}",
+    "loginRequired": "Inicia sesión para configurar el widget del tiempo",
+    "windFormat": "viento {dir}, fuerza {power}"
   },
   "weekdays": [
     "Dom",
@@ -1071,7 +1169,15 @@
     "send": "Enviar",
     "noPreviewSupport": "Este tipo de archivo no soporta vista previa. Use \"Descargar\".",
     "placeholder": "Shift+Enter para nueva línea",
-    "placeholderSmall": "Pegar/Soltar (Shift+Enter)"
+    "placeholderSmall": "Pegar/Soltar (Shift+Enter)",
+    "deleteFailed": "Error al eliminar",
+    "downloadFailed": "Error al descargar",
+    "downloadSelected": "Descargar seleccionados ({count})",
+    "largeFileConfirm": "Se detectó un archivo grande ({size}); puede tardar y consumir mucho tráfico/memoria. ¿Continuar con la descarga?",
+    "loadFailed": "Error al cargar",
+    "networkInterrupted": "Red interrumpida, esperando recuperación",
+    "sendFailed": "Error al enviar",
+    "uploadFailed": "Error al subir"
   },
   "calendarWidget": {
     "switchView": "Cambiar vista",
@@ -1093,7 +1199,14 @@
     "journalistDay": "Periodista",
     "firefighterDay": "Bombero",
     "memorialDay": "Memorial",
-    "firstDay": "1°"
+    "firstDay": "1°",
+    "weekShortSun": "Do",
+    "weekShortMon": "Lu",
+    "weekShortTue": "Ma",
+    "weekShortWed": "Mi",
+    "weekShortThu": "Ju",
+    "weekShortFri": "Vi",
+    "weekShortSat": "Sá"
   },
   "clockWidget": {
     "switchStyle": "Cambiar estilo"
@@ -1140,7 +1253,10 @@
     "clickToConfig": "Clic para configurar",
     "settings": "Configuración",
     "title": "Cuenta regresiva",
-    "arrived": "🎉 Llegó"
+    "arrived": "🎉 Llegó",
+    "dayUnit": "días",
+    "hourUnit": "horas",
+    "minuteUnit": "min"
   },
   "countupWidget": {
     "defaultTitle": "Cronómetro",
@@ -1202,7 +1318,12 @@
     "save": "Guardar",
     "saved": "Guardado",
     "switchMode": "Cambiar modo",
-    "blankMemo": "Memo en blanco"
+    "blankMemo": "Memo en blanco",
+    "saveFailAuth": "Sesión no válida",
+    "saveFailConflictData": "Datos de conflicto de versión no válidos",
+    "saveFailNetworkRetry": "Error de red, reintentando",
+    "saveFailServerPage": "El servidor devolvió una página de error",
+    "saveFailServerStatus": "Error del servidor ({status})"
   },
   "clockWeatherWidget": {
     "settingsBtn": "Configurar ciudad",
@@ -1237,7 +1358,8 @@
     "chinanews": "China News",
     "loading": "Cargando...",
     "timeout": "Tiempo de espera agotado, reintente",
-    "failed": "Error de carga, reintente"
+    "failed": "Error de carga, reintente",
+    "bilibili": "Bilibili"
   },
   "iframeWidget": {
     "blocked": "⚠️ Acceso denegado",
@@ -1280,11 +1402,25 @@
     "back": "Volver",
     "switchEffect": "Cambiar efecto",
     "noLyrics": "Sin letras",
-    "title": "Música Daoli Fish"
+    "title": "Música Daoli Fish",
+    "audioUnsupported": "Fuente de audio no compatible o sin permiso",
+    "connectFailed": "Error de conexión",
+    "loadFailed": "Error al cargar",
+    "noSongs": "Aún no hay canciones, revisa la configuración de la API o los favoritos",
+    "playError": "Error de reproducción",
+    "requestFailed": "Error en la solicitud",
+    "trackMissing": "La canción no existe, se omitió",
+    "unnamedPlaylist": "Lista sin nombre"
   },
   "iconSelectionModal": {
     "title": "Seleccionar icono",
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "autoSelectIn": "Selección automática en {n}s",
+    "cancelLink": "Desvincular",
+    "loadMore": "Cargar más ({n})",
+    "localIcons": "📁 Iconos locales",
+    "matchCount": "({n} coincidencias)",
+    "remoteIcons": "🌐 Iconos de red"
   },
   "accessCode": {
     "titleManage": "Gestionar código de acceso",
@@ -1340,5 +1476,20 @@
     "promptFull": "Escribe un componente de tarjeta HTML/CSS sencillo.\nFunción: [introduce aquí tus necesidades, p. ej. mostrar la fecha actual y una cita]\nRequisitos:\n1. El contenedor se adapta al ancho/alto, contenido centrado.\n2. Estilo moderno y minimalista, diseño redondeado.\n3. Proporciona HTML y CSS por separado (JS opcional).",
     "promptPreview": "Escribe un componente de tarjeta HTML/CSS sencillo...",
     "editWidgetTooltip": "Editar widget"
+  },
+  "statusMonitor": {
+    "jsHeap": "Montón JS",
+    "keysIdle": "Claves/Inactivo",
+    "managed": "Gestionado",
+    "objectUrl": "URL de objetos",
+    "unavailable": "No disponible",
+    "unmanaged": "No gestionado"
+  },
+  "memoToolbar": {
+    "bold": "Negrita",
+    "code": "Código",
+    "italic": "Cursiva",
+    "quote": "Cita",
+    "unorderedList": "Lista"
   }
 }

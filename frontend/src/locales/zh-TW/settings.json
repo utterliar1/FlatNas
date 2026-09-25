@@ -385,7 +385,13 @@
     "fillRssUrlFirst": "請填寫 RSS 位址後再新增。",
     "pasteTextFirst": "請先貼上要匯入的 RSS 文字。",
     "importResult": "新增 {created} 條，更新 {updated} 條，跳過 {skipped} 條",
-    "titlePlaceholder": "標題"
+    "titlePlaceholder": "標題",
+    "feedUrlPlaceholder": "RSS 位址",
+    "importInvalidLines": "，無效 {count} 行",
+    "importNoNewTitles": "，未取得新的遠端標題",
+    "importPlaceholder": "範例：\n36氪 https://www.36kr.com/feed\n少數派,https://sspai.com/feed\n酷殼 | https://coolshell.cn/feed\nhttps://example.com/rss.xml",
+    "importTitlesUpdated": "，已自動更新 {count} 個真實標題",
+    "newCategoryPlaceholder": "新增分類"
   },
   "searchSettings": {
     "title": "搜尋引擎設定",
@@ -644,7 +650,25 @@
     "modalConfirm": "确定",
     "note": "注",
     "statusLabel": "状态",
-    "amapApiKey": "高德 API Key"
+    "amapApiKey": "高德 API Key",
+    "autoSave10s": "變更後 10 秒（推薦）",
+    "autoSave30s": "變更後 30 秒",
+    "autoSave3s": "變更後 3 秒",
+    "autoSaveLabel": "自動儲存",
+    "autoSaveOff": "關閉（僅手動儲存）",
+    "configSaveHint": "分組圖示、順序、元件版面等變更會依上述延遲自動儲存；重新整理或關閉頁面前也會自動嘗試寫入未儲存的變更。",
+    "configSaveSection": "💾 設定儲存",
+    "customWeatherSourcePlaceholder": "預設使用內建來源，輸入 URL 以自訂",
+    "dashboardTitle": "FlatNas 儀表板系統",
+    "manualSaveClean": "立即儲存（已是最新）",
+    "manualSaveDirty": "立即儲存（有未儲存的變更）",
+    "qweatherConsole": "和風天氣控制台",
+    "qweatherKeyIdPlaceholder": "請輸入 Key ID",
+    "qweatherPrivateKeyPlaceholder": "請輸入 Private Key (需包含 -----BEGIN PRIVATE KEY----- 頭尾)",
+    "qweatherProjectIdPlaceholder": "請輸入 Project ID",
+    "clickToDownloadHelper": "點擊{link}解除限制",
+    "qweatherGuide": "請前往{console}取得 JWT 憑證。",
+    "customWeatherSourceDescFull": "若填寫，將直接請求該位址取得天氣資料。回傳格式需包含：{format}"
   },
   "networkIndicator": {
     "online": "線上",
@@ -913,19 +937,35 @@
   },
   "iconUploader": {
     "imageTooLarge": "圖片太大啦，請上傳小於 5MB 的圖片",
-    "iconLoadError": "圖示載入失敗，回退到文字顯示"
+    "iconLoadError": "圖示載入失敗，回退到文字顯示",
+    "clickUpload": "點擊上傳",
+    "clickUploadOrCrop": "點擊上傳 / 裁剪",
+    "cropImage": "裁剪圖片",
+    "selectFromLibrary": "從壁紙庫選擇"
   },
   "miniPlayer": {
     "loading": "載入中...",
     "noMusic": "無音樂",
-    "fetchFailed": "取得失敗"
+    "fetchFailed": "取得失敗",
+    "next": "下一首",
+    "paused": "已暫停",
+    "playing": "正在播放",
+    "prev": "上一首"
   },
   "groupSelector": {
     "selectGroup": "選擇分組",
     "switchGroup": "切換分組"
   },
   "scriptManager": {
-    "newScript": "新腳本 {index}"
+    "newScript": "新腳本 {index}",
+    "addScript": "新增腳本",
+    "clickToConfirmDelete": "點擊確認刪除",
+    "codeLabel": "程式碼內容",
+    "confirmQuestion": "確認?",
+    "dropToAdd": "放開檔案以新增",
+    "nameLabel": "名稱",
+    "namePlaceholder": "腳本名稱",
+    "useProxyNetwork": "透過區域網路"
   },
   "proxyToggle": {
     "proxy": "代理"
@@ -941,7 +981,62 @@
     "uploading": "上傳中...",
     "uploadSuccess": "上傳成功",
     "uploadFailed": "上傳失敗",
-    "dragToSort": "拖曳排序"
+    "dragToSort": "拖曳排序",
+    "apiHint1": "在此處可以直接輸入圖片的 URL 位址，或使用第三方隨機壁紙 API。",
+    "apiHintRefresh": "設定後，每次重新整理頁面可能會依 API 回傳不同的圖片（取決於 API 行為）。",
+    "apiTab": "API 介面",
+    "applySuccess": "設定成功",
+    "applyToMobile": "套用到 手機壁紙",
+    "applyToPc": "套用到 PC 壁紙",
+    "blur": "模糊",
+    "blurRadius": "模糊半徑",
+    "cannotDeleteDefault": "預設壁紙無法刪除",
+    "customApiTitle": "自訂壁紙介面",
+    "defaultWallpaper": "預設壁紙",
+    "downloadToMobileLibrary": "下載到 手機壁紙庫",
+    "downloadToPcLibrary": "下載到 PC 壁紙庫",
+    "dragToSelect": "請拖曳選擇",
+    "emptyHint": "尚無壁紙，請先上傳",
+    "enableMobileWallpaper": "啟用手機壁紙",
+    "enableMobileWallpaperTooltip": "開啟後，手機端將優先使用手機壁紙；關閉後，手機端將使用 PC 端壁紙",
+    "enableRotation": "開啟輪播",
+    "imageInvalid": "圖片已失效",
+    "imageUrlLabel": "圖片 URL / API 位址",
+    "imageUrlPlaceholder": "https://example.com/image.jpg 或 隨機圖片API",
+    "jsonApiBold": "JSON 格式 API",
+    "lanApiBold": "區域網路/自建 API",
+    "largeFileConfirm": "偵測到檔案超過 10MB，可能導致記憶體占用過高，是否繼續上傳？",
+    "lockCurrentTooltip": "鎖定目前壁紙（會停止 PC 與手機端自動輪播）",
+    "locked": "已鎖定",
+    "mask": "遮罩",
+    "maskOpacity": "遮罩濃度",
+    "minute": "分",
+    "mobilePreview": "手機端預覽",
+    "mobileWallpaperEnabled": "已啟用手機壁紙",
+    "modeRandomTooltip": "播放方式：隨機（僅輪播開啟後生效）",
+    "modeSequentialTooltip": "播放方式：順序（僅輪播開啟後生效）",
+    "pcPreview": "PC 端預覽",
+    "presetBing": "Bing 每日壁紙",
+    "presetLoliconPc": "隨機二次元 (PC)",
+    "presetLoliconPe": "隨機二次元 (PE)",
+    "presetPicsum": "隨機風景 (Picsum)",
+    "previewHint": "點擊上方預設或重新整理按鈕取得預覽",
+    "random": "隨機",
+    "refreshPreviewTooltip": "重新整理預覽 (附加時間戳)",
+    "requestFailed": "請求錯誤，請檢查網路",
+    "resolvingProxy": "正在透過代理取得並最佳化壁紙一致性...",
+    "rotating": "輪播中",
+    "rotationIntervalMinutes": "輪播間隔(分鐘)",
+    "savedToMobileLibrary": "已儲存到手機壁紙庫",
+    "savedToPcLibrary": "已儲存到 PC 壁紙庫",
+    "saving": "儲存中...",
+    "sequential": "順播",
+    "setAsDefault": "設為預設壁紙",
+    "stopAndLock": "停止並鎖定",
+    "tip": "提示",
+    "willAutoRemove": "將自動移除",
+    "apiHintJson": "支援 {jsonApi}（如 Unsplash/Bing），系統會自動解析並擷取圖片連結。",
+    "apiHintLan": "支援 {lanApi}（如 http://192.168.x.x），不再受內網存取限制。"
   },
   "loginModal": {
     "registerTitle": "👤 新使用者註冊",
@@ -984,7 +1079,10 @@
     "configApiKey": "請配置 API Key",
     "ipLocateFailed": "IP 定位失敗",
     "weatherFetchFailed": "取得天氣預報失敗",
-    "networkFailed": "網路請求失敗"
+    "networkFailed": "網路請求失敗",
+    "dayNightFormat": "{day}轉{night}",
+    "loginRequired": "請登入設定天氣元件",
+    "windFormat": "{dir}風 {power}級"
   },
   "weekdays": [
     "週日",
@@ -1071,7 +1169,15 @@
     "send": "發送",
     "noPreviewSupport": "該檔案類型暫不支援直接預覽，請使用「下載」",
     "placeholder": "Shift+Enter 換行",
-    "placeholderSmall": "貼上/拖入 (Shift+Enter)"
+    "placeholderSmall": "貼上/拖入 (Shift+Enter)",
+    "deleteFailed": "刪除失敗",
+    "downloadFailed": "下載失敗",
+    "downloadSelected": "下載選取 ({count})",
+    "largeFileConfirm": "偵測到檔案較大（{size}），可能耗時且占用較多流量/記憶體，是否繼續下載？",
+    "loadFailed": "載入失敗",
+    "networkInterrupted": "網路中斷，等待恢復",
+    "sendFailed": "傳送失敗",
+    "uploadFailed": "上傳失敗"
   },
   "calendarWidget": {
     "switchView": "切換檢視",
@@ -1093,7 +1199,14 @@
     "journalistDay": "記者",
     "firefighterDay": "消防",
     "memorialDay": "公祭",
-    "firstDay": "初一"
+    "firstDay": "初一",
+    "weekShortSun": "日",
+    "weekShortMon": "一",
+    "weekShortTue": "二",
+    "weekShortWed": "三",
+    "weekShortThu": "四",
+    "weekShortFri": "五",
+    "weekShortSat": "六"
   },
   "clockWidget": {
     "switchStyle": "切換風格"
@@ -1140,7 +1253,10 @@
     "clickToConfig": "點擊配置倒數計時",
     "settings": "設定",
     "title": "倒數計時",
-    "arrived": "🎉 已到達"
+    "arrived": "🎉 已到達",
+    "dayUnit": "天",
+    "hourUnit": "時",
+    "minuteUnit": "分"
   },
   "countupWidget": {
     "defaultTitle": "正計時",
@@ -1202,7 +1318,12 @@
     "save": "儲存",
     "saved": "已儲存",
     "switchMode": "切換模式 (Switch Mode)",
-    "blankMemo": "空白備忘"
+    "blankMemo": "空白備忘",
+    "saveFailAuth": "登入狀態無效",
+    "saveFailConflictData": "版本衝突資料無效",
+    "saveFailNetworkRetry": "網路異常，正在重試",
+    "saveFailServerPage": "服務回傳異常頁面",
+    "saveFailServerStatus": "服務異常({status})"
   },
   "clockWeatherWidget": {
     "settingsBtn": "設定城市",
@@ -1237,7 +1358,8 @@
     "chinanews": "中新網",
     "loading": "載入中...",
     "timeout": "請求超時，請重試",
-    "failed": "載入失敗，請重試"
+    "failed": "載入失敗，請重試",
+    "bilibili": "B站"
   },
   "iframeWidget": {
     "blocked": "⚠️ 禁止存取此連結",
@@ -1280,11 +1402,25 @@
     "back": "返回",
     "switchEffect": "切換播放效果",
     "noLyrics": "暫無歌詞",
-    "title": "道理魚音樂"
+    "title": "道理魚音樂",
+    "audioUnsupported": "音訊來源不支援或無權限",
+    "connectFailed": "連線失敗",
+    "loadFailed": "載入失敗",
+    "noSongs": "尚無歌曲，請檢查 API 設定或收藏",
+    "playError": "播放錯誤",
+    "requestFailed": "請求失敗",
+    "trackMissing": "歌曲不存在，已略過",
+    "unnamedPlaylist": "未命名歌單"
   },
   "iconSelectionModal": {
     "title": "選擇圖示",
-    "loading": "載入中..."
+    "loading": "載入中...",
+    "autoSelectIn": "{n}s 後自動選擇",
+    "cancelLink": "取消連結",
+    "loadMore": "載入更多 ({n} 個)",
+    "localIcons": "📁 本機圖示",
+    "matchCount": "({n}個符合)",
+    "remoteIcons": "🌐 網路圖示"
   },
   "accessCode": {
     "titleManage": "管理訪問碼",
@@ -1340,5 +1476,20 @@
     "promptFull": "請幫我寫一個簡潔的 HTML/CSS 卡片元件。\n功能：[在此輸入你的需求，如：顯示目前日期和一句名言]\n要求：\n1. 容器寬高自適應，內容置中。\n2. 風格現代簡約，圓角設計。\n3. 請分別提供 HTML 和 CSS 程式碼（可選 JS）。",
     "promptPreview": "請幫我寫一個簡潔的 HTML/CSS 卡片元件...",
     "editWidgetTooltip": "編輯元件"
+  },
+  "statusMonitor": {
+    "jsHeap": "JS 堆積",
+    "keysIdle": "鍵/閒置",
+    "managed": "受管",
+    "objectUrl": "物件URL",
+    "unavailable": "不可用",
+    "unmanaged": "未託管"
+  },
+  "memoToolbar": {
+    "bold": "粗體",
+    "code": "程式碼",
+    "italic": "斜體",
+    "quote": "引用",
+    "unorderedList": "清單"
   }
 }

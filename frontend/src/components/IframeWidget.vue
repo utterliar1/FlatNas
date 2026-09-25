@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import type { WidgetConfig } from "@/types";
 import { useElementSize } from "@vueuse/core";
 import { useMainStore } from "../stores/main";
@@ -11,6 +12,7 @@ const props = defineProps<{
 }>();
 
 const store = useMainStore();
+const { t } = useI18n();
 
 const isLoading = ref(true);
 const iframeRef = ref<HTMLIFrameElement | null>(null);
@@ -141,16 +143,16 @@ watch(
       v-else-if="isBlocked"
       class="absolute inset-0 flex items-center justify-center text-red-400 text-xs flex-col gap-2 bg-red-50 dark:bg-red-900/20"
     >
-      <span class="font-bold">⚠️ 禁止访问此链接</span>
-      <span class="text-[10px] opacity-70">Gitee 仓库页不支持嵌入</span>
+      <span class="font-bold">{{ t("settings.iframeWidget.blocked") }}</span>
+      <span class="text-[10px] opacity-70">{{ t("settings.iframeWidget.blockedReason") }}</span>
     </div>
 
     <div
       v-else
       class="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs flex-col gap-2"
     >
-      <span>未设置 URL</span>
-      <span class="text-[10px] opacity-50">请在编辑模式下配置</span>
+      <span>{{ t("settings.iframeWidget.noUrl") }}</span>
+      <span class="text-[10px] opacity-50">{{ t("settings.iframeWidget.noUrlHint") }}</span>
     </div>
 
     <!-- Controls Overlay (Visible on Hover for Desktop, Always for Mobile) -->
@@ -160,7 +162,7 @@ watch(
       <button
         @click="refresh"
         class="p-1.5 bg-black/40 dark:bg-gray-700/60 text-white rounded-full hover:bg-blue-500/80 dark:hover:bg-blue-600/80 backdrop-blur-md transition-colors shadow-sm border border-white/20"
-        title="刷新"
+        :title="t('common.common.refresh')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +183,7 @@ watch(
       <button
         @click="toggleScale"
         class="p-1.5 bg-black/40 dark:bg-gray-700/60 text-white rounded-full hover:bg-blue-500/80 dark:hover:bg-blue-600/80 backdrop-blur-md transition-colors shadow-sm border border-white/20"
-        :title="isScaled ? '恢复默认视图' : '缩放适应窗口'"
+        :title="isScaled ? t('settings.iframeWidget.restoreView') : t('settings.iframeWidget.scaleToFit')"
       >
         <svg
           v-if="!isScaled"
@@ -221,7 +223,7 @@ watch(
         target="_blank"
         rel="noopener noreferrer"
         class="p-1.5 bg-black/40 dark:bg-gray-700/60 text-white rounded-full hover:bg-blue-500/80 dark:hover:bg-blue-600/80 backdrop-blur-md transition-colors shadow-sm flex items-center justify-center border border-white/20"
-        title="在新窗口打开 (解决显示异常)"
+        :title="t('settings.iframeWidget.openExternal')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -245,7 +247,7 @@ watch(
       class="absolute bottom-0 left-0 right-0 bg-red-500/90 backdrop-blur text-white text-[10px] p-1.5 text-center transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-20 flex items-center justify-center gap-2"
       v-if="currentUrl && currentUrl.startsWith('http://') && currentProtocol === 'https:'"
     >
-      <span>⚠️ 检测到混合内容 (HTTPS引用HTTP)</span>
+      <span>{{ t("settings.iframeWidget.mixedContent") }}</span>
     </div>
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, toRef } from "vue";
+import { useI18n } from "vue-i18n";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
 import { useDevice } from "@/composables/useDevice";
@@ -8,6 +9,7 @@ import MemoToolbar from "./Memo/MemoToolbar.vue";
 import { useMemoPersistence, type MemoVersion } from "./Memo/useMemoPersistence";
 
 const props = defineProps<{ widget: WidgetConfig }>();
+const { t } = useI18n();
 const store = useMainStore();
 const { isMobile } = useDevice(toRef(store.appConfig, "deviceMode"));
 
@@ -81,7 +83,9 @@ type VersionOption = {
 };
 
 const versionOptions = computed<VersionOption[]>(() => {
-  const options: VersionOption[] = [{ id: "new", label: "新建备忘", kind: "new" }];
+  const options: VersionOption[] = [
+    { id: "new", label: t("settings.memoWidget.newMemo"), kind: "new" },
+  ];
   historyVersions.value.forEach((v) => {
     options.push({
       id: v.id,
@@ -95,10 +99,10 @@ const versionOptions = computed<VersionOption[]>(() => {
 
 const selectedVersionLabel = computed(() => {
   if (selectedVersionId.value === "new" && historyVersions.value.length > 0) {
-    return "版本管理";
+    return t("settings.memoWidget.versionManage");
   }
   const found = versionOptions.value.find((opt) => opt.id === selectedVersionId.value);
-  return found?.label || "新建备忘";
+  return found?.label || t("settings.memoWidget.newMemo");
 });
 
 // Computed Styles
@@ -129,7 +133,7 @@ const triggerSave = async () => {
   await refreshVersions();
   if (status.value === "success") {
     // Triple Feedback 2: Toast
-    toastMessage.value = "已保存，刷新不丢失";  // 已本地化
+    toastMessage.value = t("settings.memoWidget.savedHint");
     showToast.value = true;
     setTimeout(() => (showToast.value = false), 3000);
   }
@@ -351,13 +355,18 @@ const saveToServer = async (immediate = false, keepalive = false) => {
       const res = await requestMemoSave(id, payload, keepalive, requestID);
       const parsedBody = await parseJsonBody(res);
       if (!parsedBody.isJson) {
-        markSaveError("保存失败：服务返回异常页面");
+        markSaveError(
+          t("settings.memoWidget.saveFailed", { reason: t("settings.memoWidget.saveFailServerPage") }),
+        );
         return;
       }
       const data = parsedBody.data as { data?: WidgetConfig["data"] } | null;
       if (res.status === 409) {
         if (!data?.data) {
-          markSaveError("保存失败：版本冲突数据无效", false);
+          markSaveError(
+            t("settings.memoWidget.saveFailed", { reason: t("settings.memoWidget.saveFailConflictData") }),
+            false,
+          );
           return;
         }
         const remotePayload = data.data as WidgetConfig["data"];
@@ -396,7 +405,9 @@ const saveToServer = async (immediate = false, keepalive = false) => {
             return;
           }
           if (!retryParsedBody.isJson) {
-            markSaveError("保存失败：服务返回异常页面");
+            markSaveError(
+              t("settings.memoWidget.saveFailed", { reason: t("settings.memoWidget.saveFailServerPage") }),
+            );
             return;
           }
         }
@@ -431,16 +442,23 @@ const saveToServer = async (immediate = false, keepalive = false) => {
           remoteData: remotePayload,
         };
         syncState.value = "conflict";
-        toastMessage.value = "检测到版本冲突，请选择解决方案";
+        toastMessage.value = t("settings.memoWidget.conflictDetected");
         showToast.value = true;
         return;
       }
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          markSaveError("保存失败：登录状态无效", false);
+          markSaveError(
+            t("settings.memoWidget.saveFailed", { reason: t("settings.memoWidget.saveFailAuth") }),
+            false,
+          );
           return;
         }
-        markSaveError(`保存失败：服务异常(${res.status})`);
+        markSaveError(
+          t("settings.memoWidget.saveFailed", {
+            reason: t("settings.memoWidget.saveFailServerStatus", { status: res.status }),
+          }),
+        );
         return;
       }
       if (data?.data) {
@@ -452,7 +470,9 @@ const saveToServer = async (immediate = false, keepalive = false) => {
         saveRetryTimer = null;
       }
     } catch {
-      markSaveError("保存失败：网络异常，正在重试");
+      markSaveError(
+        t("settings.memoWidget.saveFailed", { reason: t("settings.memoWidget.saveFailNetworkRetry") }),
+      );
     } finally {
       isSaving.value = false;
       if (pendingSave.value) {
@@ -762,7 +782,7 @@ const handleInnerWheel = (e: WheelEvent) => {
 
 const extractPreviewLabel = (value: string) => {
   const text = value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-  if (!text) return "空白备忘";
+  if (!text) return t("settings.memoWidget.blankMemo");
   const limit = 10;
   return text.length > limit ? `${text.slice(0, limit)}…` : text;
 };
@@ -1017,7 +1037,7 @@ onUnmounted(() => {
     <div 
       class="absolute top-0 left-0 w-3 h-3 cursor-pointer z-50 overflow-hidden group/curl"
       @click="toggleMode"
-      title="切换模式"
+      :title="t('settings.memoWidget.switchMode')"
     >
       <!-- The shadow of the curl -->
       <div class="absolute top-0 left-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-white/0 border-r-black/20 transform translate-x-0.5 translate-y-0.5 blur-[1px] transition-all duration-300 group-hover/curl:scale-105"></div>
@@ -1079,7 +1099,7 @@ onUnmounted(() => {
               v-if="option.kind === 'history'"
               type="button"
               class="shrink-0 p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-white/60"
-              aria-label="删除版本"
+              :aria-label="t('settings.memoWidget.deleteVersion')"
               @click.stop="deleteVersionEntry(option)"
             >
               <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
@@ -1108,7 +1128,7 @@ onUnmounted(() => {
           status === 'saving' ? 'opacity-70 cursor-wait' : ''
         ]"
         :disabled="status === 'saving'"
-        title="保存"
+        :title="t('common.common.save')"
       >
         <svg v-if="status === 'success'" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -1116,7 +1136,7 @@ onUnmounted(() => {
         <svg v-else class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
         </svg>
-        <span>{{ status === 'success' ? '已保存' : '保存' }}</span>
+        <span>{{ status === 'success' ? t('settings.memoWidget.saved') : t('common.common.save') }}</span>
       </button>
     </div>
 
@@ -1128,7 +1148,7 @@ onUnmounted(() => {
             v-if="mode === 'simple'"
             v-model="localData"
             class="w-full h-full bg-transparent resize-none outline-none text-sm placeholder-gray-600 font-medium p-4 pt-4"
-            :placeholder="store.isLogged ? '写点什么...' : '请先登录'"
+            :placeholder="store.isLogged ? t('settings.memoWidget.writePlaceholder') : t('settings.memoWidget.loginFirst')"
             :readonly="!store.isLogged"
             @focus="handleFocus"
             @blur="handleBlur"
@@ -1141,7 +1161,7 @@ onUnmounted(() => {
             ref="editorRef"
             v-model:content="localData"
             :editable="store.isLogged"
-            :placeholder="store.isLogged ? '在此输入内容...' : '请先登录'"
+            :placeholder="store.isLogged ? t('settings.memoWidget.inputPlaceholder') : t('settings.memoWidget.loginFirst')"
             @focus="handleFocus"
             @blur="handleBlur"
             @input="handleInputActivity"
@@ -1160,23 +1180,23 @@ onUnmounted(() => {
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
-        <span>检测到版本冲突 (Version Conflict)</span>
+        <span>{{ t("settings.memoWidget.conflictTitle") }} (Version Conflict)</span>
       </div>
       <p class="text-[11px] text-red-500 leading-tight">
-        云端存在更新的版本。请选择保留您的本地更改(将覆盖云端)，还是放弃本地更改使用云端版本。
+        {{ t("settings.memoWidget.conflictDesc") }}
       </p>
       <div class="flex gap-2 mt-1">
         <button
           @click="resolveConflict('local')"
           class="flex-1 px-3 py-2 min-h-[44px] bg-white border border-red-200 text-red-600 text-xs font-medium rounded hover:bg-red-50 transition-colors"
         >
-          保留本地 (Overwrite Remote)
+          {{ t("settings.memoWidget.keepLocal") }} (Overwrite Remote)
         </button>
         <button
           @click="resolveConflict('remote')"
           class="flex-1 px-3 py-2 min-h-[44px] bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
         >
-          使用云端 (Discard Local)
+          {{ t("settings.memoWidget.useRemote") }} (Discard Local)
         </button>
       </div>
     </div>
@@ -1194,13 +1214,13 @@ onUnmounted(() => {
         @click.stop
       >
         <div class="flex items-center justify-between p-4 border-b border-gray-200/60">
-          <span class="text-sm font-semibold">选择版本</span>
+          <span class="text-sm font-semibold">{{ t("settings.memoWidget.selectVersion") }}</span>
           <button
             type="button"
             class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-md hover:bg-gray-100"
             @click="closeVersionMenu"
           >
-            关闭
+            {{ t("common.common.close") }}
           </button>
         </div>
         <div class="flex-1 overflow-y-auto no-scrollbar p-3 space-y-1" @wheel="handleInnerWheel">
@@ -1224,7 +1244,7 @@ onUnmounted(() => {
               v-if="option.kind === 'history'"
               type="button"
               class="shrink-0 mr-2 p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-gray-100"
-              aria-label="删除版本"
+              :aria-label="t('settings.memoWidget.deleteVersion')"
               @click.stop="deleteVersionEntry(option)"
             >
               <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">

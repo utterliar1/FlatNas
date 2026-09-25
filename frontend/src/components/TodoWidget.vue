@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useStorage, useDebounceFn } from "@vueuse/core";
 import type { WidgetConfig } from "@/types";
 import { useMainStore } from "../stores/main";
@@ -14,6 +15,7 @@ interface TodoItem {
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
+const { t } = useI18n();
 const newItem = ref("");
 const saveStatus = ref<"saved" | "saving" | "unsaved">("saved");
 // LAN 判定只是一种"偏好"。在隧道/反代场景下 socket 可能实际断开，
@@ -262,7 +264,7 @@ const handleScrollIsolation = (e: WheelEvent) => {
   >
     <div class="font-bold text-white text-xs mb-2 flex justify-between items-center">
       <div class="flex items-center gap-2">
-        <span>待办</span>
+        <span>{{ t("settings.todoWidget.title") }}</span>
         <span
           v-if="saveStatus !== 'saved'"
           class="text-[10px] font-normal text-white/60 transition-opacity"
@@ -270,9 +272,11 @@ const handleScrollIsolation = (e: WheelEvent) => {
           {{ saveStatus === "saving" ? "..." : "" }}
         </span>
       </div>
-      <span class="text-[10px] text-white/60"
-        >{{ todoItems.filter((i: TodoItem) => !i.done).length || 0 }} 待完成</span
-      >
+      <span class="text-[10px] text-white/60">{{
+        t("settings.todoWidget.pendingCount", {
+          count: todoItems.filter((i: TodoItem) => !i.done).length || 0,
+        })
+      }}</span>
     </div>
 
     <div class="flex-1 overflow-y-auto space-y-1 scrollbar-hide" @wheel="handleScrollIsolation">
@@ -293,11 +297,11 @@ const handleScrollIsolation = (e: WheelEvent) => {
           @click="remove(idx)"
           class="text-xs text-white/50 hover:text-white/80 border border-white/10 rounded px-2 py-0.5 hover:bg-white/10 transition-colors whitespace-nowrap shrink-0"
         >
-          删除
+          {{ t("common.common.delete") }}
         </button>
       </div>
       <div v-if="!todoItems.length" class="text-xs text-white/50 text-center py-2">
-        无待办事项
+        {{ t("settings.todoWidget.noTodos") }}
       </div>
     </div>
 
@@ -305,14 +309,14 @@ const handleScrollIsolation = (e: WheelEvent) => {
       <input
         v-model="newItem"
         @keyup.enter="add"
-        placeholder="添加待办..."
+        :placeholder="t('settings.todoWidget.addPlaceholder')"
         class="flex-1 text-xs bg-white/10 border border-white/20 rounded px-2 py-1 outline-none focus:bg-white/10 focus:border-white/40 transition-colors text-white placeholder-white/50"
       />
       <button
         @click="add"
         class="bg-white/10 text-white text-xs px-3 py-1 rounded hover:bg-white/20 transition-colors whitespace-nowrap"
       >
-        回车
+        {{ t("settings.todoWidget.enterHint") }}
       </button>
     </div>
   </div>

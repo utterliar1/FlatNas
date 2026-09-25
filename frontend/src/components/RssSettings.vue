@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import type { RssCategory, RssFeed, WidgetConfig } from "@/types";
 
+const { t } = useI18n();
 const store = useMainStore();
 const RSS_COLLAPSED_STORAGE_KEY = "flatnas-rss-settings-collapsed";
 
@@ -56,6 +58,7 @@ const looksLikeUrl = (value: string) => {
 const buildFallbackTitle = (value: string) => {
   const trimmed = normalizeUrl(value);
   if (!trimmed) {
+    // 数据标识：写入用户数据并持久化，禁止 i18n
     return "未命名订阅源";
   }
   try {
@@ -117,7 +120,7 @@ const removeCategory = (category: RssCategory) => {
   if (!normalized) {
     return;
   }
-  if (!confirm(`确定删除分类“${normalized}”吗？关联订阅源的分类将被清空。`)) {
+  if (!confirm(t("settings.rss.confirmDeleteCategory", { name: normalized }))) {
     return;
   }
   store.rssCategories = rssCategories.value.filter((item) => item.id !== category.id);
@@ -132,13 +135,13 @@ const removeCategory = (category: RssCategory) => {
 const addSingleFeed = () => {
   const url = normalizeUrl(quickFeed.value.url);
   if (!url) {
-    importFeedback.value = { type: "error", text: "请填写 RSS 地址后再新增。" };
+    importFeedback.value = { type: "error", text: t("settings.rss.fillRssUrlFirst") };
     return;
   }
   ensureArrays();
   const duplicate = rssFeeds.value.find((feed) => normalizeUrl(feed.url) === url);
   if (duplicate) {
-    importFeedback.value = { type: "info", text: "该 RSS 地址已存在，未重复新增。" };
+    importFeedback.value = { type: "info", text: t("settings.rss.feedAlreadyExists") };
     return;
   }
   const category = normalizeText(quickFeed.value.category);
@@ -165,7 +168,7 @@ const addSingleFeed = () => {
     enable: true,
     isPublic: true,
   };
-  importFeedback.value = { type: "success", text: "订阅源已新增。" };
+  importFeedback.value = { type: "success", text: t("settings.rss.feedAdded") };
 };
 
 const parseImportLine = (line: string) => {
@@ -227,7 +230,7 @@ const importFeeds = async () => {
     .map((line) => line.trim())
     .filter(Boolean);
   if (lines.length === 0) {
-    importFeedback.value = { type: "error", text: "请先粘贴要导入的 RSS 文本。" };
+    importFeedback.value = { type: "error", text: t("settings.rss.pasteTextFirst") };
     return;
   }
 
@@ -293,13 +296,14 @@ const importFeeds = async () => {
   store.rssFeeds = nextFeeds;
   store.markDirty();
 
-  const parts = [`新增 ${created} 条`, `更新 ${updated} 条`, `跳过 ${skipped} 条`];
+  const parts = [t("settings.rss.importResult", { created, updated, skipped })];
   if (invalidLines.length > 0) {
-    parts.push(`无效 ${invalidLines.length} 行`);
+    parts.push(t("settings.rss.importInvalidLines", { count: invalidLines.length }));
   }
+  const summary = parts.join("");
   importFeedback.value = {
     type: invalidLines.length > 0 ? "info" : "success",
-    text: parts.join("，"),
+    text: summary,
   };
 
   if (created > 0 || updated > 0) {
@@ -341,19 +345,19 @@ const importFeeds = async () => {
   if (titleUpdated > 0) {
     importFeedback.value = {
       type: "success",
-      text: `${parts.join("，")}，已自动更新 ${titleUpdated} 个真实标题`,
+      text: summary + t("settings.rss.importTitlesUpdated", { count: titleUpdated }),
     };
   } else if (importedFeeds.length > 0) {
     importFeedback.value = {
       type: importFeedback.value?.type || "info",
-      text: `${parts.join("，")}，未获取到新的远端标题`,
+      text: summary + t("settings.rss.importNoNewTitles"),
     };
   }
   importFetchingTitles.value = false;
 };
 
 const deleteFeed = (id: string) => {
-  if (!confirm("确定删除此订阅源吗？")) {
+  if (!confirm(t("settings.rss.confirmDeleteFeed"))) {
     return;
   }
   store.rssFeeds = rssFeeds.value.filter((feed) => feed.id !== id);
@@ -386,21 +390,21 @@ watch(rssCollapsed, (value) => {
   <div class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3 border-l-4 border-orange-500 pl-3">
       <div>
-        <h4 class="text-lg font-bold text-gray-800">RSS 订阅管理</h4>
-        <p class="mt-1 text-xs text-gray-400">支持批量导入、列表编辑、删除和云端同步。</p>
+        <h4 class="text-lg font-bold text-gray-800">{{ t("settings.rss.title") }}</h4>
+        <p class="mt-1 text-xs text-gray-400">{{ t("settings.rss.desc") }}</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <span
           class="flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-2 py-1 text-[10px] text-green-600"
         >
           <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500"></span>
-          云端同步已开启
+          {{ t("settings.rss.cloudSyncEnabled") }}
         </span>
         <button
           class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
           @click="rssCollapsed = !rssCollapsed"
         >
-          {{ rssCollapsed ? "展开" : "收起" }}
+          {{ rssCollapsed ? t("common.common.expand") : t("common.common.collapse") }}
         </button>
       </div>
     </div>
@@ -413,8 +417,8 @@ watch(rssCollapsed, (value) => {
         <div class="flex items-center gap-4">
           <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl shadow-sm">📡</div>
           <div>
-            <h5 class="font-bold text-gray-700">RSS 阅读器组件</h5>
-            <p class="text-xs text-gray-400">桌面组件总开关</p>
+            <h5 class="font-bold text-gray-700">{{ t("settings.rss.readerComponent") }}</h5>
+            <p class="text-xs text-gray-400">{{ t("settings.rss.readerComponentDesc") }}</p>
           </div>
         </div>
         <div class="flex items-center gap-6">
@@ -425,7 +429,7 @@ watch(rssCollapsed, (value) => {
               class="accent-blue-500"
               @change="toggleWidgetDirty"
             />
-            公开
+            {{ t("common.common.public") }}
           </label>
           <label class="flex cursor-pointer items-center gap-2 text-xs font-medium text-gray-500">
             <input
@@ -434,7 +438,7 @@ watch(rssCollapsed, (value) => {
               class="accent-green-500"
               @change="toggleWidgetDirty"
             />
-            启用
+            {{ t("common.common.enable") }}
           </label>
         </div>
       </section>
@@ -443,22 +447,24 @@ watch(rssCollapsed, (value) => {
         <section class="space-y-4 rounded-xl border border-orange-100 bg-orange-50/80 p-4">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <h5 class="text-sm font-bold text-orange-800">快速新增</h5>
-              <p class="mt-1 text-xs text-orange-700/70">适合补一两个订阅源，标题可留空自动生成。</p>
+              <h5 class="text-sm font-bold text-orange-800">{{ t("settings.rss.quickAdd") }}</h5>
+              <p class="mt-1 text-xs text-orange-700/70">{{ t("settings.rss.quickAddDesc") }}</p>
             </div>
-            <span class="text-[11px] text-orange-700/70">共 {{ rssFeeds.length }} 个订阅源</span>
+            <span class="text-[11px] text-orange-700/70">{{
+              t("settings.rss.totalFeeds", { count: rssFeeds.length })
+            }}</span>
           </div>
 
           <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
             <input
               v-model="quickFeed.title"
               class="w-full rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"
-              placeholder="标题（可选）"
+              :placeholder="t('settings.rss.titleOptional')"
             />
             <input
               v-model="quickFeed.url"
               class="w-full rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 md:col-span-2"
-              placeholder="RSS 地址，例如 https://example.com/feed"
+              :placeholder="t('settings.rss.urlPlaceholder')"
               @keyup.enter="addSingleFeed"
             />
           </div>
@@ -468,37 +474,37 @@ watch(rssCollapsed, (value) => {
               v-model="quickFeed.category"
               list="rss-categories"
               class="w-full rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"
-              placeholder="分类（可选）"
+              :placeholder="t('settings.rss.categoryOptional')"
             />
             <label class="flex items-center gap-2 text-xs text-gray-600">
               <input v-model="quickFeed.enable" type="checkbox" class="accent-orange-500" />
-              启用
+              {{ t("common.common.enable") }}
             </label>
             <label class="flex items-center gap-2 text-xs text-gray-600">
               <input v-model="quickFeed.isPublic" type="checkbox" class="accent-blue-500" />
-              公开
+              {{ t("common.common.public") }}
             </label>
             <button
               class="rounded-lg bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
               @click="addSingleFeed"
             >
-              新增
+              {{ t("settings.rss.add") }}
             </button>
           </div>
         </section>
 
         <section class="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
           <div>
-            <h5 class="text-sm font-bold text-gray-800">批量导入</h5>
+            <h5 class="text-sm font-bold text-gray-800">{{ t("settings.rss.batchImport") }}</h5>
             <p class="mt-1 text-xs text-gray-400">
-              支持每行一个 URL，或每行一条 `标题 URL`、`标题,URL`、`标题 | URL`。
+              {{ t("settings.rss.batchImportDesc") }}
             </p>
           </div>
 
           <textarea
             v-model="importText"
             class="min-h-[156px] w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
-            placeholder="示例：&#10;36氪 https://www.36kr.com/feed&#10;少数派,https://sspai.com/feed&#10;酷壳 | https://coolshell.cn/feed&#10;https://example.com/rss.xml"
+            :placeholder="t('settings.rss.importPlaceholder')"
           ></textarea>
 
           <div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr,auto,auto]">
@@ -506,15 +512,15 @@ watch(rssCollapsed, (value) => {
               v-model="importCategory"
               list="rss-categories"
               class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
-              placeholder="导入后统一归类到某个分类（可选）"
+              :placeholder="t('settings.rss.importCategory')"
             />
             <label class="flex items-center gap-2 text-xs text-gray-600">
               <input v-model="importEnable" type="checkbox" class="accent-orange-500" />
-              默认启用
+              {{ t("settings.rss.defaultEnabled") }}
             </label>
             <label class="flex items-center gap-2 text-xs text-gray-600">
               <input v-model="importPublic" type="checkbox" class="accent-blue-500" />
-              默认公开
+              {{ t("settings.rss.defaultPublic") }}
             </label>
           </div>
 
@@ -536,21 +542,21 @@ watch(rssCollapsed, (value) => {
               v-else-if="importFetchingTitles"
               class="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-600"
             >
-              正在抓取远端真实标题...
+              {{ t("settings.rss.fetchingRemoteTitles") }}
             </div>
             <div class="ml-auto flex items-center gap-2">
               <button
                 class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50"
                 @click="importText = ''"
               >
-                清空
+                {{ t("common.common.clear") }}
               </button>
               <button
                 class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-bold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
                 :disabled="importFetchingTitles"
                 @click="importFeeds"
               >
-                {{ importFetchingTitles ? "抓取标题中..." : "导入订阅源" }}
+                {{ importFetchingTitles ? t("settings.rss.fetchingTitles") : t("settings.rss.importFeeds") }}
               </button>
             </div>
           </div>
@@ -560,21 +566,21 @@ watch(rssCollapsed, (value) => {
       <section class="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h5 class="text-sm font-bold text-gray-800">分类</h5>
-            <p class="mt-1 text-xs text-gray-400">分类会作为订阅源的下拉候选项，可随时删除。</p>
+            <h5 class="text-sm font-bold text-gray-800">{{ t("settings.rss.categories") }}</h5>
+            <p class="mt-1 text-xs text-gray-400">{{ t("settings.rss.categoriesDesc") }}</p>
           </div>
           <div class="flex w-full gap-2 md:w-auto">
             <input
               v-model="newCategoryName"
               class="min-w-[220px] flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
-              placeholder="新增分类"
+              :placeholder="t('settings.rss.newCategoryPlaceholder')"
               @keyup.enter="addCategory"
             />
             <button
               class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-bold text-orange-600 hover:bg-orange-100"
               @click="addCategory"
             >
-              添加分类
+              {{ t("settings.rss.addCategory") }}
             </button>
           </div>
         </div>
@@ -586,22 +592,24 @@ watch(rssCollapsed, (value) => {
             class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600"
           >
             {{ category.name }}
-            <button class="text-red-500 hover:text-red-600" @click="removeCategory(category)">删除</button>
+            <button class="text-red-500 hover:text-red-600" @click="removeCategory(category)">
+              {{ t("common.common.delete") }}
+            </button>
           </span>
         </div>
         <div
           v-else
           class="rounded-lg border border-dashed border-gray-200 px-4 py-5 text-center text-sm text-gray-400"
         >
-          还没有分类，导入或新增时填写分类会自动补充到这里。
+          {{ t("settings.rss.noCategories") }}
         </div>
       </section>
 
       <section class="space-y-3">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <h5 class="text-sm font-bold text-gray-800">订阅源列表</h5>
-            <p class="mt-1 text-xs text-gray-400">直接修改后会自动参与保存；分类输入框支持现有分类提示。</p>
+            <h5 class="text-sm font-bold text-gray-800">{{ t("settings.rss.feedsList") }}</h5>
+            <p class="mt-1 text-xs text-gray-400">{{ t("settings.rss.feedsListDesc") }}</p>
           </div>
         </div>
 
@@ -609,7 +617,7 @@ watch(rssCollapsed, (value) => {
           v-if="rssFeeds.length === 0"
           class="rounded-xl border border-dashed border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-400"
         >
-          还没有订阅源，先在上方快速新增或批量导入。
+          {{ t("settings.rss.noFeeds") }}
         </div>
 
         <div v-else class="space-y-3">
@@ -622,27 +630,27 @@ watch(rssCollapsed, (value) => {
               <input
                 v-model="feed.title"
                 class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
-                placeholder="标题"
+                :placeholder="t('settings.rss.titlePlaceholder')"
                 @blur="sanitizeFeed(feed); touchFeeds()"
               />
               <input
                 v-model="feed.url"
                 class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
-                placeholder="RSS 地址"
+                :placeholder="t('settings.rss.feedUrlPlaceholder')"
                 @blur="sanitizeFeed(feed); touchFeeds()"
               />
               <input
                 v-model="feed.category"
                 list="rss-categories"
                 class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-orange-400"
-                placeholder="分类"
+                :placeholder="t('settings.rss.categories')"
                 @blur="sanitizeFeed(feed); touchFeeds()"
               />
               <button
                 class="rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-500 hover:bg-red-50"
                 @click="deleteFeed(feed.id)"
               >
-                删除
+                {{ t("common.common.delete") }}
               </button>
             </div>
 
@@ -656,7 +664,7 @@ watch(rssCollapsed, (value) => {
                     class="accent-orange-500"
                     @change="touchFeeds"
                   />
-                  启用
+                  {{ t("common.common.enable") }}
                 </label>
                 <label class="flex items-center gap-2 text-xs text-gray-600">
                   <input
@@ -665,7 +673,7 @@ watch(rssCollapsed, (value) => {
                     class="accent-blue-500"
                     @change="touchFeeds"
                   />
-                  公开
+                  {{ t("common.common.public") }}
                 </label>
               </div>
             </div>

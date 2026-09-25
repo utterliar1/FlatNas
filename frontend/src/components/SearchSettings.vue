@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import { VueDraggable } from "vue-draggable-plus";
 import type { SearchEngine } from "@/types";
 
+const { t } = useI18n();
 const store = useMainStore();
 
 const addSearchEngine = () => {
   const id = Date.now().toString();
   const key = "custom-" + id;
+  // 数据标识：写入用户数据并持久化，禁止 i18n
   const label = "新搜索引擎";
   const urlTemplate = "https://example.com/search?q={q}";
 
@@ -29,10 +32,10 @@ const removeSearchEngine = (key: string) => {
 <template>
   <div class="space-y-6">
     <h4 class="text-lg font-bold mb-2 text-gray-800 border-l-4 border-blue-500 pl-3">
-      搜索引擎设置
+      {{ t("settings.searchSettings.title") }}
     </h4>
     <div class="text-xs text-gray-500 mb-2">
-      拖拽调整优先级；设置默认或开启“记住上次选择”。
+      {{ t("settings.searchSettings.desc") }}
     </div>
     <VueDraggable
       v-model="store.appConfig.searchEngines"
@@ -83,7 +86,9 @@ const removeSearchEngine = (key: string) => {
               }"
             >
               <span>{{
-                store.appConfig.defaultSearchEngine === e.key ? "当前默认" : "设为默认"
+                store.appConfig.defaultSearchEngine === e.key
+                  ? t("settings.searchSettings.currentDefault")
+                  : t("settings.searchSettings.setAsDefault")
               }}</span>
               <input
                 type="radio"
@@ -96,16 +101,16 @@ const removeSearchEngine = (key: string) => {
               class="text-xs text-red-500 hover:underline px-1"
               @click="removeSearchEngine(e.key)"
             >
-              删除
+              {{ t("common.common.delete") }}
             </button>
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <label class="text-[10px] text-gray-500">URL 模板</label>
+          <label class="text-[10px] text-gray-500">{{ t("settings.searchSettings.urlTemplate") }}</label>
           <input
             v-model="e.urlTemplate"
             class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:border-blue-500 outline-none"
-            placeholder="例如：https://example.com/search?q={q}"
+            :placeholder="t('settings.searchSettings.urlTemplatePlaceholder')"
           />
         </div>
       </div>
@@ -115,7 +120,7 @@ const removeSearchEngine = (key: string) => {
         @click="addSearchEngine"
         class="flex-1 p-2 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all text-sm font-bold"
       >
-        + 添加搜索引擎
+        {{ t("settings.searchSettings.addEngine") }}
       </button>
     </div>
   </div>

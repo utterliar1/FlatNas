@@ -5,9 +5,11 @@ import type { WidgetConfig } from "@/types";
 import { useWeather } from "@/composables/useWeather";
 import { formatLocationSource } from "@/utils/weather";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps<{ widget: WidgetConfig }>();
 const store = useMainStore();
+const { t } = useI18n();
 const debugCity = ref("");
 const showDebugBadge = import.meta.env.DEV;
 
@@ -80,6 +82,7 @@ const saveCity = async () => {
 // 映射天气类型
 const weatherType = computed(() => {
   const text = weather.value.text;
+  // API 返回值匹配：不可 i18n
   if (text.includes("雨")) return "rain";
   if (text.includes("雪")) return "snow";
   if (text.includes("雾") || text.includes("霾")) return "fog";
@@ -298,8 +301,16 @@ onUnmounted(() => {
       v-if="showDebugBadge"
       class="absolute left-2 bottom-2 z-20 px-2 py-1 rounded-md bg-black/45 text-[10px] leading-tight text-white/90 backdrop-blur-sm border border-white/15"
     >
-      <div>定位: {{ formatLocationSource(locationSource) }}</div>
-      <div>请求城市: {{ weather.city }}</div>
+      <div>
+        {{
+          t("settings.clockWeatherWidget.locationDebug", {
+            source: formatLocationSource(locationSource),
+          })
+        }}
+      </div>
+      <div>
+        {{ t("settings.clockWeatherWidget.requestedCity", { city: weather.city }) }}
+      </div>
     </div>
 
     <!-- 设置按钮 -->
@@ -310,7 +321,7 @@ onUnmounted(() => {
       <button
         @click.stop="showCityInput = true"
         class="p-1.5 bg-black/10 text-white/70 hover:text-white rounded-full hover:bg-black/30 backdrop-blur-md transition-colors"
-        title="设置城市"
+        :title="t('settings.clockWeatherWidget.settingsBtn')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -377,11 +388,13 @@ onUnmounted(() => {
               <div
                 class="bg-gray-900/90 p-6 rounded-2xl border border-white/10 shadow-2xl w-full backdrop-blur-xl"
               >
-                <div class="text-lg font-medium mb-4 text-white">设置城市</div>
+                <div class="text-lg font-medium mb-4 text-white">
+                  {{ t("settings.clockWeatherWidget.cityModalTitle") }}
+                </div>
                 <input
                   v-model="customCityInput"
                   @keyup.enter="saveCity"
-                  placeholder="输入城市 (为空自动)"
+                  :placeholder="t('settings.clockWeatherWidget.cityPlaceholder')"
                   class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/40 text-left outline-none focus:bg-white/20 focus:border-white/40 mb-4 transition-all"
                   autofocus
                 />
@@ -395,7 +408,7 @@ onUnmounted(() => {
                       class="text-white/50 hover:text-white transition-colors"
                       :class="{ 'font-bold text-white': !selectedProvince }"
                     >
-                      省份/地区
+                      {{ t("settings.clockWeatherWidget.provinceBreadcrumb") }}
                     </button>
                     <span v-if="selectedProvince" class="text-white/30">/</span>
                     <span v-if="selectedProvince" class="text-white font-bold">{{
@@ -441,7 +454,7 @@ onUnmounted(() => {
                     v-else
                     class="h-[200px] flex items-center justify-center text-white/40 text-xs"
                   >
-                    加载中...
+                    {{ t("common.common.loading") }}
                   </div>
                 </div>
 
@@ -450,13 +463,13 @@ onUnmounted(() => {
                     @click="showCityInput = false"
                     class="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/80 rounded-lg text-sm transition-colors"
                   >
-                    取消
+                    {{ t("common.common.cancel") }}
                   </button>
                   <button
                     @click="saveCity"
                     class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors font-medium shadow-lg shadow-blue-900/20"
                   >
-                    确定
+                    {{ t("common.common.ok") }}
                   </button>
                 </div>
               </div>

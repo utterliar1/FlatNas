@@ -385,7 +385,13 @@
     "fillRssUrlFirst": "Please fill in the RSS URL before adding.",
     "pasteTextFirst": "Please paste the RSS text to import first.",
     "importResult": "{created} added, {updated} updated, {skipped} skipped",
-    "titlePlaceholder": "Title"
+    "titlePlaceholder": "Title",
+    "feedUrlPlaceholder": "RSS URL",
+    "importInvalidLines": ", {count} invalid lines",
+    "importNoNewTitles": ", no new remote titles fetched",
+    "importPlaceholder": "Example:\n36Kr https://www.36kr.com/feed\nSspai,https://sspai.com/feed\nCoolshell | https://coolshell.cn/feed\nhttps://example.com/rss.xml",
+    "importTitlesUpdated": ", {count} real titles updated automatically",
+    "newCategoryPlaceholder": "New category"
   },
   "searchSettings": {
     "title": "Search Engine Settings",
@@ -644,7 +650,25 @@
     "modalConfirm": "OK",
     "note": "Note",
     "statusLabel": "Status",
-    "amapApiKey": "Amap API Key"
+    "amapApiKey": "Amap API Key",
+    "autoSave10s": "10 seconds after changes (recommended)",
+    "autoSave30s": "30 seconds after changes",
+    "autoSave3s": "3 seconds after changes",
+    "autoSaveLabel": "Auto-save",
+    "autoSaveOff": "Off (manual save only)",
+    "configSaveHint": "Changes to group icons, order, widget layout, etc. are auto-saved after the delay above; unsaved changes are also flushed before refreshing or closing the page.",
+    "configSaveSection": "💾 Config saving",
+    "customWeatherSourcePlaceholder": "Uses the built-in source by default; enter a URL to customize",
+    "dashboardTitle": "FlatNas Dashboard System",
+    "manualSaveClean": "Save now (up to date)",
+    "manualSaveDirty": "Save now (unsaved changes)",
+    "qweatherConsole": "QWeather Console",
+    "qweatherKeyIdPlaceholder": "Enter Key ID",
+    "qweatherPrivateKeyPlaceholder": "Enter Private Key (must include the -----BEGIN PRIVATE KEY----- header and footer)",
+    "qweatherProjectIdPlaceholder": "Enter Project ID",
+    "clickToDownloadHelper": "Click {link} to remove the restriction",
+    "qweatherGuide": "Go to {console} to get your JWT credentials.",
+    "customWeatherSourceDescFull": "If set, weather data is requested directly from this address. The response must include: {format}"
   },
   "networkIndicator": {
     "online": "Online",
@@ -913,19 +937,35 @@
   },
   "iconUploader": {
     "imageTooLarge": "Image too large, please upload an image smaller than 5MB",
-    "iconLoadError": "Icon failed to load, falling back to text"
+    "iconLoadError": "Icon failed to load, falling back to text",
+    "clickUpload": "Click to upload",
+    "clickUploadOrCrop": "Click to upload / crop",
+    "cropImage": "Crop image",
+    "selectFromLibrary": "Select from library"
   },
   "miniPlayer": {
     "loading": "Loading...",
     "noMusic": "No music",
-    "fetchFailed": "Fetch failed"
+    "fetchFailed": "Fetch failed",
+    "next": "Next",
+    "paused": "Paused",
+    "playing": "Now playing",
+    "prev": "Previous"
   },
   "groupSelector": {
     "selectGroup": "Select Group",
     "switchGroup": "Switch Group"
   },
   "scriptManager": {
-    "newScript": "New Script {index}"
+    "newScript": "New Script {index}",
+    "addScript": "Add new script",
+    "clickToConfirmDelete": "Click to confirm deletion",
+    "codeLabel": "Code",
+    "confirmQuestion": "Confirm?",
+    "dropToAdd": "Drop files to add",
+    "nameLabel": "Name",
+    "namePlaceholder": "Script name",
+    "useProxyNetwork": "Via local network"
   },
   "proxyToggle": {
     "proxy": "Proxy"
@@ -941,7 +981,62 @@
     "uploading": "Uploading...",
     "uploadSuccess": "Upload successful",
     "uploadFailed": "Upload failed",
-    "dragToSort": "Drag to sort"
+    "dragToSort": "Drag to sort",
+    "apiHint1": "You can enter an image URL directly here, or use a third-party random wallpaper API.",
+    "apiHintRefresh": "After setting this, each page refresh may return a different image depending on the API.",
+    "apiTab": "API",
+    "applySuccess": "Applied successfully",
+    "applyToMobile": "Apply to mobile wallpaper",
+    "applyToPc": "Apply to PC wallpaper",
+    "blur": "Blur",
+    "blurRadius": "Blur radius",
+    "cannotDeleteDefault": "The default wallpaper cannot be deleted",
+    "customApiTitle": "Custom wallpaper API",
+    "defaultWallpaper": "Default wallpaper",
+    "downloadToMobileLibrary": "Download to mobile library",
+    "downloadToPcLibrary": "Download to PC library",
+    "dragToSelect": "Drag to select",
+    "emptyHint": "No wallpapers yet, please upload first",
+    "enableMobileWallpaper": "Enable mobile wallpaper",
+    "enableMobileWallpaperTooltip": "When on, mobile devices prefer the mobile wallpaper; when off, they use the PC wallpaper",
+    "enableRotation": "Enable rotation",
+    "imageInvalid": "Image is no longer available",
+    "imageUrlLabel": "Image URL / API address",
+    "imageUrlPlaceholder": "https://example.com/image.jpg or random image API",
+    "jsonApiBold": "JSON API",
+    "lanApiBold": "LAN / self-hosted API",
+    "largeFileConfirm": "The file exceeds 10MB, which may use too much memory. Continue uploading?",
+    "lockCurrentTooltip": "Lock the current wallpaper (stops auto-rotation on PC and mobile)",
+    "locked": "Locked",
+    "mask": "Mask",
+    "maskOpacity": "Mask opacity",
+    "minute": "min",
+    "mobilePreview": "Mobile preview",
+    "mobileWallpaperEnabled": "Mobile wallpaper enabled",
+    "modeRandomTooltip": "Playback mode: random (only effective when rotation is on)",
+    "modeSequentialTooltip": "Playback mode: sequential (only effective when rotation is on)",
+    "pcPreview": "PC preview",
+    "presetBing": "Bing daily wallpaper",
+    "presetLoliconPc": "Random anime (PC)",
+    "presetLoliconPe": "Random anime (Mobile)",
+    "presetPicsum": "Random scenery (Picsum)",
+    "previewHint": "Click a preset above or the refresh button to get a preview",
+    "random": "Random",
+    "refreshPreviewTooltip": "Refresh preview (appends a timestamp)",
+    "requestFailed": "Request failed, please check your network",
+    "resolvingProxy": "Fetching via proxy and optimizing wallpaper consistency...",
+    "rotating": "Rotating",
+    "rotationIntervalMinutes": "Rotation interval (minutes)",
+    "savedToMobileLibrary": "Saved to mobile library",
+    "savedToPcLibrary": "Saved to PC library",
+    "saving": "Saving...",
+    "sequential": "Sequential",
+    "setAsDefault": "Set as default wallpaper",
+    "stopAndLock": "Stop and lock",
+    "tip": "Note",
+    "willAutoRemove": "Will be removed automatically",
+    "apiHintJson": "Supports {jsonApi} (such as Unsplash/Bing); the image link is parsed and extracted automatically.",
+    "apiHintLan": "Supports {lanApi} (such as http://192.168.x.x); no longer limited by LAN access."
   },
   "loginModal": {
     "registerTitle": "👤 New User Registration",
@@ -984,7 +1079,10 @@
     "configApiKey": "Please configure API Key",
     "ipLocateFailed": "IP location failed",
     "weatherFetchFailed": "Weather fetch failed",
-    "networkFailed": "Network request failed"
+    "networkFailed": "Network request failed",
+    "dayNightFormat": "{day} to {night}",
+    "loginRequired": "Please log in to configure the weather widget",
+    "windFormat": "{dir} wind, level {power}"
   },
   "weekdays": [
     "Sun",
@@ -1071,7 +1169,15 @@
     "send": "Send",
     "noPreviewSupport": "This file type doesn't support preview. Use \"Download\".",
     "placeholder": "Shift+Enter for newline",
-    "placeholderSmall": "Paste/Drop (Shift+Enter)"
+    "placeholderSmall": "Paste/Drop (Shift+Enter)",
+    "deleteFailed": "Delete failed",
+    "downloadFailed": "Download failed",
+    "downloadSelected": "Download selected ({count})",
+    "largeFileConfirm": "A large file was detected ({size}); it may take a while and use significant bandwidth/memory. Continue downloading?",
+    "loadFailed": "Load failed",
+    "networkInterrupted": "Network interrupted, waiting to recover",
+    "sendFailed": "Send failed",
+    "uploadFailed": "Upload failed"
   },
   "calendarWidget": {
     "switchView": "Switch View",
@@ -1093,7 +1199,14 @@
     "journalistDay": "Journalist",
     "firefighterDay": "Firefighter",
     "memorialDay": "Memorial",
-    "firstDay": "1st"
+    "firstDay": "1st",
+    "weekShortSun": "Sun",
+    "weekShortMon": "Mon",
+    "weekShortTue": "Tue",
+    "weekShortWed": "Wed",
+    "weekShortThu": "Thu",
+    "weekShortFri": "Fri",
+    "weekShortSat": "Sat"
   },
   "clockWidget": {
     "switchStyle": "Switch Style"
@@ -1140,7 +1253,10 @@
     "clickToConfig": "Click to configure countdown",
     "settings": "Settings",
     "title": "Countdown",
-    "arrived": "🎉 Arrived"
+    "arrived": "🎉 Arrived",
+    "dayUnit": "days",
+    "hourUnit": "hours",
+    "minuteUnit": "mins"
   },
   "countupWidget": {
     "defaultTitle": "Count Up",
@@ -1202,7 +1318,12 @@
     "save": "Save",
     "saved": "Saved",
     "switchMode": "Switch Mode",
-    "blankMemo": "Blank Memo"
+    "blankMemo": "Blank Memo",
+    "saveFailAuth": "Invalid login state",
+    "saveFailConflictData": "Invalid version-conflict data",
+    "saveFailNetworkRetry": "Network error, retrying",
+    "saveFailServerPage": "Server returned an error page",
+    "saveFailServerStatus": "Server error ({status})"
   },
   "clockWeatherWidget": {
     "settingsBtn": "Set City",
@@ -1237,7 +1358,8 @@
     "chinanews": "China News",
     "loading": "Loading...",
     "timeout": "Request timed out, please retry",
-    "failed": "Load failed, please retry"
+    "failed": "Load failed, please retry",
+    "bilibili": "Bilibili"
   },
   "iframeWidget": {
     "blocked": "⚠️ Access Denied",
@@ -1280,11 +1402,25 @@
     "back": "Back",
     "switchEffect": "Switch Effect",
     "noLyrics": "No lyrics",
-    "title": "Daoli Fish Music"
+    "title": "Daoli Fish Music",
+    "audioUnsupported": "Audio source unsupported or not permitted",
+    "connectFailed": "Connection failed",
+    "loadFailed": "Load failed",
+    "noSongs": "No songs yet, please check the API configuration or favorites",
+    "playError": "Playback error",
+    "requestFailed": "Request failed",
+    "trackMissing": "Track does not exist, skipped",
+    "unnamedPlaylist": "Unnamed playlist"
   },
   "iconSelectionModal": {
     "title": "Select Icon",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "autoSelectIn": "Auto-select in {n}s",
+    "cancelLink": "Unlink",
+    "loadMore": "Load more ({n})",
+    "localIcons": "📁 Local icons",
+    "matchCount": "({n} matches)",
+    "remoteIcons": "🌐 Remote icons"
   },
   "accessCode": {
     "titleManage": "Manage Access Code",
@@ -1340,5 +1476,20 @@
     "promptFull": "Please write a clean HTML/CSS card component for me.\nFeatures: [describe your needs here, e.g. show the current date and a quote]\nRequirements:\n1. Container adapts to width/height, content centered.\n2. Modern minimalist style, rounded design.\n3. Provide HTML and CSS separately (JS optional).",
     "promptPreview": "Please write a clean HTML/CSS card component...",
     "editWidgetTooltip": "Edit widget"
+  },
+  "statusMonitor": {
+    "jsHeap": "JS heap",
+    "keysIdle": "Keys/Idle",
+    "managed": "Managed",
+    "objectUrl": "Object URLs",
+    "unavailable": "Unavailable",
+    "unmanaged": "Unmanaged"
+  },
+  "memoToolbar": {
+    "bold": "Bold",
+    "code": "Code",
+    "italic": "Italic",
+    "quote": "Quote",
+    "unorderedList": "List"
   }
 }
