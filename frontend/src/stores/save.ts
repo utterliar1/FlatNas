@@ -107,7 +107,12 @@ export const useSaveStore = defineStore("save", () => {
           body.password = auth.password;
         }
         const json = JSON.stringify(body);
-        if (json === lastSavedJson) return "no_change";
+        if (json === lastSavedJson) {
+          // 内容与上次保存完全一致：没有真正未保存的变更，清掉脏标记
+          // （否则自动保存调度器会因脏标记滞留而反复空转）
+          hasUnsavedChanges.value = false;
+          return "no_change";
+        }
 
         cacheStore.saveToCache(body);
         const compressed = pako.gzip(json);

@@ -107,6 +107,8 @@ export interface AppConfig {
   widgetAreaSize?: number;
   widgetAreaCols?: number;
   widgetAreaRows?: number;
+  // 配置自动保存延迟（秒）：0 = 关闭自动保存（仅手动保存）；缺省 = 10 秒
+  autoSaveDelay?: number;
   webGroupPagination?: boolean;
   webGroupPaginationDisableFlip?: boolean;
   backgroundBlur?: number;
@@ -200,6 +202,10 @@ export interface SystemConfig {
   authMode: "single" | "multi";
   // 访问码保护：服务端只暴露「是否已设置」，绝不回传访问码本身
   hasAccessCode?: boolean;
+  // 解锁有效期（小时）：0/缺省 = 会话内有效（关闭浏览器即上锁）
+  accessUnlockTTL?: number;
+  // 当前请求是否已解锁（服务端依据解锁 Cookie 实时判定）
+  accessUnlocked?: boolean;
 }
 
 export interface WidgetConfig {

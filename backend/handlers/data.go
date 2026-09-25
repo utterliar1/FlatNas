@@ -478,8 +478,9 @@ func GetData(c *gin.Context) {
 	}
 	filterMs := time.Since(filterStart).Milliseconds()
 
-	// Inject system config（脱敏：绝不包含访问码本身，仅暴露 hasAccessCode）
-	userData["systemConfig"] = sanitizedSystemConfig(sysConfig)
+	// Inject system config（脱敏：绝不包含访问码本身，仅暴露 hasAccessCode /
+	// accessUnlockTTL / accessUnlocked——后者依据请求 Cookie 实时判定）
+	userData["systemConfig"] = sanitizedSystemConfig(c, sysConfig)
 	// Single-user mode must always present as admin, even if old data files carry stale usernames.
 	if sysConfig.AuthMode == "single" && username == "admin" {
 		userData["username"] = "admin"
@@ -1255,7 +1256,7 @@ func ResetData(c *gin.Context) {
 func GetSystemConfig(c *gin.Context) {
 	sysConfig := getCachedSystemConfig()
 	// 访问码属敏感信息，对外只暴露「是否已设置」，绝不回传访问码本身
-	c.JSON(http.StatusOK, sanitizedSystemConfig(sysConfig))
+	c.JSON(http.StatusOK, sanitizedSystemConfig(c, sysConfig))
 }
 
 func UpdateSystemConfig(c *gin.Context) {
@@ -1291,6 +1292,13 @@ func UpdateSystemConfig(c *gin.Context) {
 		sysConfig.AccessCode = v
 	}
 
+	// 解锁有效期（小时）：0 = 会话内有效；非法值回退为文件既有设置
+	if raw, exists := payload["accessUnlockTTL"]; exists {
+		if f, ok := raw.(float64); ok && f >= 0 && f <= 8760 {
+			sysConfig.AccessUnlockTTL = int(f)
+		}
+	}
+
 	if sysConfig.AuthMode != oldAuthMode {
 		if err := migrateAuthModeData(oldAuthMode, sysConfig.AuthMode); err != nil {
 			log.Printf("UpdateSystemConfig: data migration failed: %v", err)
@@ -1302,7 +1310,7 @@ func UpdateSystemConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, sanitizedSystemConfig(sysConfig))
+	c.JSON(http.StatusOK, sanitizedSystemConfig(c, sysConfig))
 }
 
 func migrateAuthModeData(from, to string) error {

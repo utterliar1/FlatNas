@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,11 +22,15 @@ import (
 // 设计：用户可在自己的任意分组上标记 protected，被标记的分组在「未解锁」状态下
 // 由后端从 /api/data 响应中整体剔除（对所有人生效，含管理员与访客），前端完全
 // 拿不到数据，而非仅前端隐藏。解锁方式为提交全局访问码（存于系统配置，仅管理
-// 员可设置），校验通过后种一个签名 HttpOnly 会话 Cookie：
-//   - 会话 Cookie（无 Max-Age）：关闭浏览器后自动失效，符合「会话内有效」；
-//   - Cookie 值 = HMAC(secret, "flatnas-access-unlock:" + 当前访问码)，
-//     访问码被修改后旧 Cookie 立即失效，无需额外黑名单。
-// 访问码本身绝不回传给前端；对外只暴露 hasAccessCode 布尔值。
+// 员可设置），校验通过后种一个签名 HttpOnly 解锁 Cookie：
+//   - 解锁有效期 accessUnlockTTL = 0（默认）：会话 Cookie（无 Max-Age），关闭
+//     浏览器即失效；前端还会在「服务端已解锁但本会话无解锁标记」时自动上锁，
+//     规避浏览器「启动时恢复会话」还原会话 Cookie 造成的解锁残留；
+//   - accessUnlockTTL > 0：持久 Cookie（Max-Age = TTL 秒），到期自动失效；
+//   - Cookie 值 = HMAC(secret, "flatnas-access-unlock:" + 访问码 + ":" + TTL)，
+//     访问码或 TTL 被修改后旧 Cookie 立即失效，无需额外黑名单。
+// 访问码本身绝不回传给前端；对外只暴露 hasAccessCode / accessUnlockTTL /
+// accessUnlocked（当前请求是否已解锁）。
 
 const unlockCookieName = "flatnas_unlock"
 
@@ -34,12 +39,25 @@ func accessProtectionActive() bool {
 	return strings.TrimSpace(getCachedSystemConfig().AccessCode) != ""
 }
 
-// expectedUnlockCookieValue 计算当前访问码对应的解锁 Cookie 期望值。
+// expectedUnlockCookieValue 计算当前访问码 + 解锁有效期对应的解锁 Cookie 期望值。
+// 把 TTL 纳入 HMAC 签名：管理员调整「解锁有效期」后，所有旧解锁 Cookie 立即失效。
 func expectedUnlockCookieValue() string {
 	code := strings.TrimSpace(getCachedSystemConfig().AccessCode)
+	ttl := normalizeUnlockTTL(getCachedSystemConfig().AccessUnlockTTL)
 	mac := hmac.New(sha256.New, []byte(config.GetSecretKeyString()))
-	mac.Write([]byte("flatnas-access-unlock:" + code))
+	mac.Write([]byte("flatnas-access-unlock:" + code + ":" + strconv.Itoa(ttl)))
 	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// normalizeUnlockTTL 约束解锁有效期取值范围：0（会话内）或 1~8760 小时（一年）。
+func normalizeUnlockTTL(ttl int) int {
+	if ttl < 0 {
+		return 0
+	}
+	if ttl > 8760 {
+		return 8760
+	}
+	return ttl
 }
 
 // requestUnlocked 判断当前请求是否处于「已解锁」状态。
@@ -71,12 +89,16 @@ func filterProtectedGroups(groups []interface{}) []interface{} {
 	return result
 }
 
-// sanitizedSystemConfig 返回对外可见的系统配置视图：只暴露 authMode 与
-// 「是否已设置访问码」，绝不回传访问码本身。
-func sanitizedSystemConfig(cfg models.SystemConfig) gin.H {
+// sanitizedSystemConfig 返回对外可见的系统配置视图：只暴露 authMode、「是否已设
+// 置访问码」、解锁有效期与「当前请求是否已解锁」，绝不回传访问码本身。
+// accessUnlocked 依据请求 Cookie 实时判定，是前端区分「真解锁」与「浏览器会话
+// 恢复导致的残留解锁」的关键信号。
+func sanitizedSystemConfig(c *gin.Context, cfg models.SystemConfig) gin.H {
 	return gin.H{
-		"authMode":      cfg.AuthMode,
-		"hasAccessCode": strings.TrimSpace(cfg.AccessCode) != "",
+		"authMode":        cfg.AuthMode,
+		"hasAccessCode":   strings.TrimSpace(cfg.AccessCode) != "",
+		"accessUnlockTTL": normalizeUnlockTTL(cfg.AccessUnlockTTL),
+		"accessUnlocked":  accessProtectionActive() && requestUnlocked(c),
 	}
 }
 
@@ -151,8 +173,14 @@ func UnlockAccess(c *gin.Context) {
 	}
 
 	unlockClearAttempts(ip)
-	// 会话 Cookie：不设 Max-Age，浏览器关闭即失效
-	c.SetCookie(unlockCookieName, expectedUnlockCookieValue(), 0, "/", "", false, true)
+	// 解锁有效期：0 = 会话 Cookie（不设 Max-Age，浏览器关闭即失效）；
+	// >0 = 持久 Cookie（Max-Age = TTL 秒），到期由浏览器自动清除。
+	ttl := normalizeUnlockTTL(getCachedSystemConfig().AccessUnlockTTL)
+	maxAge := 0
+	if ttl > 0 {
+		maxAge = ttl * 3600
+	}
+	c.SetCookie(unlockCookieName, expectedUnlockCookieValue(), maxAge, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"success": true, "unlocked": true})
 }
 

@@ -24,6 +24,25 @@ const emit = defineEmits(["update:show"]);
 const store = useMainStore();
 const i18nStore = useI18nStore();
 
+// ---- 配置保存（自动保存延迟 + 手动保存） ----
+// autoSaveDelay 存于 appConfig：改动后会经 appConfig 深度监听自动落盘
+const autoSaveDelay = ref<number>(Number(store.appConfig.autoSaveDelay ?? 10));
+const manualSaveBusy = ref(false);
+const onAutoSaveChange = () => {
+  const v = Number(autoSaveDelay.value);
+  store.appConfig.autoSaveDelay = Number.isFinite(v) && v >= 0 ? v : 10;
+  store.markDirty();
+};
+const onManualSave = async () => {
+  if (manualSaveBusy.value) return;
+  manualSaveBusy.value = true;
+  try {
+    await store.saveData(true);
+  } finally {
+    manualSaveBusy.value = false;
+  }
+};
+
 const LOCALE_LABELS: Record<SupportedLocale, string> = {
   "zh-CN": "简体中文",
   "en-US": "English",
@@ -3879,11 +3898,50 @@ document.querySelector('.card-item').addEventListener('click', () => {
                   />
                 </div>
               </div>
-              <div
-                v-if="hasAdminAccess"
-                class="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-6"
-              >
-                <h5 class="text-sm font-bold text-gray-900 mb-3">{{ $t('settings.extraSections.systemMode') }}</h5>
+                <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 mb-6">
+                  <h5 class="text-sm font-bold text-gray-900 mb-3">💾 配置保存</h5>
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                      <span class="text-sm text-gray-700 whitespace-nowrap">自动保存</span>
+                      <select
+                        v-model.number="autoSaveDelay"
+                        class="flex-1 max-w-[220px] px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-gray-800 bg-white"
+                        @change="onAutoSaveChange"
+                      >
+                        <option :value="0">关闭（仅手动保存）</option>
+                        <option :value="3">改动后 3 秒</option>
+                        <option :value="10">改动后 10 秒（推荐）</option>
+                        <option :value="30">改动后 30 秒</option>
+                      </select>
+                    </div>
+                    <button
+                      @click="onManualSave"
+                      :disabled="manualSaveBusy || store.isSaving"
+                      class="w-full py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                      :class="
+                        store.hasUnsavedChanges
+                          ? 'bg-amber-500 text-white hover:bg-amber-600'
+                          : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                      "
+                    >
+                      {{
+                        manualSaveBusy || store.isSaving
+                          ? "保存中…"
+                          : store.hasUnsavedChanges
+                            ? "立即保存（有未保存的更改）"
+                            : "立即保存（已是最新）"
+                      }}
+                    </button>
+                    <p class="text-[11px] text-gray-400 leading-relaxed">
+                      分组图标、顺序、组件布局等改动会按上述延迟自动保存；刷新或关闭页面前也会自动尝试落盘未保存的更改。
+                    </p>
+                  </div>
+                </div>
+                <div
+                  v-if="hasAdminAccess"
+                  class="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-6"
+                >
+                  <h5 class="text-sm font-bold text-gray-900 mb-3">{{ $t('settings.extraSections.systemMode') }}</h5>
                 <div class="flex items-center justify-between">
                   <span class="text-sm text-gray-700"
                     >当前模式：{{

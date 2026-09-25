@@ -83,6 +83,9 @@ type SystemConfig struct {
 	// 访问码（隐藏分组保护）：仅在服务端持久化与校验，任何对外响应都必须
 	// 剔除该字段（GetSystemConfig / GetData 注入处已做脱敏，只暴露 hasAccessCode）。
 	AccessCode string `json:"accessCode,omitempty"`
+	// 解锁有效期（小时）：0 = 会话内有效（关闭浏览器即上锁，默认）；
+	// >0 时解锁 Cookie 携带 Max-Age，且 TTL 变更会使旧 Cookie 失效。
+	AccessUnlockTTL int `json:"accessUnlockTTL,omitempty"`
 }
 
 type LoginRequest struct {

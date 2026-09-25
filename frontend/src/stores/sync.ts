@@ -1,6 +1,7 @@
 import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
 import { useWebSocket } from "@vueuse/core";
+import pako from "pako";
 import { normalizeVersion } from "@/utils/storeHelpers";
 import type { LuckyStunData } from "@/types";
 import { useAuthStore } from "./auth";
@@ -608,6 +609,7 @@ export const useSyncStore = defineStore("sync", () => {
         catch (e) { lastError = e; }
         if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
       }
+      if (serverSnapshotLoaded) void reconcileAccessUnlock();
       if (!serverSnapshotLoaded) {
         if (lastError) console.error("Init failed", lastError);
         cacheStore.loadFromCache(rssFeeds, rssCategories, dataVersion);
@@ -624,6 +626,7 @@ export const useSyncStore = defineStore("sync", () => {
     } finally {
       isInitializing = false;
       initCompleted.value = true;
+      bindUnloadFlush();
       if (!wsMessageHandlerBound) {
         wsMessageHandlerBound = true;
         if (typeof document !== "undefined" && !visibilityVersionCheckBound) {
@@ -701,6 +704,89 @@ export const useSyncStore = defineStore("sync", () => {
     return result;
   };
 
+  // ---- 自动保存调度 ----
+  // markDirty 只置脏标记，历史上没有任何调度器把它变成实际保存（仅 WS 重连兜底），
+  // 分组图标/顺序等改动会一直悬空直到某次显式保存，刷新即丢失。
+  // 这里补齐：脏标记出现/续期时按 appConfig.autoSaveDelay（秒）防抖自动保存。
+  let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  const AUTO_SAVE_DEFAULT_SECONDS = 10;
+
+  const scheduleAutosave = () => {
+    if (!auth.isLogged) return;
+    const raw = Number(configStore.appConfig.autoSaveDelay);
+    const delay = Number.isFinite(raw) && raw > 0 ? raw : (configStore.appConfig.autoSaveDelay === 0 ? 0 : AUTO_SAVE_DEFAULT_SECONDS);
+    if (delay <= 0) return; // 0 = 关闭自动保存（仅手动保存）
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      autoSaveTimer = null;
+      if (!saveStore.hasUnsavedChanges || saveStore.isSaving || saveStore.conflictState.show) return;
+      void saveData();
+    }, delay * 1000);
+  };
+
+  // ---- 页面卸载兜底落盘 ----
+  // 刷新/关闭页面前把未保存变更用 fetch keepalive 直接发出（gzip 压缩，绕过
+  // doSave 的 isPageUnloading 守卫）。作为自动保存之外的最后防线。
+  let unloadFlushBound = false;
+  const bindUnloadFlush = () => {
+    if (unloadFlushBound || typeof window === "undefined") return;
+    unloadFlushBound = true;
+    window.addEventListener("pagehide", () => {
+      try {
+        if (!auth.isLogged || !saveStore.hasUnsavedChanges || saveStore.isSaving) return;
+        if (saveStore.conflictState.show) return;
+        const body = {
+          groups: groupsStore.groups,
+          groupOrder: Array.isArray(groupsStore.groupOrder) ? groupsStore.groupOrder : [],
+          widgets: widgetsStore.widgets,
+          appConfig: configStore.appConfig,
+          rssFeeds: rssFeeds.value,
+          rssCategories: rssCategories.value,
+          version: dataVersion.value,
+        };
+        fetch("/api/save", {
+          method: "POST",
+          headers: { ...cacheStore.getHeaders(), "Content-Encoding": "gzip" },
+          body: pako.gzip(JSON.stringify(body)),
+          keepalive: true,
+        }).catch(() => { /* 卸载期尽力而为 */ });
+      } catch { /* ignore */ }
+    });
+  };
+
+  // ---- 访问码解锁状态校准 ----
+  // 浏览器「启动时恢复会话」会把会话 Cookie 一并还原，导致关闭浏览器后解锁
+  // 残留（前端 sessionStorage 标记已清空，但服务端 Cookie 仍有效，保护分组照常
+  // 下发）。init 完成后以服务端实时判定的 accessUnlocked 为准校准：
+  //   - 持久解锁模式（TTL > 0）：补齐本地标记，弹窗显示「已解锁」；
+  //   - 会话模式（TTL = 0）：本会话无标记 = 残留解锁 → 立即上锁并重拉数据。
+  const ACCESS_UNLOCK_KEY = "flatnas_access_unlocked";
+  const reconcileAccessUnlock = async () => {
+    try {
+      const sc = configStore.systemConfig as { hasAccessCode?: boolean; accessUnlocked?: boolean; accessUnlockTTL?: number };
+      if (!sc?.hasAccessCode || sc.accessUnlocked !== true) return;
+      const flag = sessionStorage.getItem(ACCESS_UNLOCK_KEY) === "1";
+      if (flag) return;
+      const ttl = Number(sc.accessUnlockTTL ?? 0);
+      if (ttl > 0) {
+        // 持久解锁：Cookie 在有效期内，补齐标记使弹窗状态一致
+        sessionStorage.setItem(ACCESS_UNLOCK_KEY, "1");
+        return;
+      }
+      console.log("[Access] Stale unlocked cookie detected (session restore), locking...");
+      await fetch("/api/access/lock", { method: "POST" });
+      sessionStorage.removeItem(ACCESS_UNLOCK_KEY);
+      // 同步清除本地受保护分组，避免重拉完成前的一瞬闪现
+      isApplyingServerData = true;
+      groupsStore.groups = groupsStore.groups.filter((g: any) => !g?.protected);
+      groupsStore.sharedGroups = (groupsStore.sharedGroups || []).filter((g: any) => !g?.protected);
+      isApplyingServerData = false;
+      await fetchAndProcessData();
+    } catch (e) {
+      console.warn("[Access] reconcile failed", e);
+    }
+  };
+
   const resolveConflict = (action: "remote" | "local") =>
     saveStore.resolveConflict(action, fetchAndProcessData, saveData);
 
@@ -758,11 +844,15 @@ export const useSyncStore = defineStore("sync", () => {
       stopPingCheck();
     }
   });
-  const markDirtyIfActive = () => { if (!isInitializing && !isApplyingServerData) saveStore.markDirty(); };
+  const markDirtyIfActive = () => { if (!isInitializing && !isApplyingServerData) { saveStore.markDirty(); scheduleAutosave(); } };
   watch(configStore.appConfig, markDirtyIfActive, { deep: true });
   watch(widgetsStore.widgets, markDirtyIfActive, { deep: true });
   watch(rssFeeds, markDirtyIfActive, { deep: true });
   watch(rssCategories, markDirtyIfActive, { deep: true });
+  // 分组与其混排偏好的深度监听：分组图标/标题/顺序等改动此前完全依赖各组件
+  // 手动 markDirty（分组设置弹窗就漏了），是「刷新回到中途状态」的主要缺口
+  watch(() => groupsStore.groups, markDirtyIfActive, { deep: true });
+  watch(() => groupsStore.groupOrder, markDirtyIfActive, { deep: true });
   watch(() => saveStore.hasUnsavedChanges, (dirty, wasDirty) => {
     if (wasDirty && !dirty && pendingServerVersion.value > 0 && pendingServerVersion.value > dataVersion.value && !saveStore.isSaving) {
       const psv = pendingServerVersion.value;

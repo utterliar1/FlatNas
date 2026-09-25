@@ -28,11 +28,28 @@ const codeSet = computed(() => !!store.systemConfig.hasAccessCode);
 // 管理员且未设置访问码 => 首次设置模式
 const setupMode = computed(() => isAdmin.value && !codeSet.value);
 
+// 解锁有效期选项（小时；0 = 会话内，关闭浏览器即上锁）
+const TTL_OPTIONS = [
+  { value: 0, label: "会话内（关闭浏览器即上锁）" },
+  { value: 1, label: "1 小时" },
+  { value: 12, label: "12 小时" },
+  { value: 24, label: "24 小时" },
+  { value: 168, label: "7 天" },
+];
+const unlockTTL = ref<number>(0);
+const ttlSaving = ref(false);
+
 watch(
   () => props.show,
   (v) => {
     if (v) {
-      unlocked.value = sessionStorage.getItem(UNLOCK_KEY) === "1";
+      // 已解锁状态以服务端实时判定为准（accessUnlocked 依据解锁 Cookie 计算），
+      // sessionStorage 标记仅作回退（老版本服务端无该字段时）。
+      unlocked.value =
+        store.systemConfig.accessUnlocked === true ||
+        (typeof store.systemConfig.accessUnlocked === "undefined" &&
+          sessionStorage.getItem(UNLOCK_KEY) === "1");
+      unlockTTL.value = Number(store.systemConfig.accessUnlockTTL ?? 0);
       code.value = "";
       confirmCode.value = "";
       error.value = "";
@@ -92,6 +109,22 @@ const handleLock = async () => {
   }
 };
 
+// 管理员修改解锁有效期（即时保存；后端会把 TTL 纳入 Cookie 签名，旧解锁立即按新策略失效）
+const handleTTLChange = async () => {
+  if (ttlSaving.value) return;
+  ttlSaving.value = true;
+  try {
+    const ok = await store.updateSystemConfig({ accessUnlockTTL: unlockTTL.value });
+    if (ok) {
+      emit("changed");
+    } else {
+      showError("修改失败（需要管理员身份）");
+    }
+  } finally {
+    ttlSaving.value = false;
+  }
+};
+
 const handleSetup = async () => {
   if (busy.value) return;
   const c = code.value.trim();
@@ -109,7 +142,7 @@ const handleSetup = async () => {
   }
   busy.value = true;
   try {
-    const ok = await store.updateSystemConfig({ accessCode: c });
+    const ok = await store.updateSystemConfig({ accessCode: c, accessUnlockTTL: unlockTTL.value });
     if (ok) {
       emit("changed");
       close();
@@ -165,6 +198,19 @@ const handleSetup = async () => {
           <p class="text-[11px] text-gray-400 text-center leading-relaxed">
             隐藏分组当前可见。重新上锁后需再次输入访问码。
           </p>
+          <div v-if="isAdmin" class="space-y-1">
+            <label class="block text-[11px] text-gray-500 px-1">解锁有效期</label>
+            <select
+              v-model.number="unlockTTL"
+              :disabled="ttlSaving"
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 bg-white disabled:opacity-50"
+              @change="handleTTLChange"
+            >
+              <option v-for="opt in TTL_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
           <button
             @click="handleLock"
             :disabled="busy"
@@ -195,6 +241,17 @@ const handleSetup = async () => {
             class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 text-center tracking-widest"
             @keyup.enter="handleSetup"
           />
+          <div class="space-y-1">
+            <label class="block text-[11px] text-gray-500 px-1">解锁有效期</label>
+            <select
+              v-model.number="unlockTTL"
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 bg-white"
+            >
+              <option v-for="opt in TTL_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
           <button
             @click="handleSetup"
             :disabled="busy"
