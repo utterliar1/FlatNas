@@ -27,6 +27,9 @@ const isAdmin = computed(() => store.username === "admin" && store.isLogged);
 const codeSet = computed(() => !!store.systemConfig.hasAccessCode);
 // 管理员且未设置访问码 => 首次设置模式
 const setupMode = computed(() => isAdmin.value && !codeSet.value);
+// 管理员且已设置访问码 => 可在弹窗内切换为「管理」态（改码 / 清码）
+const canManage = computed(() => isAdmin.value && codeSet.value);
+const manageMode = ref(false);
 
 // 解锁有效期选项（小时；0 = 会话内，关闭浏览器即上锁）
 const TTL_OPTIONS = [
@@ -54,6 +57,7 @@ watch(
       confirmCode.value = "";
       error.value = "";
       shake.value = false;
+      manageMode.value = false;
     }
   },
 );
@@ -153,6 +157,25 @@ const handleSetup = async () => {
     busy.value = false;
   }
 };
+
+// 清除全局访问码（关闭保护）：所有「访问码保护」分组将恢复为普通可见分组。
+const handleClearCode = async () => {
+  if (busy.value) return;
+  if (!confirm("确定要清除访问码吗？清除后所有受保护分组将不再隐藏。")) return;
+  busy.value = true;
+  try {
+    const ok = await store.updateSystemConfig({ accessCode: "" });
+    if (ok) {
+      emit("changed");
+      manageMode.value = false;
+      close();
+    } else {
+      showError("清除失败（需要管理员身份）");
+    }
+  } finally {
+    busy.value = false;
+  }
+};
 </script>
 
 <template>
@@ -187,14 +210,76 @@ const handleSetup = async () => {
           </svg>
         </div>
         <div class="text-sm font-bold text-gray-700">
-          {{ unlocked ? "已解锁" : setupMode ? "设置访问码" : "访问验证" }}
+          {{
+            manageMode
+              ? "管理访问码"
+              : unlocked
+                ? "已解锁"
+                : setupMode
+                  ? "设置访问码"
+                  : "访问验证"
+          }}
         </div>
       </div>
 
       <!-- Body -->
       <div class="px-5 pb-5 pt-3 space-y-3">
+        <!-- 管理员管理访问码（修改 / 清除） -->
+        <template v-if="manageMode">
+          <p class="text-[11px] text-gray-400 text-center leading-relaxed">
+            修改下方输入框可更新访问码；如需彻底关闭保护，请使用「清除访问码」。
+          </p>
+          <input
+            v-model="code"
+            type="password"
+            autocomplete="off"
+            placeholder="新访问码（至少 4 位）"
+            class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 text-center tracking-widest"
+            @keyup.enter="handleSetup"
+          />
+          <input
+            v-model="confirmCode"
+            type="password"
+            autocomplete="off"
+            placeholder="再次输入以确认"
+            class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 text-center tracking-widest"
+            @keyup.enter="handleSetup"
+          />
+          <div class="space-y-1">
+            <label class="block text-[11px] text-gray-500 px-1">解锁有效期</label>
+            <select
+              v-model.number="unlockTTL"
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-800 bg-white"
+            >
+              <option v-for="opt in TTL_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+          <button
+            @click="handleSetup"
+            :disabled="busy"
+            class="w-full py-2 rounded-xl text-sm font-bold text-white bg-gray-800 hover:bg-black transition-colors disabled:opacity-50"
+          >
+            保存新访问码
+          </button>
+          <button
+            @click="handleClearCode"
+            :disabled="busy"
+            class="w-full py-2 rounded-xl text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+          >
+            清除访问码
+          </button>
+          <button
+            @click="manageMode = false"
+            class="w-full text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            返回
+          </button>
+        </template>
+
         <!-- 已解锁：提供重新上锁 -->
-        <template v-if="unlocked">
+        <template v-if="!manageMode && unlocked">
           <p class="text-[11px] text-gray-400 text-center leading-relaxed">
             隐藏分组当前可见。重新上锁后需再次输入访问码。
           </p>
@@ -221,7 +306,7 @@ const handleSetup = async () => {
         </template>
 
         <!-- 管理员首次设置 -->
-        <template v-else-if="setupMode">
+        <template v-else-if="!manageMode && setupMode">
           <p class="text-[11px] text-gray-400 text-center leading-relaxed">
             设置全局访问码后，标记为「访问码保护」的分组将被隐藏，输入访问码才能显示。
           </p>
@@ -262,7 +347,7 @@ const handleSetup = async () => {
         </template>
 
         <!-- 常规输码解锁 -->
-        <template v-else>
+        <template v-else-if="!manageMode">
           <input
             v-model="code"
             type="password"
@@ -279,6 +364,14 @@ const handleSetup = async () => {
             确认
           </button>
         </template>
+
+        <button
+          v-if="canManage && !manageMode"
+          @click="manageMode = true"
+          class="w-full text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          管理访问码
+        </button>
 
         <p v-if="error" class="text-[11px] text-red-500 text-center">{{ error }}</p>
       </div>
