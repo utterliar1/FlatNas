@@ -16,8 +16,10 @@ describe('GroupSelector', () => {
         plugins: [
           createTestingPinia({
             createSpy: vi.fn,
+            // 注意：main store 的 groups 是 computed(() => groupsStore.groups)，
+            // 而 computed 无法被 initialState 覆盖。必须直接 seed 真正的 groups store。
             initialState: {
-              main: {
+              groups: {
                 groups: [
                   { id: 'group-1', title: 'Group 1', items: [] },
                   { id: 'group-2', title: 'Group 2', items: [] },

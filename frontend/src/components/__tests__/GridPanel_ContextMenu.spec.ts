@@ -25,6 +25,29 @@ vi.mock('grid-layout-plus', () => ({
 
 // Mock composables
 vi.mock('../composables/useWallpaperRotation', () => ({ useWallpaperRotation: () => { } }));
+
+// OverlayMotion 默认 teleportTo="body"，内容会被传送到 document.body，
+// 导致 wrapper.find() 查不到浮层里的元素。这里替换成内联渲染（保留 show 门控），
+// 使上下文菜单与删除确认弹窗仍留在组件树内，便于断言。
+vi.mock('@/components/base/OverlayMotion.vue', () => ({
+  default: {
+    name: 'OverlayMotion',
+    props: {
+      show: { type: Boolean, default: false },
+      zIndex: { default: 50 },
+      closeOnOverlay: { type: Boolean, default: false },
+      teleportTo: { default: 'body' },
+      teleportDisabled: { type: Boolean, default: false },
+      overlayClass: { default: '' },
+      panelClass: { default: '' },
+      panelStyle: { default: undefined },
+      variant: { default: 'dialog' },
+      appear: { type: Boolean, default: true },
+      panelTag: { default: 'div' }
+    },
+    template: '<div v-if="show" data-overlay-motion><slot /></div>'
+  }
+}));
 vi.mock('../composables/useDevice', () => ({
   useDevice: () => ({ deviceKey: { value: 'desktop' }, isMobile: { value: false } })
 }));
@@ -36,7 +59,9 @@ vi.mock('../utils/gridLayout', () => ({
 }));
 vi.mock('@/utils/network', () => ({
   isInternalNetwork: () => false,
-  getNetworkConfig: () => ({})
+  getNetworkConfig: () => ({}),
+  // GridPanel 会调用该函数决定组件走内网/外网地址，mock 必须提供同名导出
+  computeEffectiveNetworkMode: () => ({ isLan: false, reason: 'mock', measuredLatencyMs: 0 })
 }));
 
 describe('GridPanel Context Menu', () => {
@@ -50,9 +75,15 @@ describe('GridPanel Context Menu', () => {
         plugins: [
           createTestingPinia({
             createSpy: () => vi.fn().mockResolvedValue(undefined),
+            // 注意：main store 的 widgets / groups / isLogged 都是 computed 转发
+            // （computed(() => widgetsStore.widgets) 等），initialState 无法覆盖 computed。
+            // 必须直接 seed 真正的来源 store：widgets / groups / auth。
             initialState: {
-              main: {
-                isLogged: true,
+              auth: {
+                token: 'test-token',
+                username: 'tester'
+              },
+              widgets: {
                 widgets: [
                   {
                     id: 'div-card-1',
@@ -62,9 +93,10 @@ describe('GridPanel Context Menu', () => {
                     enable: true,
                     isPublic: true
                   }
-                ],
-                groups: [],
-                appConfig: {}
+                ]
+              },
+              groups: {
+                groups: []
               }
             }
           })

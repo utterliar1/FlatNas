@@ -41,6 +41,9 @@ vi.mock('../../config', () => ({
 type FetchResponse = {
   ok: boolean;
   status?: number;
+  // 必须带上 headers：MemoWidget 的 parseJsonBody 会读取 content-type，
+  // 缺失时会在解析前抛 TypeError 而走异常分支（导致 server_ts 不被采纳）。
+  headers: Headers;
   json: () => Promise<unknown>;
 };
 
@@ -56,6 +59,8 @@ describe('MemoWidget Conflict Reproduction', () => {
     // Default fallback
     (fetchMock as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({ success: true, data: { content: '', server_ts: 0 } })
     });
   });
@@ -107,6 +112,8 @@ describe('MemoWidget Conflict Reproduction', () => {
 
       return {
         ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ success: true, data: { content: '', server_ts: 0 } })
       };
     });
@@ -142,6 +149,7 @@ describe('MemoWidget Conflict Reproduction', () => {
     resolveFirstFetch!({
       ok: true,
       status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({
         success: true,
         data: { content: 'initialA', server_ts: 101 }
@@ -168,6 +176,7 @@ describe('MemoWidget Conflict Reproduction', () => {
     resolveSecondFetch!({
       ok: true,
       status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({
         success: true,
         data: { content: 'initialAB', server_ts: 102 }

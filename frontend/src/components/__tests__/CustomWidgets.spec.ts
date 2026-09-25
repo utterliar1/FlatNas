@@ -60,9 +60,18 @@ function isModuleScript(js: string): boolean {
 describe("win/组件 自定义组件", () => {
   const componentDirs = loadComponentDirs();
 
-  it("应至少存在 20 个组件目录", () => {
+  // win/ 已在 .gitignore 中（本地自用素材，不随仓库分发），
+  // 因此在干净克隆 / CI 环境下该目录必然不存在。此时整组校验无意义，直接跳过，
+  // 避免"仓库里没有的数据"把测试基线染红。
+  const hasWinDir = fs.existsSync(WIN_COMPONENTS_DIR);
+
+  it.skipIf(!hasWinDir)("应至少存在 20 个组件目录", () => {
     expect(componentDirs.length).toBeGreaterThanOrEqual(20);
   });
+
+  if (!hasWinDir) {
+    it.skip("跳过：本机不存在 win/组件 目录（该目录被 .gitignore 排除，不随仓库分发）", () => { });
+  }
 
   for (const dir of componentDirs) {
     const name = path.basename(dir);
