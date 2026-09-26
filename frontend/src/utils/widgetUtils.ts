@@ -4,6 +4,34 @@
  */
 
 import type { WidgetConfig } from "@/types";
+import { genId } from "./id";
+
+/**
+ * 保证 widget id 全局唯一。
+ *
+ * 为什么必须做：网格库 `grid-layout-plus` 在挂载时会校验 `Layout[i].i` 唯一，
+ * 一旦重复就 **throw**（`VueGridLayout: Layout[n].i must be unique!`）并中断整棵网格的挂载 ——
+ * 表现是首页组件区整个渲染不出来，而不只是一条无害的告警。
+ *
+ * 传入顺序即优先级：先出现的保留原 id，后出现的冲突项改用派生 id
+ * （优先保留 `<type>-` 前缀，便于排查）。
+ */
+export function ensureUniqueWidgetIds(list: WidgetConfig[]): WidgetConfig[] {
+  const used = new Set<string>();
+  return list.map((widget) => {
+    const id = typeof widget.id === "string" ? widget.id : "";
+    if (id && !used.has(id)) {
+      used.add(id);
+      return widget;
+    }
+    const prefix = widget.type ? `${widget.type}-` : "";
+    let next = genId(prefix);
+    while (used.has(next)) next = genId(prefix);
+    used.add(next);
+    return { ...widget, id: next };
+  });
+}
+
 
 /**
  * Create default widget list when no widgets are provided.
@@ -149,5 +177,10 @@ export function normalizeIncomingWidgets(
     }
   }
 
-  return nextWidgets;
+  // 补齐 fallback 后必须再保证 id 唯一：
+  // 用户数据里可能存在「同一个 id 被别的 type 占用」的历史残留
+  // （例如 id 为 `w1` 的组件其实是 music，而默认列表里 `w1` 是 clock）。
+  // 若只按 type 判重就直接 push fallback，会得到一个重复 id 的组件，
+  // 进而让 grid-layout-plus 在挂载时抛 "Layout[i].i must be unique!" 并中断渲染。
+  return ensureUniqueWidgetIds(nextWidgets);
 }
