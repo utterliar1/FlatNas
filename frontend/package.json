@@ -20,7 +20,8 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
-    "test": "vitest --environment=jsdom",
+    "test": "vitest run --environment=jsdom --no-file-parallelism",
+    "test:watch": "vitest --environment=jsdom --no-file-parallelism",
     "test:e2e": "playwright test"
   },
   "dependencies": {
