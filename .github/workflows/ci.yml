@@ -1,0 +1,83 @@
+name: CI
+
+# 本仓库是 Garry-QD/FlatNas 的个人定制分支，部署方式为「本地构建 → 直接推送到 iKuai 路由器的容器」，
+# 不发布 Docker 镜像，因此这里只做「干净机器上的构建 + 测试」校验，不做任何部署。
+#
+# 历史说明：原先的 docker-publish.yml / release.yml 指向上游镜像 qdnas/flatnas，
+# 且依赖 fork 里并不存在的 DOCKERHUB_USERNAME / DOCKERHUB_TOKEN secret，
+# 属于永远不会成功的僵尸配置，已于 268bd1a 删除（不发布镜像 → 无需 Docker Hub）。
+#
+# ⚠️ 本文件被 .gitignore 第 167 行的 `.github` 规则忽略，如需提交必须 `git add -f`。
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+# 最小权限：只需要读代码，不需要写任何东西（无部署、无发布、无评论）
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Build
+        working-directory: backend
+        run: go build ./...
+
+      - name: Vet
+        working-directory: backend
+        run: go vet ./...
+
+      # 包含 handlers/merge_test.go —— 文档三方合并引擎的表驱动单测（33 项）
+      - name: Test
+        working-directory: backend
+        run: go test ./...
+
+  frontend:
+    name: Frontend (Vue 3 + Vite)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      # npm ci 会在 package.json 与 lockfile 不同步时直接失败 —— 这正是我们要的
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type check
+        working-directory: frontend
+        run: npx vue-tsc --build
+
+      # 用 npm test（= vitest run --environment=jsdom --no-file-parallelism），与本地基线同一口径。
+      # 串行是为了确定性：本机 Windows 下文件级并行会随机静默丢 spec 文件（假绿），
+      # 用同一命令可以让 CI 与本地得到可比较的结果（12 文件 / 154 passed / 2 skipped）。
+      # 其中 i18n-keys.spec.ts 会断言已接线组件的模板里不得残留中文字面量，是防回退门禁。
+      - name: Unit tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        run: npx vite build
