@@ -5,6 +5,7 @@
 # Docker
 docker-compose.yml
 .dockerignore
+Dockerfile
 
 # Dependencies
 node_modules
@@ -20,6 +21,22 @@ backend/server_debug.exe
 backend/server_run.exe
 backend/debug_weather.exe
 *.exe
+
+# 本地构建产物：镜像内部自己会构建，不需要从上下文传进来
+# （server/public 是 Windows 本地构建的输出目录，也是后端运行期静态目录，
+#   在镜像里由 frontend-builder 的 dist 直接 COPY 得到，故无需进上下文）
+server/public
+frontend/dist
+
+# 运行期数据目录：由容器数据卷提供，绝不能打进镜像
+# 这些目录在仓库里也存在（含 icon 缓存 / 图片 / 素材），不排除的话每次构建都要
+# 白白上传几十 MB 上下文；更重要的是避免把用户数据误固化进镜像层。
+server/data
+server/music
+server/APP
+server/PC
+server/doc
+server/icon-cache
 
 # Logs
 *.log

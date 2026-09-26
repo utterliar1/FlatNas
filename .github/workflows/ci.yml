@@ -8,7 +8,7 @@ name: CI
 # **不需要配置任何 secret**。原先的 docker-publish.yml / release.yml 指向 Docker Hub 的 qdnas/flatnas
 # 并依赖 fork 里不存在的 DOCKERHUB_* secret（已于 268bd1a 删除）。
 #
-# GHCR 包已存在且为公开（匿名可拉）：
+# GHCR 包已存在且为公开（匿名可拉），同时提供 linux/amd64 与 linux/arm64：
 #   docker pull ghcr.io/utterliar1/flatnas:latest
 #   docker pull ghcr.io/utterliar1/flatnas:sha-5f8b6dc
 #
@@ -22,6 +22,12 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+# 连续推送时取消尚未跑完的旧运行，避免排队浪费 runner 分钟。
+# 注意 PR 与 main 用不同 ref，互不干扰。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 # 默认最小权限：只需要读代码（docker 作业在 job 级单独提权）
 permissions:
   contents: read
@@ -30,6 +36,7 @@ jobs:
   backend:
     name: Backend (Go)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -56,14 +63,17 @@ jobs:
   frontend:
     name: Frontend (Vue 3 + Vite)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # 与 Dockerfile 的 node:24-bookworm-slim 保持同一大版本，避免「CI 绿、镜像里构建失败」
+      # 这类环境漂移。Node 24 是当前 Active LTS；原先用 22.12.0，而镜像里是已 EOL 的 Node 20。
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "22.12.0"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -91,6 +101,7 @@ jobs:
   docker:
     name: Docker (GHCR)
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     # 「测试绿了才发版本」由 needs 结构性保证 —— 上面两个作业任一失败，本作业根本不启动
     needs: [backend, frontend]
     permissions:
@@ -99,6 +110,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      # linux/arm64 由 QEMU 模拟执行。因为 Dockerfile 里两个构建阶段都标了
+      # --platform=$BUILDPLATFORM，真正走模拟的只有运行层的 apk add，开销很小。
+      # 只想出 amd64 的话，删掉本步骤并把下面的 platforms 改回 linux/amd64 即可。
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -131,9 +148,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # 只出 amd64（爱快 / fnOS 都是 x86_64）。要 arm64 就改成 linux/amd64,linux/arm64，
-          # 但 QEMU 模拟下 npm ci + go build 会慢数倍。
-          platforms: linux/amd64
+          # 双架构：x86_64（爱快 / fnOS / 群晖）与 arm64（树莓派 / ARM NAS 均可直接拉）
+          platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
