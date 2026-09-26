@@ -238,6 +238,10 @@ func mergeIDList(bm, lm, sm map[string]interface{}, border, lorder, sorder []str
 		chosen = so
 	} else if equalStrings(so, bo) {
 		chosen = lo
+	} else if equalStrings(lo, so) {
+		// 双方各自重排，但落到了同一个顺序 → 没有分歧需要裁决，不应记冲突
+		// （否则会平白弹一次「合并冲突」提示，而两端数据其实完全一致）。
+		chosen = so
 	} else {
 		chosen = so
 		*conflicts = append(*conflicts, Conflict{Scope: scope, Field: "order", Resolution: "server", Note: "both_reordered"})
