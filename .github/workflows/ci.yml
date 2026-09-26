@@ -1,22 +1,28 @@
 name: CI
 
-# 本仓库是 Garry-QD/FlatNas 的个人定制分支，部署方式为「本地构建 → 直接推送到 iKuai 路由器的容器」，
-# 不发布 Docker 镜像，因此这里只做「干净机器上的构建 + 测试」校验，不做任何部署。
+# 本仓库是 Garry-QD/FlatNas 的个人定制分支。本工作流只做两件事：
+#   1) 在干净的 Linux 机器上构建 + 测试（backend / frontend 两个作业）
+#   2) 测试全绿后，把完整镜像推送到 GHCR（docker 作业，needs 依赖上面两个）
 #
-# 历史说明：原先的 docker-publish.yml / release.yml 指向上游镜像 qdnas/flatnas，
-# 且依赖 fork 里并不存在的 DOCKERHUB_USERNAME / DOCKERHUB_TOKEN secret，
-# 属于永远不会成功的僵尸配置，已于 268bd1a 删除（不发布镜像 → 无需 Docker Hub）。
+# 为什么用 GHCR 而不是 Docker Hub：推 ghcr.io 只需内置的 GITHUB_TOKEN（permissions: packages: write），
+# **不需要配置任何 secret**。原先的 docker-publish.yml / release.yml 指向 Docker Hub 的 qdnas/flatnas
+# 并依赖 fork 里不存在的 DOCKERHUB_* secret（已于 268bd1a 删除）。
+#
+# GHCR 包已存在且为公开（匿名可拉）：
+#   docker pull ghcr.io/utterliar1/flatnas:latest
+#   docker pull ghcr.io/utterliar1/flatnas:sha-5f8b6dc
 #
 # ⚠️ 本文件被 .gitignore 第 167 行的 `.github` 规则忽略，改动后需 `git add -f` 才能提交。
 
 on:
   push:
     branches: ["main"]
+    tags: ["v*"]          # 打 vX.Y.Z 标签时额外产出语义化版本 tag
   pull_request:
     branches: ["main"]
   workflow_dispatch:
 
-# 最小权限：只需要读代码，不需要写任何东西（无部署、无发布、无评论）
+# 默认最小权限：只需要读代码（docker 作业在 job 级单独提权）
 permissions:
   contents: read
 
@@ -81,3 +87,55 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npx vite build
+
+  docker:
+    name: Docker (GHCR)
+    runs-on: ubuntu-latest
+    # 「测试绿了才发版本」由 needs 结构性保证 —— 上面两个作业任一失败，本作业根本不启动
+    needs: [backend, frontend]
+    permissions:
+      contents: read
+      packages: write    # 推 ghcr.io 所需；配合 GITHUB_TOKEN，无需任何 secret
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # PR 只验证 Dockerfile 还能不能构建，不登录、不推送
+      - name: Log into ghcr.io
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 镜像名会被自动转小写（ghcr.io/utterliar1/flatnas）
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+            type=semver,pattern={{version}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # 只出 amd64（爱快 / fnOS 都是 x86_64）。要 arm64 就改成 linux/amd64,linux/arm64，
+          # 但 QEMU 模拟下 npm ci + go build 会慢数倍。
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NPM_REGISTRY=https://registry.npmjs.org
+            GOPROXY=https://proxy.golang.org,direct
