@@ -7,7 +7,7 @@ name: CI
 # 且依赖 fork 里并不存在的 DOCKERHUB_USERNAME / DOCKERHUB_TOKEN secret，
 # 属于永远不会成功的僵尸配置，已于 268bd1a 删除（不发布镜像 → 无需 Docker Hub）。
 #
-# ⚠️ 本文件被 .gitignore 第 167 行的 `.github` 规则忽略，如需提交必须 `git add -f`。
+# ⚠️ 本文件被 .gitignore 第 167 行的 `.github` 规则忽略，改动后需 `git add -f` 才能提交。
 
 on:
   push:
@@ -26,10 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
@@ -52,10 +52,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22.12.0"
           cache: "npm"
