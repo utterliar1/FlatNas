@@ -97,9 +97,18 @@ export const getCachedImage = async (url: string): Promise<Blob | null> => {
   // Check localStorage first for expiration (24h)
   const metaStr = localStorage.getItem(`cache_meta_${url}`);
   if (metaStr) {
-    const meta = JSON.parse(metaStr);
+    let meta: { timestamp?: number } | null = null;
+    try {
+      meta = JSON.parse(metaStr) as { timestamp?: number };
+    } catch {
+      // meta 损坏（手动改动 / 写入中断 / 跨版本残留）时不能抛出，
+      // 否则调用方（壁纸加载链）会因未捕获异常中断。清理脏数据并按“无缓存”处理。
+      localStorage.removeItem(`cache_meta_${url}`);
+      return null;
+    }
     const now = Date.now();
-    if (now - meta.timestamp > MAX_CACHE_AGE) {
+    const timestamp = typeof meta?.timestamp === "number" ? meta.timestamp : 0;
+    if (now - timestamp > MAX_CACHE_AGE) {
       // Expired
       localStorage.removeItem(`cache_meta_${url}`);
       try {
