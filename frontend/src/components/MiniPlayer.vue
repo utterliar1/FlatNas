@@ -62,7 +62,7 @@ const fetchMusicList = async () => {
       historyIndex.value = 0;
 
       if (store.appConfig.autoPlayMusic) {
-        setTimeout(() => {
+        autoplayTimer = setTimeout(() => {
           playAudio();
         }, 1000);
       }
@@ -222,8 +222,13 @@ watch(
   { immediate: true },
 );
 
-let mountTimer: ReturnType<typeof setTimeout>;
+let mountTimer: ReturnType<typeof setTimeout> | null = null;
+let marqueeTimer: ReturnType<typeof setTimeout> | null = null;
+let autoplayTimer: ReturnType<typeof setTimeout> | null = null;
 let gestureHandlerAttached = false;
+// 保存当前已注册的手势解绑函数：卸载时若手势尚未触发，必须主动解绑，
+// 否则 window/document 上会残留闭包并长期持有组件引用。
+let detachGesture: (() => void) | null = null;
 
 const tryAutoplay = async () => {
   if (!store.appConfig.autoPlayMusic) return;
@@ -250,7 +255,11 @@ const attachGestureAutoplay = () => {
     window.removeEventListener("touchstart", handler);
     window.removeEventListener("keydown", handler);
     document.removeEventListener("click", handler);
+    // 复位标志，允许后续自动播放再次失败时重新附着监听
+    gestureHandlerAttached = false;
+    detachGesture = null;
   };
+  detachGesture = detach;
   window.addEventListener("pointerdown", handler, { once: true });
   window.addEventListener("touchstart", handler, { once: true });
   window.addEventListener("keydown", handler, { once: true });
@@ -262,7 +271,7 @@ onMounted(() => {
   // 延迟加载，避免因父组件重渲染导致的快速卸载重挂引发的请求 Abort
   mountTimer = setTimeout(() => {
     fetchMusicList();
-    setTimeout(setupMarquee, 200);
+    marqueeTimer = setTimeout(setupMarquee, 200);
   }, 500);
   if (store.appConfig.autoPlayMusic) attachGestureAutoplay();
 });
@@ -270,6 +279,10 @@ onMounted(() => {
 onUnmounted(() => {
   console.log("[MiniPlayer] Unmounted");
   if (mountTimer) clearTimeout(mountTimer);
+  if (marqueeTimer) clearTimeout(marqueeTimer);
+  if (autoplayTimer) clearTimeout(autoplayTimer);
+  if (switchTimer) clearTimeout(switchTimer);
+  if (detachGesture) detachGesture();
 });
 
 watch(

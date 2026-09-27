@@ -28,23 +28,25 @@ watch(
 
 // Reactive date
 const now = ref(new Date());
-let timer: number | null = null;
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+let timer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
   // Sync with minute
-  setTimeout(
+  syncTimer = setTimeout(
     () => {
       now.value = new Date();
       timer = setInterval(() => {
         now.value = new Date();
-      }, 60000) as unknown as number;
+      }, 60000);
     },
     (60 - new Date().getSeconds()) * 1000,
   );
 });
 
 onUnmounted(() => {
-  if (timer) clearInterval(timer);
+  if (syncTimer !== null) clearTimeout(syncTimer);
+  if (timer !== null) clearInterval(timer);
 });
 
 // Day View Data

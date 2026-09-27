@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useMainStore } from "../stores/main";
 import type { WidgetConfig } from "@/types";
 import { useWeather } from "@/composables/useWeather";
@@ -181,6 +181,10 @@ const snowFlakes = ref(
 onMounted(() => {
   updateTime();
   timer = setInterval(updateTime, 60000);
+});
+
+onUnmounted(() => {
+  if (timer !== null) clearInterval(timer);
 });
 </script>
 
