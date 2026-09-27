@@ -173,26 +173,6 @@ func buildHotCacheKey(t string) string {
 	return strings.TrimSpace(t)
 }
 
-func WarmHotCache(types []string) {
-	seen := make(map[string]struct{})
-	for _, t := range types {
-		normalized := strings.TrimSpace(t)
-		if normalized == "" {
-			continue
-		}
-		if _, ok := hotTTLs[normalized]; !ok {
-			continue
-		}
-		if _, exists := seen[normalized]; exists {
-			continue
-		}
-		seen[normalized] = struct{}{}
-		if _, err := refreshHotData(normalized); err != nil {
-			continue
-		}
-	}
-}
-
 func fetchWithHeaders(url string, headers map[string]string) ([]byte, int, error) {
 	client, err := getSharedProxyClient()
 	if err != nil {

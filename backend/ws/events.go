@@ -136,22 +136,6 @@ type WSBroadcaster struct {
 	Manager *WSManager
 }
 
-func (b *WSBroadcaster) BroadcastMemo(username string, widgetID string, content interface{}) {
-	BroadcastMemoUpdated(b.Manager, username, widgetID, content)
-}
-
-func (b *WSBroadcaster) BroadcastData(username string, version int64, changedWidgets []string, deletedWidgets []string, structureChanged bool) {
-	BroadcastDataUpdated(b.Manager, username, version, changedWidgets, deletedWidgets, structureChanged)
-}
-
-func (b *WSBroadcaster) BroadcastTodo(username string, widgetID string, content interface{}) {
-	BroadcastTodoUpdated(b.Manager, username, widgetID, content)
-}
-
-func (b *WSBroadcaster) BroadcastBookmarks(username string, widgetID string, content interface{}) {
-	BroadcastBookmarksUpdated(b.Manager, username, widgetID, content)
-}
-
 // BroadcastSharedGroupsUpdated 通知全体在线用户共享分组（多用户共同的书签分组）已变更，
 // 促使其重新拉取自己的 /api/data（其中包含只读的 sharedGroups 副本）。
 // 共享分组对所有用户可见，故使用全员广播而非按用户广播。
