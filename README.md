@@ -154,7 +154,7 @@ services:
       - ./APP:/app/server/APP
 ```
 
-> 仓库内 `docker-compose.yml` 为上游模板，可能仍含 `docker.sock` 挂载项 —— 本定制版已移除 Docker 管理，可自行删除该挂载。
+> 本定制版已移除 Docker 管理，因此不需要挂载 `/var/run/docker.sock`。
 
 ### 2. Docker CLI
 

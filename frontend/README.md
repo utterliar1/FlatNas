@@ -153,12 +153,11 @@ FlatNas 后端集成了智能网络环境识别功能，能够根据用户的访
      -v $(pwd)/server/music:/app/server/music \
      -v $(pwd)/server/PC:/app/server/PC \
      -v $(pwd)/server/APP:/app/server/APP \
-     -v /var/run/docker.sock:/var/run/docker.sock \
      --name flatnas \
      qdnas/flatnas
    ```
 
-   > **注意**: 建议挂载 `data`、`doc`、`music`、`PC` 和 `APP` 目录，以确保配置数据、文件传输记录、媒体文件和自定义壁纸在容器重启后不会丢失。若需要使用 Docker 管理功能，必须挂载 `/var/run/docker.sock`。
+   > **注意**: 建议挂载 `data`、`doc`、`music`、`PC` 和 `APP` 目录，以确保配置数据、文件传输记录、媒体文件和自定义壁纸在容器重启后不会丢失。
 
 3. **docker-compose**
 
@@ -178,7 +177,6 @@ FlatNas 后端集成了智能网络环境识别功能，能够根据用户的访
          - ./music:/app/server/music #映射播放器路径
          - ./PC:/app/server/PC #映射PC端壁纸路径
          - ./APP:/app/server/APP #映射移动端壁纸路径
-         - /var/run/docker.sock:/var/run/docker.sock #映射Docker Socket
    ```
 
 ## 🚀 一键部署 (Debian)
@@ -209,18 +207,6 @@ sudo ./deploy.sh install
 - **数据文件**: 所有配置（布局、组件、书签等）均存储在 `server/data/data.json` 中。
 - **音乐文件**: 将 MP3 文件放入 `server/music` 目录，刷新页面后即可在播放器中看到。
 - CGI 脚本: 将自定义脚本放入 `server/cgi-bin` 目录，可通过 `/cgi-bin/script.cgi` 访问。
-- **Docker 自动升级镜像**:
-  - 入口：设置 → Docker 管理 → 自动升级镜像(每2小时)。
-  - 关闭时：后台不会进行任何镜像拉取或版本对比。
-  - 开启时：每 2 小时对运行中的容器执行“拉取并对比镜像 ID”，发现新版本则自动重建容器。
-  - 镜像清理：升级完成后自动清理旧镜像，默认每个镜像名保留 2 个版本（可配置 1–20）。
-  - 磁盘保护：当 Docker 所在磁盘可用空间低于阈值时跳过本轮升级，默认阈值 5GB（可配置）。
-  - 监控指标：镜像数量、磁盘使用率、自动升级日志中的 pulls/updates/pruned/error 计数。
-  - 升级后验证：开启开关等待一个周期（或手动触发一次更新检测），确认日志中 pulls/updates 变化且镜像数量不持续增长。
-  - 灰度验证（建议）：准备 2 个环境分别开启/关闭该开关，各运行 24 小时，对比以下数据以确认“开关状态=后台行为”且无镜像堆积：
-    - 服务器日志：筛选 `[AutoUpdate]` 与 `[UpdateChecker]` 关键字，统计 pulls/updates/pruned/error 次数与频率。
-    - Docker 镜像数量：对比 24 小时前后 `docker images -q | wc -l`（Linux）或 `docker images -q | Measure-Object -Line`（PowerShell）。
-    - Docker 根目录磁盘：对比 24 小时前后磁盘可用空间（或使用 `docker info` + 系统磁盘监控）。
 
 ## 🛠️ 高级定制 (Advanced Customization)
 
