@@ -106,19 +106,39 @@ func sanitizedSystemConfig(c *gin.Context, cfg models.SystemConfig) gin.H {
 // --- 解锁尝试限流（防暴力枚举，进程内实现即可） ---
 
 var (
-	unlockAttemptMu sync.Mutex
-	unlockAttempts  = map[string][]time.Time{} // key: 客户端 IP
+	unlockAttemptMu     sync.Mutex
+	unlockAttempts      = map[string][]time.Time{} // key: 客户端 IP
+	unlockAttemptSweeps uint64
 )
 
 const (
 	unlockAttemptWindow = time.Minute
 	unlockAttemptLimit  = 10
+	// 清理频率：每 N 次限流判定做一次全表扫描，回收陈旧条目。
+	// 限流函数只在解锁尝试时被调用（本身已限速），扫描开销可忽略。
+	unlockSweepEvery = 256
 )
+
+// sweepUnlockAttempts 回收「最后一次尝试已超出时间窗」的条目，避免
+// unlockAttempts 只增不减（尝试过一次便不再出现的 IP 会永久占用一个键）。
+// 时间戳按升序追加，故末位即该 IP 最近一次尝试时间。
+// 必须在持有 unlockAttemptMu 时调用。
+func sweepUnlockAttempts(now time.Time) {
+	for ip, ts := range unlockAttempts {
+		if len(ts) == 0 || now.Sub(ts[len(ts)-1]) >= unlockAttemptWindow {
+			delete(unlockAttempts, ip)
+		}
+	}
+}
 
 func unlockRateLimited(ip string) bool {
 	now := time.Now()
 	unlockAttemptMu.Lock()
 	defer unlockAttemptMu.Unlock()
+	unlockAttemptSweeps++
+	if unlockAttemptSweeps%unlockSweepEvery == 0 {
+		sweepUnlockAttempts(now)
+	}
 	recent := unlockAttempts[ip][:0]
 	for _, t := range unlockAttempts[ip] {
 		if now.Sub(t) < unlockAttemptWindow {
