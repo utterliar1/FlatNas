@@ -65,6 +65,22 @@ func (l *ipRateLimiter) get(ip string) *rate.Limiter {
 // pingLimiter 每 IP 限速：稳定速率 2 次/秒，突发上限 10 次。
 // 对正常用户的延迟检测完全无感，但能有效阻断高频内网扫描。
 var pingLimiter = newIPRateLimiter(rate.Limit(2), 10, 10*time.Minute)
+var loginLimiter = newIPRateLimiter(rate.Limit(0.2), 5, 10*time.Minute)
+var registerLimiter = newIPRateLimiter(rate.Limit(0.05), 3, 10*time.Minute)
+
+func rateLimit(limiter *ipRateLimiter) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !limiter.get(c.ClientIP()).Allow() {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "rate limited"})
+			return
+		}
+		c.Next()
+	}
+}
+
+func LoginRateLimit() gin.HandlerFunc { return rateLimit(loginLimiter) }
+
+func RegisterRateLimit() gin.HandlerFunc { return rateLimit(registerLimiter) }
 
 // PingRateLimit 给探测类接口加速率限制。
 func PingRateLimit() gin.HandlerFunc {

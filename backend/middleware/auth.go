@@ -40,7 +40,22 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("username", claims["username"])
+			username, ok := claims["username"].(string)
+			if !ok || username == "" {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+				return
+			}
+			currentVersion, exists := config.GetUserAuthVersion(username)
+			if !exists {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+				return
+			}
+			tokenVersion, hasVersion := claims["authVersion"].(float64)
+			if !hasVersion || int64(tokenVersion) != currentVersion {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+				return
+			}
+			c.Set("username", username)
 		}
 		c.Next()
 	}
@@ -52,7 +67,13 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 
 		if err == nil && token != nil && token.Valid {
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
-				c.Set("username", claims["username"])
+				if username, ok := claims["username"].(string); ok && username != "" {
+					if currentVersion, exists := config.GetUserAuthVersion(username); exists {
+						if tokenVersion, hasVersion := claims["authVersion"].(float64); hasVersion && int64(tokenVersion) == currentVersion {
+							c.Set("username", username)
+						}
+					}
+				}
 			}
 		}
 		c.Next()

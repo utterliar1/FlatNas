@@ -131,6 +131,12 @@ server/.public_prev/
 # ----------------------
 # Project Data & Config
 # ----------------------
+# Runtime state and secrets must stay local and must not be committed.
+server/data/*
+server/doc/*
+!server/data/.gitkeep
+!server/doc/.gitkeep
+
 # User generated data
 debian/server/data/*.json
 debian/server/data/users/*.json

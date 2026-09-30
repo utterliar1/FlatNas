@@ -9,6 +9,7 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -149,38 +150,36 @@ func main() {
 			}
 		}
 	}
-	allowAllOrigins := len(allowedOrigins) == 0
 	allowOriginFunc := func(origin string) bool {
-		if allowAllOrigins {
-			return true
-		}
 		_, ok := allowedOrigins[origin]
 		return ok
 	}
 
-	// CORS
-	r.Use(cors.New(cors.Config{
-		AllowOriginFunc: func(origin string) bool {
-			return allowOriginFunc(origin)
-		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	// CORS is disabled by default. Cross-origin access must be explicitly allowlisted.
+	if len(allowedOrigins) > 0 {
+		r.Use(cors.New(cors.Config{
+			AllowOriginFunc:  allowOriginFunc,
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
+			ExposeHeaders:    []string{"Content-Length"},
+			AllowCredentials: true,
+			MaxAge:           12 * time.Hour,
+		}))
+	}
 
 	// Socket.IO
 	server := socketio.NewServer(&engineio.Options{
 		Transports: []transport.Transport{
 			&polling.Transport{
 				CheckOrigin: func(r *http.Request) bool {
-					return allowOriginFunc(r.Header.Get("Origin"))
+					origin := r.Header.Get("Origin")
+					return isSocketOriginAllowed(r, origin, allowedOrigins)
 				},
 			},
 			&websocket.Transport{
 				CheckOrigin: func(r *http.Request) bool {
-					return allowOriginFunc(r.Header.Get("Origin"))
+					origin := r.Header.Get("Origin")
+					return isSocketOriginAllowed(r, origin, allowedOrigins)
 				},
 			},
 		},
@@ -206,7 +205,7 @@ func main() {
 		}
 		if strings.HasPrefix(room, "user:") {
 			username, _ := s.Context().(string)
-			if handlers.SocketUserRoom(username) != room {
+			if username == "" || handlers.SocketUserRoom(username) != room {
 				return
 			}
 		}
@@ -258,12 +257,21 @@ func main() {
 		c.File(indexPath)
 	})
 	r.StaticFile(mountPath(basePath, "/favicon.ico"), filepath.Join(config.PublicDir, "favicon.ico"))
-	r.Static(mountPath(basePath, "/music"), config.MusicDir)
-	r.Static(mountPath(basePath, "/backgrounds"), config.BackgroundsDir)
-	r.Static(mountPath(basePath, "/mobile_backgrounds"), config.MobileBackgroundsDir)
+	r.GET(mountPath(basePath, "/music/*name"), middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		c.Params = append(c.Params, gin.Param{Key: "type", Value: "music"})
+		handlers.ServeOwnedAsset(c)
+	})
+	r.GET(mountPath(basePath, "/backgrounds/*name"), middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		c.Params = append(c.Params, gin.Param{Key: "type", Value: "backgrounds"})
+		handlers.ServeOwnedAsset(c)
+	})
+	r.GET(mountPath(basePath, "/mobile_backgrounds/*name"), middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		c.Params = append(c.Params, gin.Param{Key: "type", Value: "mobile_backgrounds"})
+		handlers.ServeOwnedAsset(c)
+	})
 	r.Static(mountPath(basePath, "/icon-cache"), config.IconCacheDir)
 	r.Static(mountPath(basePath, "/public"), config.PublicDir)
-	r.Any(proxyPath, handlers.ProxyRequest)
+	r.Any(proxyPath, middleware.AuthMiddleware(), handlers.ProxyRequest)
 
 	// Middleware to serve static files from config.PublicDir if they exist
 	r.Use(func(c *gin.Context) {
@@ -314,8 +322,8 @@ func main() {
 	// API Routes
 	api := r.Group(apiPath)
 	{
-		api.POST("/login", handlers.Login)
-		api.POST("/register", handlers.Register)
+		api.POST("/login", middleware.LoginRateLimit(), handlers.Login)
+		api.POST("/register", middleware.RegisterRateLimit(), handlers.Register)
 		api.POST("/access/unlock", handlers.UnlockAccess) // 访问码解锁（隐藏分组），公开端点，内置限流
 		api.POST("/access/lock", handlers.LockAccess)     // 重新上锁，清除解锁 Cookie
 		api.GET("/data", middleware.OptionalAuthMiddleware(), handlers.GetData)
@@ -423,4 +431,18 @@ func main() {
 	}
 	log.Println("Server stopped")
 	select {}
+}
+
+func isSocketOriginAllowed(r *http.Request, origin string, allowedOrigins map[string]struct{}) bool {
+	if origin == "" {
+		return true
+	}
+	if _, ok := allowedOrigins[origin]; ok {
+		return true
+	}
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	return strings.EqualFold(parsed.Host, r.Host)
 }

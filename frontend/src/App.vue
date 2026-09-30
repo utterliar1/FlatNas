@@ -175,7 +175,10 @@ const customJsRuntime = (() => {
       if (urlStr.startsWith("http")) {
         const parsed = new URL(urlStr);
         if (parsed.hostname !== window.location.hostname) {
-          return await window.fetch("/proxy?url=" + encodeURIComponent(urlStr), init);
+          const headers = new Headers(init?.headers);
+          const token = localStorage.getItem("flat-nas-token");
+          if (token && !headers.has("Authorization")) headers.set("Authorization", "Bearer " + token);
+          return await window.fetch("/proxy?url=" + encodeURIComponent(urlStr), { ...init, headers });
         }
       }
     } catch { /* fall through to normal fetch */ }
@@ -347,7 +350,10 @@ const fetch = async (input, init) => {
     if (typeof input === 'string' && input.startsWith('http')) {
       const url = new URL(input);
       if (url.hostname !== window.location.hostname) {
-        return await originalFetch('/proxy?url=' + encodeURIComponent(input), init);
+        const headers = new Headers(init && init.headers);
+        const token = localStorage.getItem('flat-nas-token');
+        if (token && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + token);
+        return await originalFetch('/proxy?url=' + encodeURIComponent(input), { ...(init || {}), headers });
       }
     }
   } catch (e) {}

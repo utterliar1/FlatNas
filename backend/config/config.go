@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -221,6 +222,40 @@ func loadSecretKey() {
 
 func GetSecretKeyString() string {
 	return string(SecretKey)
+}
+
+var authUsernamePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,32}$`)
+
+// GetUserAuthVersion returns the current credential generation for a user.
+// Missing users are rejected so tokens cannot survive account deletion.
+func GetUserAuthVersion(username string) (int64, bool) {
+	if !authUsernamePattern.MatchString(username) {
+		return 0, false
+	}
+	authMode := "single"
+	if data, err := os.ReadFile(SystemConfigFile); err == nil {
+		var system struct {
+			AuthMode string `json:"authMode"`
+		}
+		if json.Unmarshal(data, &system) == nil && (system.AuthMode == "single" || system.AuthMode == "multi") {
+			authMode = system.AuthMode
+		}
+	}
+	userFile := filepath.Join(UsersDir, username+".json")
+	if username == "admin" && authMode == "single" {
+		userFile = filepath.Join(DataDir, "data.json")
+	}
+	data, err := os.ReadFile(userFile)
+	if err != nil {
+		return 0, false
+	}
+	var user struct {
+		AuthVersion int64 `json:"authVersion"`
+	}
+	if err := json.Unmarshal(data, &user); err != nil {
+		return 0, false
+	}
+	return user.AuthVersion, true
 }
 
 func ensureAdditionalDataFiles() {

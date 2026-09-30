@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -27,7 +30,17 @@ const (
 func WSHandler(manager *WSManager) gin.HandlerFunc {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
-			return true
+			origin := strings.TrimSpace(r.Header.Get("Origin"))
+			if origin == "" {
+				return true
+			}
+			for _, configured := range strings.Split(os.Getenv("CORS_ALLOW_ORIGINS"), ",") {
+				if strings.TrimSpace(configured) == origin {
+					return true
+				}
+			}
+			parsed, err := url.Parse(origin)
+			return err == nil && parsed.Host != "" && strings.EqualFold(parsed.Host, r.Host)
 		},
 	}
 	return func(c *gin.Context) {

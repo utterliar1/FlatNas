@@ -92,6 +92,85 @@ func canAccessOwnedAsset(owner *string, username string) bool {
 	return username != "" && trimmed == username
 }
 
+func ServeOwnedAsset(c *gin.Context) {
+	assetType := c.Param("type")
+	root := ""
+	metadata := map[string]assetMetaEntry(nil)
+	rel := strings.TrimLeft(c.Param("name"), "/")
+	if rel == "" || filepath.IsAbs(rel) || strings.Contains(rel, "\\") {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	switch assetType {
+	case "backgrounds":
+		root = config.BackgroundsDir
+	case "mobile_backgrounds":
+		root = config.MobileBackgroundsDir
+	case "music":
+		root = config.MusicDir
+	default:
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	clean := filepath.Clean(filepath.FromSlash(rel))
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	filePath := filepath.Join(root, clean)
+	rootPath, err := filepath.Abs(root)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	fileAbs, err := filepath.Abs(filePath)
+	if err != nil || !strings.HasPrefix(fileAbs, rootPath+string(os.PathSeparator)) {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	if assetType == "music" {
+		if !isSupportedMusicFile(clean) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+	} else if filepath.Dir(clean) != "." || !isSupportedWallpaperFile(clean) {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	assetMetaMu.Lock()
+	store, metaErr := loadAssetMetaStoreUnlocked()
+	if metaErr == nil {
+		switch assetType {
+		case "music":
+			metadata = store.Music
+		case "backgrounds":
+			metadata = store.Backgrounds
+		case "mobile_backgrounds":
+			metadata = store.MobileBackgrounds
+		}
+	}
+	entry, known := metadata[normalizeAssetKey(clean)]
+	assetMetaMu.Unlock()
+	if metaErr != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if known && !canAccessOwnedAsset(entry.Owner, c.GetString("username")) {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	info, err := os.Stat(fileAbs)
+	if err != nil || info.IsDir() {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	if known && entry.Owner != nil && strings.TrimSpace(*entry.Owner) != "" {
+		c.Header("Cache-Control", "private, no-store")
+	}
+	c.File(fileAbs)
+}
+
 func isSupportedWallpaperFile(name string) bool {
 	lower := strings.ToLower(name)
 	return strings.HasSuffix(lower, ".jpg") || strings.HasSuffix(lower, ".jpeg") ||
@@ -143,7 +222,7 @@ func ResolveWallpaper(c *gin.Context) {
 	}
 
 	parsed, err := url.Parse(req.URL)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
 		return
 	}
@@ -151,15 +230,12 @@ func ResolveWallpaper(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported protocol"})
 		return
 	}
-	if IsBlockedHost(parsed.Hostname()) && !isAllowedWallpaperHost(parsed.Hostname()) {
+	if IsBlockedHost(parsed.Hostname()) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Target host is not allowed"})
 		return
 	}
 
-	client, err := getSharedProxyClient()
-	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
-	}
+	client := newSafeHTTPClient(10 * time.Second)
 	resp, err := client.Head(parsed.String())
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"url": req.URL})
@@ -188,26 +264,35 @@ func FetchWallpaper(c *gin.Context) {
 	fmt.Printf("DEBUG: FetchWallpaper URL: %s, Type: %s\n", req.URL, req.Type)
 
 	parsed, err := url.Parse(req.URL)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
 		return
 	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported protocol"})
+		return
+	}
 
-	if IsBlockedHost(parsed.Hostname()) && !isAllowedWallpaperHost(parsed.Hostname()) {
+	if IsBlockedHost(parsed.Hostname()) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Target host is not allowed"})
 		return
 	}
 
-	client, err := getSharedProxyClient()
-	if err != nil {
-		client = &http.Client{Timeout: 30 * time.Second}
-	}
+	client := newSafeHTTPClient(30 * time.Second)
 	resp, err := client.Get(req.URL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to download image"})
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Upstream returned an unsuccessful status"})
+		return
+	}
+	if resp.ContentLength > maxWallpaperResponseBytes {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Image exceeds size limit"})
+		return
+	}
 
 	ct := resp.Header.Get("Content-Type")
 	ext := ".jpg"
@@ -248,9 +333,15 @@ func FetchWallpaper(c *gin.Context) {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
+	limitedBody := io.LimitReader(resp.Body, maxWallpaperResponseBytes+1)
+	bytesWritten, err := io.Copy(out, limitedBody)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+	if bytesWritten > maxWallpaperResponseBytes {
+		_ = os.Remove(outPath)
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Image exceeds size limit"})
 		return
 	}
 

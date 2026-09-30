@@ -176,7 +176,7 @@ func buildHotCacheKey(t string) string {
 func fetchWithHeaders(url string, headers map[string]string) ([]byte, int, error) {
 	client, err := getSharedProxyClient()
 	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = newSafeHTTPClient(10 * time.Second)
 	}
 
 	req, err := http.NewRequest("GET", url, nil)

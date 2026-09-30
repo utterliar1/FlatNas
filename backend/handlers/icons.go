@@ -267,10 +267,7 @@ func GetAliIcons(c *gin.Context) {
 	aliIconsMutex.RUnlock()
 
 	// Fetch from upstream
-	client, err := getSharedProxyClient()
-	if err != nil {
-		client = &http.Client{Timeout: 30 * time.Second}
-	}
+	client := newSafeHTTPClient(30 * time.Second)
 
 	type fetchResult struct {
 		icons []aliIconRecord
@@ -475,10 +472,7 @@ func fetchIconFromURL(urlStr string) ([]byte, string, *iconError) {
 		}
 	}
 
-	client, err := getSharedProxyClient()
-	if err != nil {
-		client = &http.Client{Timeout: 30 * time.Second}
-	}
+	client := newSafeHTTPClient(30 * time.Second)
 	resp, err := client.Get(urlStr)
 	if err != nil {
 		return nil, "", &iconError{

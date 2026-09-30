@@ -41,6 +41,40 @@ func userFilePath(username string) (string, bool) {
 	return p, true
 }
 
+func requireAdmin(c *gin.Context) bool {
+	if c.GetString("username") == "admin" {
+		return true
+	}
+	c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
+	return false
+}
+
+func userCount() (int, error) {
+	entries, err := os.ReadDir(config.UsersDir)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func persistAuthVersion(userFile string, version int64) error {
+	var raw map[string]interface{}
+	if err := utils.ReadJSON(userFile, &raw); err != nil {
+		return err
+	}
+	if raw == nil {
+		raw = make(map[string]interface{})
+	}
+	raw["authVersion"] = version
+	return utils.WriteJSON(userFile, raw)
+}
+
 
 func Login(c *gin.Context) {
 	var req models.LoginRequest
@@ -130,9 +164,17 @@ func Login(c *gin.Context) {
 	}
 
 	if match {
+		if user.AuthVersion < 1 {
+			user.AuthVersion = 1
+			if err := persistAuthVersion(userFile, user.AuthVersion); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save user"})
+				return
+			}
+		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"username": req.Username,
-			"exp":      time.Now().Add(time.Hour * 24 * 30).Unix(),
+			"username":    req.Username,
+			"authVersion": user.AuthVersion,
+			"exp":         time.Now().Add(time.Hour * 24 * 30).Unix(),
 		})
 		tokenString, err := token.SignedString([]byte(config.GetSecretKeyString()))
 		if err != nil {
@@ -173,6 +215,7 @@ func initUserFile(username string, hashedPassword string) error {
 		"rssFeeds":      []interface{}{},
 		"rssCategories": []interface{}{},
 		"version":       int64(0),
+		"authVersion":   int64(1),
 	}
 
 	var defaultData map[string]interface{}
@@ -264,6 +307,13 @@ func GetUsers(c *gin.Context) {
 }
 
 func AddUser(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	if count, err := userCount(); err == nil && count >= 1000 {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "User limit reached"})
+		return
+	}
 	var req AddUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -368,6 +418,9 @@ func sanitizeFileName(name string) string {
 }
 
 func UploadLicense(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
 	var req LicenseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -375,7 +428,7 @@ func UploadLicense(c *gin.Context) {
 	}
 
 	licenseFile := filepath.Join(config.DataDir, "license.key")
-	if err := os.WriteFile(licenseFile, []byte(req.Key), 0644); err != nil {
+	if err := os.WriteFile(licenseFile, []byte(req.Key), 0600); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save license"})
 		return
 	}

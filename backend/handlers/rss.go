@@ -326,6 +326,9 @@ func fetchRssTitle(feedUrl string) (string, error) {
 }
 
 func fetchRssFeedOnce(feedUrl string) ([]UnifiedRssItem, error) {
+	if _, err := validateExternalHTTPURL(feedUrl); err != nil {
+		return nil, err
+	}
 	attempts := buildRssAttempts(feedUrl)
 	var lastErr error
 	for _, attempt := range attempts {
@@ -349,6 +352,9 @@ func fetchRssFeedOnce(feedUrl string) ([]UnifiedRssItem, error) {
 }
 
 func fetchRssTitleOnce(feedUrl string) (string, error) {
+	if _, err := validateExternalHTTPURL(feedUrl); err != nil {
+		return "", err
+	}
 	attempts := buildRssAttempts(feedUrl)
 	var lastErr error
 	for _, attempt := range attempts {
@@ -381,14 +387,8 @@ func buildRssAttempts(feedUrl string) []rssAttempt {
 	headersA := buildRssHeaders(referer, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	headersB := buildRssHeaders(referer, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15")
 	attempts := []rssAttempt{
-		{client: &http.Client{Timeout: 10 * time.Second}, headers: headersA},
-		{client: &http.Client{Timeout: 10 * time.Second}, headers: headersB},
-	}
-	proxyURL, err := getProxyURL()
-	if err == nil && proxyURL != nil {
-		if proxyClient, err := buildProxyClient(); err == nil {
-			attempts = append(attempts, rssAttempt{client: proxyClient, headers: headersB})
-		}
+		{client: newSafeHTTPClient(10 * time.Second), headers: headersA},
+		{client: newSafeHTTPClient(10 * time.Second), headers: headersB},
 	}
 	return attempts
 }
@@ -430,7 +430,15 @@ func fetchRssBody(client *http.Client, feedUrl string, headers map[string]string
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("HTTP status %d", resp.StatusCode)
 	}
-	return io.ReadAll(resp.Body)
+	const maxRSSBodyBytes = 10 << 20
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxRSSBodyBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > maxRSSBodyBytes {
+		return nil, fmt.Errorf("RSS response is too large")
+	}
+	return body, nil
 }
 
 func parseRssItems(body []byte) ([]UnifiedRssItem, error) {

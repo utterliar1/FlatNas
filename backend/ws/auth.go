@@ -25,7 +25,11 @@ func validateJWT(tokenStr string) (string, bool) {
 	}
 	if claims, ok := tok.Claims.(jwt.MapClaims); ok {
 		if username, ok := claims["username"].(string); ok && username != "" {
-			return username, true
+			version, hasVersion := claims["authVersion"].(float64)
+			currentVersion, exists := config.GetUserAuthVersion(username)
+			if exists && hasVersion && int64(version) == currentVersion {
+				return username, true
+			}
 		}
 	}
 	return "", false

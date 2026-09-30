@@ -31,11 +31,18 @@ func socketConnUsername(s socketio.Conn) string {
 }
 
 func bindSocketUserRoom(s socketio.Conn, username string) bool {
+	if s == nil {
+		return false
+	}
 	room := SocketUserRoom(username)
 	if room == "" {
 		return false
 	}
-	if socketConnUsername(s) != username {
+	boundUsername := socketConnUsername(s)
+	if boundUsername != "" && boundUsername != username {
+		return false
+	}
+	if boundUsername == "" {
 		s.SetContext(username)
 	}
 	hasRoom := false
@@ -274,7 +281,11 @@ func validateSocketToken(tokenStr string) (string, bool) {
 	}
 	if claims, ok := tok.Claims.(jwt.MapClaims); ok {
 		if username, ok := claims["username"].(string); ok && username != "" {
-			return username, true
+			version, hasVersion := claims["authVersion"].(float64)
+			currentVersion, exists := config.GetUserAuthVersion(username)
+			if exists && hasVersion && int64(version) == currentVersion {
+				return username, true
+			}
 		}
 	}
 	return "", false

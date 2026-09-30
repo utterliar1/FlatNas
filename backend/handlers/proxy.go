@@ -16,6 +16,8 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+const maxWallpaperResponseBytes = 20 << 20
+
 func shouldDropProxyResponseHeader(header string) bool {
 	switch strings.ToLower(strings.TrimSpace(header)) {
 	case "content-security-policy",
@@ -30,45 +32,23 @@ func shouldDropProxyResponseHeader(header string) bool {
 		"permissions-policy",
 		"clear-site-data",
 		"report-to",
-		"nel":
+		"nel",
+		"set-cookie",
+		"set-cookie2",
+		"www-authenticate",
+		"authorization",
+		"connection",
+		"keep-alive",
+		"proxy-authenticate",
+		"proxy-authorization",
+		"te",
+		"trailer",
+		"transfer-encoding",
+		"upgrade":
 		return true
 	default:
 		return false
 	}
-}
-
-func isAllowedWallpaperHost(host string) bool {
-	host = strings.TrimSpace(strings.ToLower(host))
-	if host == "" {
-		return false
-	}
-	raw := strings.TrimSpace(os.Getenv("WALLPAPER_WHITELIST"))
-	presets := []string{"bing.biturl.top", "picsum.photos", "www.loliapi.com", "loliapi.com"}
-	list := make([]string, 0, len(presets))
-	list = append(list, presets...)
-	if raw != "" {
-		for _, part := range strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == '\n' || r == ';' }) {
-			v := strings.TrimSpace(strings.ToLower(part))
-			if v != "" {
-				list = append(list, v)
-			}
-		}
-	}
-	for _, p := range list {
-		if p == "" {
-			continue
-		}
-		if host == p {
-			return true
-		}
-		if strings.HasSuffix(host, "."+p) {
-			return true
-		}
-		if strings.HasPrefix(host, p) {
-			return true
-		}
-	}
-	return false
 }
 
 func ProxyWallpaper(c *gin.Context) {
@@ -81,7 +61,7 @@ func ProxyWallpaper(c *gin.Context) {
 	}
 
 	parsed, err := url.Parse(targetURL)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
 		return
 	}
@@ -90,7 +70,7 @@ func ProxyWallpaper(c *gin.Context) {
 		return
 	}
 	h := parsed.Hostname()
-	if IsBlockedHost(h) && !isAllowedWallpaperHost(h) {
+	if IsBlockedHost(h) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Target host is not allowed"})
 		return
 	}
@@ -107,11 +87,8 @@ func ProxyWallpaper(c *gin.Context) {
 
 	// Reuse shared client or use a dedicated global one if needed.
 	// For now, let's use the shared proxy client to support environments behind proxy.
-	client, err := getSharedProxyClient()
-	if err != nil {
-		// Fallback to direct client if proxy setup fails, though unlikely
-		client = &http.Client{Timeout: 10 * time.Second}
-	}
+	client := newSafeHTTPClient(10 * time.Second)
+	client = cloneProxyClientWithoutRedirects(client)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -135,7 +112,7 @@ func ProxyWallpaper(c *gin.Context) {
 	}
 
 	c.Status(resp.StatusCode)
-	_, err = io.Copy(c.Writer, resp.Body)
+	_, err = io.Copy(c.Writer, io.LimitReader(resp.Body, maxWallpaperResponseBytes))
 	if err != nil {
 		fmt.Printf("Error streaming response: %v\n", err)
 	}
@@ -157,7 +134,7 @@ func ProxyRequest(c *gin.Context) {
 		return
 	}
 	parsed, err := url.Parse(targetURL)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
 		return
 	}
@@ -181,9 +158,14 @@ func ProxyRequest(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
 		return
 	}
+	allowedRequestHeaders := map[string]bool{
+		"Accept": true, "Accept-Encoding": true, "Accept-Language": true,
+		"Content-Type": true, "If-Modified-Since": true, "If-None-Match": true,
+		"Range": true, "User-Agent": true,
+	}
 	for k, v := range c.Request.Header {
 		key := http.CanonicalHeaderKey(k)
-		if key == "Host" || key == "Content-Length" {
+		if !allowedRequestHeaders[key] {
 			continue
 		}
 		for _, vv := range v {
@@ -194,17 +176,27 @@ func ProxyRequest(c *gin.Context) {
 		req.Header.Set("User-Agent", "FlatNas/1.0")
 	}
 
-	client, err := buildProxyClient()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Proxy unavailable"})
-		return
-	}
+	client := newSafeHTTPClient(20 * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to fetch upstream URL"})
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		location := resp.Header.Get("Location")
+		if location == "" {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Upstream redirect is not allowed"})
+			return
+		}
+		redirectURL, err := parsed.Parse(location)
+		if err != nil || (redirectURL.Scheme != "http" && redirectURL.Scheme != "https") || IsBlockedHost(redirectURL.Hostname()) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Upstream redirect target is not allowed"})
+			return
+		}
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Upstream redirect is not allowed"})
+		return
+	}
 
 	for k, v := range resp.Header {
 		if shouldDropProxyResponseHeader(k) {
@@ -225,6 +217,89 @@ func ProxyRequest(c *gin.Context) {
 	if err != nil {
 		fmt.Printf("Error streaming response: %v\n", err)
 	}
+}
+
+func cloneProxyClientWithoutRedirects(client *http.Client) *http.Client {
+	if client == nil {
+		return newSafeHTTPClient(20 * time.Second)
+	}
+	clone := *client
+	clone.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	var transport *http.Transport
+	if existing, ok := client.Transport.(*http.Transport); ok {
+		transport = existing.Clone()
+	} else if client.Transport == nil {
+		transport = (&http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 10,
+			IdleConnTimeout:     90 * time.Second,
+		}).Clone()
+	}
+	if transport != nil {
+		if transport.Proxy == nil {
+			transport.DialContext = safeProxyDialContext(transport.DialContext)
+		}
+		clone.Transport = transport
+	}
+	return &clone
+}
+
+func newSafeHTTPClient(timeout time.Duration) *http.Client {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+	}
+	transport.DialContext = safeProxyDialContext(nil)
+	return cloneProxyClientWithoutRedirects(&http.Client{Timeout: timeout, Transport: transport})
+}
+
+func safeProxyDialContext(parentDial func(context.Context, string, string) (net.Conn, error)) func(context.Context, string, string) (net.Conn, error) {
+	dialer := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+		ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		if err != nil || len(ips) == 0 {
+			return nil, fmt.Errorf("target host resolution failed")
+		}
+		for _, resolved := range ips {
+			if isBlockedIP(resolved.IP) {
+				return nil, fmt.Errorf("target host is not allowed")
+			}
+		}
+		if parentDial != nil {
+			return parentDial(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+		}
+		return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+	}
+}
+
+type safeProxyDialer struct {
+	dialer proxy.Dialer
+}
+
+func (d safeProxyDialer) Dial(network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil || len(ips) == 0 {
+		return nil, fmt.Errorf("target host resolution failed")
+	}
+	for _, resolved := range ips {
+		if isBlockedIP(resolved.IP) {
+			return nil, fmt.Errorf("target host is not allowed")
+		}
+	}
+	return d.dialer.Dial(network, net.JoinHostPort(ips[0].IP.String(), port))
 }
 
 func getProxyURL() (*url.URL, error) {
@@ -310,7 +385,7 @@ func getSharedProxyClient() (*http.Client, error) {
 	}
 
 	if proxyURL == nil {
-		newClient := &http.Client{Timeout: 20 * time.Second, Transport: transport}
+		newClient := cloneProxyClientWithoutRedirects(&http.Client{Timeout: 20 * time.Second, Transport: transport})
 		globalProxyClient = newClient
 		globalProxyURLStr = ""
 		return newClient, nil
@@ -324,14 +399,15 @@ func getSharedProxyClient() (*http.Client, error) {
 		if err != nil {
 			return nil, err
 		}
+		safeDialer := safeProxyDialer{dialer: dialer}
 		transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dialer.Dial(network, addr)
+			return safeDialer.Dial(network, addr)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported proxy protocol")
 	}
 
-	newClient := &http.Client{Timeout: 20 * time.Second, Transport: transport}
+	newClient := cloneProxyClientWithoutRedirects(&http.Client{Timeout: 20 * time.Second, Transport: transport})
 	globalProxyClient = newClient
 	globalProxyURLStr = currentURLStr
 	return newClient, nil
@@ -364,6 +440,20 @@ func IsBlockedHost(host string) bool {
 		}
 	}
 	return false
+}
+
+func validateExternalHTTPURL(raw string) (*url.URL, error) {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed.Scheme == "" || parsed.Hostname() == "" || parsed.User != nil {
+		return nil, fmt.Errorf("invalid URL")
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, fmt.Errorf("unsupported URL scheme")
+	}
+	if IsBlockedHost(parsed.Hostname()) {
+		return nil, fmt.Errorf("target host is not allowed")
+	}
+	return parsed, nil
 }
 
 func isBlockedIP(ip net.IP) bool {

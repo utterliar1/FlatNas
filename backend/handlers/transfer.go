@@ -93,24 +93,61 @@ func parseThumbSize(raw string) (int, bool) {
 	}
 }
 
+func transferOwner(filename string) (string, bool) {
+	var data models.TransferData
+	if err := utils.ReadJSON(getTransferIndexFile(), &data); err != nil {
+		return "", false
+	}
+	for _, item := range data.Items {
+		if item.Type == "file" && item.File != nil && filepath.Base(item.File.Url) == filename {
+			return item.Sender, true
+		}
+	}
+	return "", false
+}
+
 func authorizeTransferAccess(c *gin.Context, filename string) bool {
+	owner, found := transferOwner(filename)
+	if !found {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return false
+	}
 	tokenStr := strings.TrimSpace(c.Query("token"))
 	if tokenStr != "" {
 		claims := &DownloadClaims{}
 		tok, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(config.GetSecretKeyString()), nil
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
-		if err == nil && tok != nil && tok.Valid && claims.Filename == filename {
+		if err == nil && tok != nil && tok.Valid && claims.Subject == "download" && claims.Filename == filename &&
+			(claims.Username == owner || claims.Username == "admin") {
 			return true
 		}
 	}
 
-	if c.GetString("username") != "" {
+	username := c.GetString("username")
+	if username == owner || username == "admin" {
 		return true
 	}
 
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 	return false
+}
+
+const (
+	maxUploadFileBytes = int64(2 << 30)
+	maxUploadChunkBytes = int64(16 << 20)
+	maxUploadChunks = 4096
+	maxUploadSessionAge = 24 * time.Hour
+)
+
+func validUploadSession(session UploadSession) bool {
+	if session.Size <= 0 || session.Size > maxUploadFileBytes || session.ChunkSize <= 0 || session.ChunkSize > maxUploadChunkBytes ||
+		session.TotalChunks <= 0 || session.TotalChunks > maxUploadChunks ||
+		session.TotalChunks != int((session.Size+session.ChunkSize-1)/session.ChunkSize) || session.CreatedAt <= 0 {
+		return false
+	}
+	createdAt := time.UnixMilli(session.CreatedAt)
+	return !createdAt.After(time.Now().Add(5*time.Minute)) && time.Since(createdAt) <= maxUploadSessionAge
 }
 
 func calcThumbBounds(src image.Image, maxEdge int) image.Rectangle {
@@ -352,11 +389,23 @@ func UploadInit(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid chunk size or file size"})
 		return
 	}
+	if req.Size > maxUploadFileBytes || req.ChunkSize > maxUploadChunkBytes {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File or chunk is too large"})
+		return
+	}
+	if strings.TrimSpace(req.FileName) == "" || len(req.FileName) > 255 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file name"})
+		return
+	}
 
 	username := c.GetString("username")
 	uploadId := fmt.Sprintf("%x", time.Now().UnixNano()) // Simple ID
 
 	totalChunks := int((req.Size + req.ChunkSize - 1) / req.ChunkSize)
+	if totalChunks <= 0 || totalChunks > maxUploadChunks {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Too many chunks"})
+		return
+	}
 
 	session := UploadSession{
 		UploadID:    uploadId,
@@ -415,6 +464,10 @@ func UploadChunk(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 		return
 	}
+	if !validUploadSession(session) {
+		c.JSON(http.StatusGone, gin.H{"error": "Upload session expired"})
+		return
+	}
 	if index >= session.TotalChunks {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid index"})
 		return
@@ -423,6 +476,14 @@ func UploadChunk(c *gin.Context) {
 	file, err := c.FormFile("chunk")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file"})
+		return
+	}
+	expectedSize := session.ChunkSize
+	if index == session.TotalChunks-1 {
+		expectedSize = session.Size - session.ChunkSize*int64(session.TotalChunks-1)
+	}
+	if expectedSize <= 0 || file.Size != expectedSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid chunk size"})
 		return
 	}
 
@@ -504,9 +565,14 @@ func UploadComplete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid upload session"})
 		return
 	}
+	if !validUploadSession(session) {
+		c.JSON(http.StatusGone, gin.H{"error": "Upload session expired or invalid"})
+		return
+	}
 
 	// Assemble
 	chunkDir := filepath.Join(userDir, req.UploadId+"_chunks")
+	var assembledSize int64
 
 	// Use random filename to prevent guessing
 	randBytes := make([]byte, 16)
@@ -535,14 +601,27 @@ func UploadComplete(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Missing chunk %d", i)})
 			return
 		}
-		_, err = io.Copy(outFile, in)
+		written, copyErr := io.Copy(outFile, in)
 		in.Close()
-		if err != nil {
+		if copyErr != nil {
 			outFile.Close()
 			os.Remove(finalPath)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assemble file"})
 			return
 		}
+		assembledSize += written
+		if assembledSize > session.Size {
+			outFile.Close()
+			os.Remove(finalPath)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Uploaded file exceeds declared size"})
+			return
+		}
+	}
+	if assembledSize != session.Size {
+		outFile.Close()
+		os.Remove(finalPath)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Uploaded file size does not match declaration"})
+		return
 	}
 
 	// Cleanup
@@ -673,6 +752,11 @@ func DownloadToken(c *gin.Context) {
 	}
 	if _, err := os.Stat(filepath.Join(getUploadsDir(), name)); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return
+	}
+	owner, found := transferOwner(name)
+	if !found || (owner != username && username != "admin") {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 		return
 	}
 	claims := DownloadClaims{

@@ -262,7 +262,7 @@ func GetAmapWeather(c *gin.Context) {
 
 	client, err := getSharedProxyClient()
 	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = newSafeHTTPClient(10 * time.Second)
 	}
 	resp, err := client.Get(targetURL)
 	if err != nil {
@@ -314,15 +314,21 @@ func proxyRequest(c *gin.Context, targetURL string) {
 		return
 	}
 
-	// Copy headers
+	// Forward only headers that are meaningful to the upstream API.
+	allowedHeaders := map[string]bool{
+		"Accept": true, "Accept-Encoding": true, "Accept-Language": true,
+		"Content-Type": true, "User-Agent": true,
+	}
 	for k, v := range c.Request.Header {
-		req.Header[k] = v
+		if allowedHeaders[http.CanonicalHeaderKey(k)] {
+			req.Header[k] = v
+		}
 	}
 
 	// Execute request
 	client, err := getSharedProxyClient()
 	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = newSafeHTTPClient(10 * time.Second)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -474,7 +480,7 @@ func qweatherGeoCode(city, privateKey, projectID, keyID string) (locationID, cit
 
 	client, err := getSharedProxyClient()
 	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = newSafeHTTPClient(10 * time.Second)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -508,7 +514,7 @@ func fetchQWeather(city, privateKey, projectID, keyID string) (*WeatherData, err
 
 	client, err := getSharedProxyClient()
 	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = newSafeHTTPClient(10 * time.Second)
 	}
 
 	nowURL := fmt.Sprintf("https://devapi.qweather.com/v7/weather/now?location=%s", locationID)
@@ -634,7 +640,7 @@ func fetchOpenMeteoWithGeoCache(city string, geoCache *GeocodingCache) (*Weather
 func geocodeCity(city string) (*GeoCoord, error) {
 	client, err := getSharedProxyClient()
 	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = newSafeHTTPClient(10 * time.Second)
 	}
 	candidates := buildGeocodingCandidates(city)
 	if len(candidates) == 0 {
@@ -726,7 +732,7 @@ func geocodeWithLang(city, lang string, client *http.Client) (*GeoCoord, error) 
 func fetchOpenMeteoWeatherData(lat, lon float64, apiName, displayName string) (*WeatherData, error) {
 	client, err := getSharedProxyClient()
 	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = newSafeHTTPClient(10 * time.Second)
 	}
 
 	weatherURL := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%f&longitude=%f&current=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto", lat, lon)
@@ -866,7 +872,7 @@ func fetchAmap(city, key string) (*WeatherData, error) {
 	liveURL := fmt.Sprintf("https://restapi.amap.com/v3/weather/weatherInfo?city=%s&key=%s&extensions=base", url.QueryEscape(city), key)
 	client, err := getSharedProxyClient()
 	if err != nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = newSafeHTTPClient(10 * time.Second)
 	}
 
 	respLive, err := client.Get(liveURL)

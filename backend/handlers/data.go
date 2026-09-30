@@ -1070,6 +1070,7 @@ func SaveData(c *gin.Context) {
 			return
 		}
 		payload["password"] = hashed
+		payload["authVersion"] = normalizeVersion(existingData["authVersion"]) + 1
 	} else {
 		// Keep existing password
 		if existingPwd, ok := existingData["password"]; ok {

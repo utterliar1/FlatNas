@@ -3,6 +3,7 @@ package models
 type User struct {
 	Username      string    `json:"username"`
 	Password      string    `json:"password"` // Hashed
+	AuthVersion   int64     `json:"authVersion,omitempty"`
 	Groups        []Group   `json:"groups"`
 	Widgets       []Widget  `json:"widgets"`
 	AppConfig     AppConfig `json:"appConfig"`
