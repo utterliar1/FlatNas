@@ -29,7 +29,8 @@
     "jsx": "preserve",
     "useDefineForClassFields": true,
     "types": [
-      "vite/client"
+      "vite/client",
+      "node"
     ],
     "noEmit": true,
     "skipLibCheck": true
