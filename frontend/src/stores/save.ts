@@ -552,10 +552,14 @@ export const useSaveStore = defineStore("save", () => {
   };
 
   const discardOfflineQueue = async (fetchData: () => Promise<void>) => {
+    await clearOfflineQueue();
+    await fetchData();
+  };
+
+  const clearOfflineQueue = async () => {
     await offlineQueue.clear();
     offlineQueueCount.value = 0;
     offlineQueueConflictState.value = { show: false, item: null, serverVersion: 0 };
-    await fetchData();
   };
 
   return {
@@ -582,6 +586,7 @@ export const useSaveStore = defineStore("save", () => {
     resolveOfflineQueueConflict,
     triggerOfflineQueueReplay,
     discardOfflineQueue,
+    clearOfflineQueue,
     saveCustomScripts,
   };
 });

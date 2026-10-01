@@ -17,6 +17,9 @@ const SERVER_SNAPSHOT_RETRY_COUNT = 3;
 const SERVER_SNAPSHOT_RETRY_DELAY_MS = 1000;
 const SERVER_SNAPSHOT_TIMEOUT_MS = 60000;
 
+const stripProtectedGroups = (groups: unknown) =>
+  Array.isArray(groups) ? groups.filter((group) => !(group as NavGroup | null)?.protected) : groups;
+
 export const useCacheStore = defineStore("cache", () => {
   const auth = useAuthStore();
   const widgetsStore = useWidgetsStore();
@@ -47,9 +50,12 @@ export const useCacheStore = defineStore("cache", () => {
       const cacheWidgets = Array.isArray(data.widgets)
         ? (data.widgets as WidgetConfig[]).map((widget) => stripWidgetUiState(widget))
         : data.widgets;
+      const cacheSystemConfig =
+        (data.systemConfig || configStore.systemConfig) as Record<string, unknown>;
+      const protectionEnabled = cacheSystemConfig.hasAccessCode !== false;
       const cacheData = {
-        groups: data.groups,
-        sharedGroups: data.sharedGroups,
+        groups: protectionEnabled ? stripProtectedGroups(data.groups) : data.groups,
+        sharedGroups: protectionEnabled ? stripProtectedGroups(data.sharedGroups) : data.sharedGroups,
         groupOrder: data.groupOrder,
         widgets: cacheWidgets,
         appConfig: stripForceNetworkMode(
@@ -57,7 +63,10 @@ export const useCacheStore = defineStore("cache", () => {
         ),
         rssFeeds: data.rssFeeds,
         rssCategories: data.rssCategories,
-        systemConfig: data.systemConfig,
+        systemConfig: {
+          ...cacheSystemConfig,
+          accessUnlocked: false,
+        },
         username: authMode === "single" ? "admin" : data.username || auth.username,
         version: data.version,
         timestamp: Date.now(),
@@ -77,14 +86,29 @@ export const useCacheStore = defineStore("cache", () => {
       const json = localStorage.getItem(CACHE_KEY);
       if (!json) return false;
       const cache = JSON.parse(json);
+      const protectionEnabled = cache.systemConfig?.hasAccessCode !== false;
+      if (protectionEnabled) {
+        cache.groups = stripProtectedGroups(cache.groups);
+        cache.sharedGroups = stripProtectedGroups(cache.sharedGroups);
+      }
+      if (cache.systemConfig) cache.systemConfig.accessUnlocked = false;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
 
       const cachedUser = cache.username || "";
       const currentUser = auth.username || "";
       const isMatch = cachedUser === currentUser || (currentUser === "" && cachedUser === "admin");
       if (!isMatch) return false;
 
-      if (cache.groups) groupsStore.groups = cache.groups;
-      if (Array.isArray(cache.sharedGroups)) groupsStore.sharedGroups = cache.sharedGroups;
+      if (cache.groups) {
+        groupsStore.groups = protectionEnabled
+          ? stripProtectedGroups(cache.groups) as NavGroup[]
+          : cache.groups;
+      }
+      if (Array.isArray(cache.sharedGroups)) {
+        groupsStore.sharedGroups = protectionEnabled
+          ? stripProtectedGroups(cache.sharedGroups) as NavGroup[]
+          : cache.sharedGroups;
+      }
       if (Array.isArray(cache.groupOrder)) groupsStore.groupOrder = cache.groupOrder;
       if (cache.widgets) {
         widgetsStore.applyServerWidgets(
@@ -108,7 +132,9 @@ export const useCacheStore = defineStore("cache", () => {
       }
       if (Array.isArray(cache.rssFeeds)) rssFeedsRef.value = cache.rssFeeds;
       if (Array.isArray(cache.rssCategories)) rssCategoriesRef.value = cache.rssCategories;
-      if (cache.systemConfig) configStore.systemConfig = cache.systemConfig;
+      if (cache.systemConfig) {
+        configStore.systemConfig = { ...cache.systemConfig, accessUnlocked: false };
+      }
       if (typeof cache.version !== "undefined") {
         dataVersionRef.value = normalizeVersion(cache.version);
       }
@@ -123,6 +149,21 @@ export const useCacheStore = defineStore("cache", () => {
     if (hasServerSnapshot.value) return false;
     if (cacheLoadedAt.value === null) return false;
     return Date.now() - cacheLoadedAt.value < CACHE_WRITE_GUARD_MS;
+  };
+
+  const removeProtectedGroupsFromCache = () => {
+    try {
+      const json = localStorage.getItem(CACHE_KEY);
+      if (!json) return;
+      const cache = JSON.parse(json);
+      cache.groups = stripProtectedGroups(cache.groups);
+      cache.sharedGroups = stripProtectedGroups(cache.sharedGroups);
+      if (cache.systemConfig) cache.systemConfig.accessUnlocked = false;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch (e) {
+      console.warn("Cache lock cleanup failed", e);
+      localStorage.removeItem(CACHE_KEY);
+    }
   };
 
   const markServerSnapshotReady = () => {
@@ -157,16 +198,14 @@ export const useCacheStore = defineStore("cache", () => {
     try {
       const res = await fetchWithTimeout("/api/data", { headers: getHeaders() });
       if (res.status === 304) {
-        if (!isClientReady.value) {
-          const reloadRes = await fetchWithTimeout("/api/data", {
-            headers: getHeaders(),
-            cache: "reload",
-          });
-          if (!reloadRes.ok) throw new Error(`Init reload failed with status ${reloadRes.status}`);
-          const reloadData = await reloadRes.json();
-          if (reloadData.systemConfig) configStore.systemConfig = reloadData.systemConfig;
-          handleDataUpdate(reloadData);
-        }
+        const reloadRes = await fetchWithTimeout("/api/data", {
+          headers: getHeaders(),
+          cache: "reload",
+        });
+        if (!reloadRes.ok) throw new Error(`Init reload failed with status ${reloadRes.status}`);
+        const reloadData = await reloadRes.json();
+        if (reloadData.systemConfig) configStore.systemConfig = reloadData.systemConfig;
+        handleDataUpdate(reloadData);
         updateLayout();
         markServerSnapshotReady();
         return;
@@ -190,6 +229,7 @@ export const useCacheStore = defineStore("cache", () => {
     isLoadingSnapshot,
     serverSnapshotRetryTimer,
     saveToCache,
+    removeProtectedGroupsFromCache,
     loadFromCache,
     isCacheWriteGuardActive,
     markServerSnapshotReady,

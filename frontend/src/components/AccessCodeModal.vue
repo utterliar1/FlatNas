@@ -17,8 +17,6 @@ const props = defineProps<{
 const emit = defineEmits(["update:show", "changed"]);
 const store = useMainStore();
 
-const UNLOCK_KEY = "flatnas_access_unlocked";
-
 const unlocked = ref(false);
 const code = ref("");
 const confirmCode = ref("");
@@ -50,12 +48,8 @@ watch(
   () => props.show,
   (v) => {
     if (v) {
-      // 已解锁状态以服务端实时判定为准（accessUnlocked 依据解锁 Cookie 计算），
-      // sessionStorage 标记仅作回退（老版本服务端无该字段时）。
-      unlocked.value =
-        store.systemConfig.accessUnlocked === true ||
-        (typeof store.systemConfig.accessUnlocked === "undefined" &&
-          sessionStorage.getItem(UNLOCK_KEY) === "1");
+      // 解锁状态以服务端实时判定为准，不能信任可被浏览器恢复的本地标记。
+      unlocked.value = store.systemConfig.accessUnlocked === true;
       unlockTTL.value = Number(store.systemConfig.accessUnlockTTL ?? 0);
       code.value = "";
       confirmCode.value = "";
@@ -88,7 +82,7 @@ const handleUnlock = async () => {
       body: JSON.stringify({ code: code.value.trim() }),
     });
     if (res.ok) {
-      sessionStorage.setItem(UNLOCK_KEY, "1");
+      store.markAccessUnlocked();
       unlocked.value = true;
       emit("changed");
       close();
@@ -107,8 +101,11 @@ const handleLock = async () => {
   if (busy.value) return;
   busy.value = true;
   try {
-    await fetch("/api/access/lock", { method: "POST" });
-    sessionStorage.removeItem(UNLOCK_KEY);
+    const locked = await store.lockAccess();
+    if (!locked) {
+      showError(t("settings.accessCode.errNetwork"));
+      return;
+    }
     unlocked.value = false;
     emit("changed");
     close();

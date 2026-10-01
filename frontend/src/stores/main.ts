@@ -196,6 +196,8 @@ export const useMainStore = defineStore("main", () => {
   const fetchLuckyStunData = sync.fetchLuckyStunData;
   const init = sync.init;
   const fetchData = sync.fetchData;
+  const markAccessUnlocked = sync.markAccessUnlocked;
+  const lockAccess = sync.lockAccess;
   const saveData = sync.saveData;
   const markDirty = sync.markDirty;
   const resolveConflict = sync.resolveConflict;
@@ -340,6 +342,8 @@ export const useMainStore = defineStore("main", () => {
     fetchLuckyStunData,
     init,
     fetchData,
+    markAccessUnlocked,
+    lockAccess,
     saveData,
     markDirty,
     resolveConflict,

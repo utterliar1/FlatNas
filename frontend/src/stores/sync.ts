@@ -13,6 +13,8 @@ import { useSaveStore } from "./save";
 import { useNetworkStore } from "./network";
 import { toWsUrl } from "@/utils/runtimeUrls";
 
+let accessUnlockedThisRuntime = false;
+
 export const useSyncStore = defineStore("sync", () => {
   const auth = useAuthStore();
   const widgetsStore = useWidgetsStore();
@@ -285,12 +287,32 @@ export const useSyncStore = defineStore("sync", () => {
     syncUsernameFromServer(data, responseRole);
     if (typeof data.version !== "undefined") dataVersion.value = normalizeVersion(data.version);
 
-    if (data.groups) groupsStore.groups = data.groups as any;
+    const incomingSystemConfig = data.systemConfig as {
+      hasAccessCode?: boolean;
+      accessUnlocked?: boolean;
+      accessUnlockTTL?: number;
+    } | undefined;
+    const staleSessionUnlock =
+      incomingSystemConfig?.hasAccessCode === true &&
+      incomingSystemConfig.accessUnlocked === true &&
+      Number(incomingSystemConfig.accessUnlockTTL ?? 0) === 0 &&
+      !accessUnlockedThisRuntime;
+    const mustFilterProtectedGroups =
+      incomingSystemConfig?.hasAccessCode !== false &&
+      (incomingSystemConfig?.accessUnlocked !== true || staleSessionUnlock);
+    if (data.groups) {
+      const groups = data.groups as any[];
+      groupsStore.groups = mustFilterProtectedGroups
+        ? groups.filter((group) => !group?.protected)
+        : groups;
+    }
     else groupsStore.groups = [];
 
     // 共享分组（多用户共同的书签分组）：后端对非管理员用户注入的只读副本
     groupsStore.sharedGroups = Array.isArray(data.sharedGroups)
-      ? (data.sharedGroups as any)
+      ? (mustFilterProtectedGroups
+          ? (data.sharedGroups as any[]).filter((group) => !group?.protected)
+          : (data.sharedGroups as any))
       : [];
 
     // 分组混排顺序偏好：用户个人对「自己的分组 + 只读共享分组」的展示顺序，
@@ -566,6 +588,15 @@ export const useSyncStore = defineStore("sync", () => {
           if (auth.isLogged) doLogout();
           break;
         }
+        case "access_locked": {
+          void applyLocalAccessLock();
+          break;
+        }
+        case "access_unlocked": {
+          accessUnlockedThisRuntime = true;
+          void fetchAndProcessData();
+          break;
+        }
       }
     };
     window.addEventListener("beforeunload", () => { bc?.close(); });
@@ -695,8 +726,14 @@ export const useSyncStore = defineStore("sync", () => {
     stopPingCheck();
     stopVersionCheck();
     bc?.postMessage({ type: "logout" });
+    try {
+      await saveStore.clearOfflineQueue();
+    } catch (e) {
+      console.warn("[Logout] offline queue cleanup failed", e);
+    }
     auth.token = "";
     auth.username = "";
+    accessUnlockedThisRuntime = false;
     localStorage.removeItem("flat-nas-token");
     localStorage.removeItem("flat-nas-username");
     localStorage.removeItem("flat-nas-data-cache");
@@ -798,35 +835,58 @@ export const useSyncStore = defineStore("sync", () => {
   };
 
   // ---- 访问码解锁状态校准 ----
-  // 浏览器「启动时恢复会话」会把会话 Cookie 一并还原，导致关闭浏览器后解锁
-  // 残留（前端 sessionStorage 标记已清空，但服务端 Cookie 仍有效，保护分组照常
-  // 下发）。init 完成后以服务端实时判定的 accessUnlocked 为准校准：
-  //   - 持久解锁模式（TTL > 0）：补齐本地标记，弹窗显示「已解锁」；
-  //   - 会话模式（TTL = 0）：本会话无标记 = 残留解锁 → 立即上锁并重拉数据。
-  const ACCESS_UNLOCK_KEY = "flatnas_access_unlocked";
+  // 浏览器启动恢复会话时可能同时恢复会话 Cookie。会话模式下，当前页面运行
+  // 没有成功解锁记录即视为残留解锁，立即上锁并重拉数据。
   const reconcileAccessUnlock = async () => {
     try {
       const sc = configStore.systemConfig as { hasAccessCode?: boolean; accessUnlocked?: boolean; accessUnlockTTL?: number };
       if (!sc?.hasAccessCode || sc.accessUnlocked !== true) return;
-      const flag = sessionStorage.getItem(ACCESS_UNLOCK_KEY) === "1";
-      if (flag) return;
+      if (accessUnlockedThisRuntime) return;
       const ttl = Number(sc.accessUnlockTTL ?? 0);
       if (ttl > 0) {
-        // 持久解锁：Cookie 在有效期内，补齐标记使弹窗状态一致
-        sessionStorage.setItem(ACCESS_UNLOCK_KEY, "1");
         return;
       }
       console.log("[Access] Stale unlocked cookie detected (session restore), locking...");
-      await fetch("/api/access/lock", { method: "POST" });
-      sessionStorage.removeItem(ACCESS_UNLOCK_KEY);
-      // 同步清除本地受保护分组，避免重拉完成前的一瞬闪现
-      isApplyingServerData = true;
-      groupsStore.groups = groupsStore.groups.filter((g: any) => !g?.protected);
-      groupsStore.sharedGroups = (groupsStore.sharedGroups || []).filter((g: any) => !g?.protected);
-      isApplyingServerData = false;
+      if (!(await lockAccess())) return;
       await fetchAndProcessData();
     } catch (e) {
       console.warn("[Access] reconcile failed", e);
+    }
+  };
+
+  const markAccessUnlocked = () => {
+    accessUnlockedThisRuntime = true;
+    bc?.postMessage({ type: "access_unlocked" });
+  };
+
+  async function applyLocalAccessLock() {
+    accessUnlockedThisRuntime = false;
+    isApplyingServerData = true;
+    groupsStore.groups = groupsStore.groups.filter((group: any) => !group?.protected);
+    groupsStore.sharedGroups = groupsStore.sharedGroups.filter((group: any) => !group?.protected);
+    configStore.systemConfig.accessUnlocked = false;
+    cacheStore.removeProtectedGroupsFromCache();
+    try {
+      await saveStore.clearOfflineQueue();
+    } catch (e) {
+      console.warn("[Access] offline queue cleanup failed", e);
+    }
+    nextTick(() => { isApplyingServerData = false; });
+  }
+
+  const lockAccess = async () => {
+    try {
+      // Local cleanup must not prevent the authoritative server-side lock.
+      const res = await fetch("/api/access/lock", { method: "POST" });
+      if (!res.ok) return false;
+      const result = await res.json().catch(() => null);
+      if (result?.unlocked !== false) return false;
+      await applyLocalAccessLock();
+      bc?.postMessage({ type: "access_locked" });
+      return true;
+    } catch (e) {
+      console.warn("[Access] lock request failed", e);
+      return false;
     }
   };
 
@@ -928,6 +988,7 @@ export const useSyncStore = defineStore("sync", () => {
     offlineQueueCount: saveStore.offlineQueueCount, offlineQueueConflictState: saveStore.offlineQueueConflictState,
     resolveOfflineQueueConflict, discardOfflineQueue,
     init, fetchData: fetchAndProcessData, fetchVersionOnly,
+    markAccessUnlocked, lockAccess,
     doLogout,
     syncConfirmModal: saveStore.syncConfirmModal, confirmSyncFromServer, dismissSyncConfirm,
     lastPingAt: networkStore.lastPingAt, isNetworkSyncActive: networkStore.isNetworkSyncActive,
