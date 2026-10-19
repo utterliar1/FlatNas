@@ -203,6 +203,11 @@ init_data_dir() {
     if [ -z "$(ls -A "${dest_path}" 2>/dev/null)" ]; then
        log_info "初始化 ${src_name} 从 ${src_path} ..."
        cp -r "${src_path}/." "${dest_path}/"
+       # 密钥必须由本机首次启动时随机生成，绝不沿用安装包里的 secret.key
+       # （共用同一 JWT 密钥 = 任何人可伪造管理员 token）。升级不会触碰已有密钥。
+       if [ "${src_name}" = "data" ]; then
+         rm -f "${dest_path}/secret.key" "${dest_path}/data.json.bak"
+       fi
     else
        log_info "保留现有 ${src_name} (目标非空)"
     fi
@@ -440,10 +445,10 @@ install_flow() {
   fi
 
   if [ ! -f "${BIN_SRC}" ]; then
-    fail_with_tip "未找到二进制文件: ${BIN_SRC}" "请确保 debian/ 目录下包含 flatnas-server"
+    fail_with_tip "未找到二进制文件: ${BIN_SRC}" "仓库不再跟踪二进制；请从 GitHub Releases 下载 flatnas-<arch>.zip 解压后在本目录运行"
   fi
   if [ ! -d "${SERVER_SRC}/public" ]; then
-    fail_with_tip "未找到前端静态目录: ${SERVER_SRC}/public" "请确保 debian/server/public 目录存在"
+    fail_with_tip "未找到前端静态目录: ${SERVER_SRC}/public" "仓库不再跟踪前端产物；请从 GitHub Releases 下载 flatnas-<arch>.zip 解压后在本目录运行"
   fi
 
   echo "=============================="

@@ -1,0 +1,148 @@
+name: Release
+
+# 打 tag（v*）时产出：flatnas-amd64.zip / flatnas-arm64.zip + sha256sums.txt
+#
+# 为什么需要它：
+#   1) deploy_debian.sh 依赖 Release 里的 zip，zip 内是 flatnas-server + server/public；
+#   2) 仓库不再跟踪二进制与前端产物（见 .gitignore），构建产物必须由这里产出；
+#   3) sha256sums.txt 供安装脚本做完整性校验。
+#
+# zip 结构（deploy_debian.sh 会在 maxdepth 2 内找 flatnas-server，再取同级 server/public）：
+#   flatnas/flatnas-server
+#   flatnas/server/public/...
+#   flatnas/server/{data,music,PC,APP,doc}/.gitkeep
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci --prefer-offline --no-audit --timeout=300000
+
+      - name: Build (outDir = dist)
+        working-directory: frontend
+        env:
+          VITE_DOCKER_BUILD: "1"
+          TAILWIND_DISABLE_NATIVE: "1"
+        run: npm run build-only
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 3
+
+  package:
+    name: Package ${{ matrix.arch }}
+    needs: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            goarch: amd64
+          - arch: arm64
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Build binary
+        working-directory: backend
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -trimpath -ldflags="-s -w" -o flatnas-server .
+
+      - name: Assemble zip
+        run: |
+          set -euo pipefail
+          PKG="flatnas"
+          rm -rf "$PKG" "flatnas-${{ matrix.arch }}.zip"
+          mkdir -p "$PKG/server"
+          cp backend/flatnas-server "$PKG/flatnas-server"
+          chmod +x "$PKG/flatnas-server"
+          cp -a frontend/dist "$PKG/server/public"
+          for d in data music PC APP doc; do
+            mkdir -p "$PKG/server/$d"
+            touch "$PKG/server/$d/.gitkeep"
+          done
+          cat > "$PKG/README.txt" <<'EOF'
+          FlatNas ${{ github.ref_name }} (${{ matrix.arch }})
+
+          安装：
+            1) 同目录下执行 ./flatnas-server（默认监听 0.0.0.0:3000）
+            2) 或使用 deploy_debian.sh / manage.sh 以 systemd 方式部署
+          数据：全部保存在 ./server/data，备份即拷贝该目录。
+          首次启动会随机生成本机 secret.key，请勿把它复制到别的机器。
+          EOF
+          zip -qr "flatnas-${{ matrix.arch }}.zip" "$PKG"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zip-${{ matrix.arch }}
+          path: flatnas-${{ matrix.arch }}.zip
+          retention-days: 3
+
+  release:
+    name: Publish release
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: zip-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate sha256sums.txt
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          sha256sum flatnas-*.zip > sha256sums.txt
+          cat sha256sums.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/flatnas-amd64.zip
+            dist/flatnas-arm64.zip
+            dist/sha256sums.txt
+          generate_release_notes: true
+          fail_on_unmatched_files: true

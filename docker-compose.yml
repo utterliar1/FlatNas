@@ -2,7 +2,11 @@ version: "3.8"
 
 services:
   flatnas:
-    image: qdnas/flatnas:latest
+    # 本仓库（定制版）的镜像由 CI 构建并发布到 GHCR，amd64/arm64 双架构：
+    #   ghcr.io/utterliar1/flatnas:latest
+    # 上游原版是 qdnas/flatnas（含 Docker 管理 / 宿主机监控，与本分支行为不同），
+    # 请勿混用。
+    image: ghcr.io/utterliar1/flatnas:latest
     container_name: flatnas
     restart: unless-stopped
     ports:

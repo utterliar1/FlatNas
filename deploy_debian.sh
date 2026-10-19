@@ -12,16 +12,22 @@ IFS=$'\n\t'
 #
 # 使用方式：
 #   1. 下载脚本：
-#      wget -O deploy_debian.sh https://raw.githubusercontent.com/Garry-QD/FlatNas/main/deploy_debian.sh
+#      wget -O deploy_debian.sh https://raw.githubusercontent.com/utterliar1/FlatNas/main/deploy_debian.sh
 #   2. 运行安装：
 #      chmod +x deploy_debian.sh
 #      sudo ./deploy_debian.sh
 #
 # 前置要求：
-#   - 确保 GitHub 仓库 (Garry-QD/FlatNas) 发布了包含 flatnas-amd64.zip / flatnas-arm64.zip 的 Release。
+#   - 仓库 (utterliar1/FlatNas) 已发布包含 flatnas-amd64.zip / flatnas-arm64.zip 与
+#     sha256sums.txt 的 Release；如需从上游原版安装，可用 FLATNAS_REPO=Garry-QD/FlatNas 覆盖。
 #   - zip 包应包含 flatnas-server 二进制和 server/public 目录。
 
 MODE="${1:-install}"
+
+# 发布来源：默认本仓库（定制版）。上游原版没有共享分组 / 访问码 / 三方合并，
+# 混用会得到与文档不符的行为，故不再默认指向上游。
+REPO_SLUG="${FLATNAS_REPO:-utterliar1/FlatNas}"
+DOWNLOAD_BASE="https://github.com/${REPO_SLUG}/releases/latest/download"
 
 # ==========================================
 # 基础配置与变量
@@ -213,6 +219,12 @@ init_data_dir() {
     if [ -z "$(ls -A "${dest_path}" 2>/dev/null)" ]; then
        log_info "初始化 ${src_name} 从 ${src_path} ..."
        cp -r "${src_path}/." "${dest_path}/"
+       # 密钥必须由本机在首次启动时随机生成：安装包里带 secret.key 会让所有实例
+       # 共用同一 JWT 签名密钥，任何人都能伪造管理员 token。仅在全新安装时清理，
+       # 升级不会动已有实例的密钥（避免把所有人踢下线）。
+       if [ "${src_name}" = "data" ]; then
+         rm -f "${dest_path}/secret.key" "${dest_path}/data.json.bak"
+       fi
     else
        log_info "保留现有 ${src_name} (目标非空)"
     fi
@@ -568,12 +580,29 @@ install_flow() {
   # 注册清理函数，确保退出时删除临时目录
   trap 'rm -rf "${tmp_dir}"' EXIT
 
-  local download_url="https://github.com/Garry-QD/FlatNas/releases/latest/download/flatnas-${ARCH}.zip"
+  local download_url="${DOWNLOAD_BASE}/flatnas-${ARCH}.zip"
   local zip_file="${tmp_dir}/flatnas-${ARCH}.zip"
-  
+  local sums_file="${tmp_dir}/sha256sums.txt"
+
   log_info "下载: ${download_url}"
   if ! wget -O "${zip_file}" "${download_url}"; then
-    fail_with_tip "下载失败，请检查网络或确认 GitHub Release 是否存在 flatnas-${ARCH}.zip"
+    fail_with_tip "下载失败，请检查网络或确认 ${REPO_SLUG} 的 Release 是否存在 flatnas-${ARCH}.zip"
+  fi
+
+  # 完整性校验：Release 一并发布 sha256sums.txt；旧发布没有该文件时只告警，不阻断安装
+  if wget -q -O "${sums_file}" "${DOWNLOAD_BASE}/sha256sums.txt" 2>/dev/null && [ -s "${sums_file}" ]; then
+    local expected actual
+    expected="$(awk -v f="flatnas-${ARCH}.zip" '$2==f {print $1}' "${sums_file}" | head -n 1)"
+    if [ -z "${expected}" ]; then
+      fail_with_tip "sha256sums.txt 中缺少 flatnas-${ARCH}.zip 的校验值"
+    fi
+    actual="$(sha256sum "${zip_file}" | awk '{print $1}')"
+    if [ "${expected}" != "${actual}" ]; then
+      fail_with_tip "安装包校验失败：期望 ${expected}，实际 ${actual}"
+    fi
+    log_info "sha256 校验通过"
+  else
+    log_warn "未找到 sha256sums.txt，跳过完整性校验"
   fi
   
   log_info "解压资源..."

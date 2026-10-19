@@ -31,6 +31,10 @@ FlatNas 是一个轻量级、高度可定制的**个人导航页与仪表盘**�
 
 > 本仓库是**去广告、去无关功能、并增强多用户与多端可靠性**的定制版，与上游存在明显差异，请勿混用镜像与文档。
 
+> **镜像与发布源**（重要）：本分支的产物只从本仓库发布 ——
+> Docker 镜像 `ghcr.io/utterliar1/flatnas`（amd64 / arm64），二进制与离线包见 [Releases](https://github.com/utterliar1/FlatNas/releases)。
+> 上游原版是 `qdnas/flatnas`，它仍包含本分支已移除的 Docker 管理与宿主机监控，**两者不可互换**。
+
 **新增**
 
 - **共享分组**：管理员可把自己维护的某个分组标记为「共享」，所有已登录用户都会看到该分组的只读副本，复用同一批书签而无需各自维护。
@@ -87,7 +91,7 @@ FlatNas 是一个轻量级、高度可定制的**个人导航页与仪表盘**�
 - **背景设置**：PC 与移动端壁纸分别配置，支持模糊 / 遮罩强度、轮播与昼夜遮罩。
 - **分组卡片背景**：在分组设置中统一配置该组所有卡片背景（图片 / 模糊 / 遮罩）。
 - **访客统计**：页脚显示总访问量、今日访问量及在线时长（需在设置中开启）。
-- **更新提醒**：自动检测 GitHub 最新 Release。
+- **更新提醒**：已移除向第三方仓库发起的版本检查请求（避免外链与隐私泄露），升级请手动查看 Releases。
 
 ![自定义脚本.png](public/自定义脚本.png)
 
@@ -136,7 +140,7 @@ version: "3.8"
 
 services:
   flatnas:
-    image: qdnas/flatnas:latest
+    image: ghcr.io/utterliar1/flatnas:latest
     container_name: flatnas
     restart: unless-stopped
     ports:
@@ -167,19 +171,26 @@ docker run -d \
   -v $(pwd)/PC:/app/server/PC \
   -v $(pwd)/APP:/app/server/APP \
   --name flatnas \
-  qdnas/flatnas:latest
+  ghcr.io/utterliar1/flatnas:latest
 ```
 
 ### 3. 本地二进制（Release 包）
 
+从 [Releases](https://github.com/utterliar1/FlatNas/releases) 下载对应架构的 zip，解压后目录结构为
+`flatnas-server` + `server/public`，直接运行即可：
+
 ```bash
-# 下载对应架构的 flatnas-amd64.zip / flatnas-arm64.zip 并解压到任意目录
 cd /opt/flatnas
+# 可选：校验完整性（Release 同时提供 sha256sums.txt）
+sha256sum -c sha256sums.txt --ignore-missing
 chmod +x flatnas-server
 ./flatnas-server
 ```
 
 访问 `http://<服务器IP>:3000`。
+
+> 首次启动会在 `server/data/secret.key` 随机生成本机 JWT 签名密钥，**不要**把这个文件复制到其他实例，
+> 也不要从别处拷贝一份过来 —— 多台机器共用同一密钥等于互相能伪造登录态。
 
 ### 4. Debian / Ubuntu 脚本部署
 
