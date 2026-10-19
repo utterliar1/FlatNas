@@ -257,7 +257,11 @@ npm run build-only     # 产物输出到 ../server/public
 
 ## ⚡ 全局自定义 JS
 
-在 **设置 → 自定义 JS** 中注入脚本（首次启用需同意安全免责声明）。代码运行在沙箱中，并注入 `ctx` 上下文对象；推荐使用生命周期钩子：
+在 **设置 → 自定义 JS** 中注入脚本（首次启用需同意安全免责声明），并注入 `ctx` 上下文对象；推荐使用生命周期钩子：
+
+> ⚠️ **信任边界**：自定义 JS 以普通 `<script>` 注入页面，运行在本站同源、**等同于站点自身代码**，
+> 可以读写 `localStorage`（含登录 token）并发起任意请求 —— 它不是隔离沙箱。
+> 只粘贴你信任的脚本；不要执行来源不明的代码。
 
 ```javascript
 // @module
@@ -288,6 +292,19 @@ FlatNas/
 ├── deploy_debian.sh / manage.sh
 └── README.md
 ```
+
+## 🚀 维护者：发版流程
+
+仓库不再跟踪二进制与前端产物（见 `.gitignore`），发布包全部由 CI 生成：
+
+1. 更新 `frontend/src/stores/config.ts` 里的 `currentVersion`，与即将打的 tag 保持一致；
+2. 打 tag 并推送：`git tag v1.3.0 && git push origin v1.3.0`；
+3. `.github/workflows/release.yml` 会构建 `flatnas-amd64.zip` / `flatnas-arm64.zip`（内含 `flatnas-server` + `server/public`）
+   并生成 `sha256sums.txt`，自动发布 Release；
+4. `.github/workflows/ci.yml` 同时推送镜像 `ghcr.io/utterliar1/flatnas:latest` 与 `:v1.3.0`（amd64 + arm64）。
+
+`deploy_debian.sh` 默认从本仓库的 `releases/latest` 下载并校验 `sha256sums.txt`；
+需要安装上游原版时可 `FLATNAS_REPO=Garry-QD/FlatNas sudo ./deploy_debian.sh`。
 
 ## 📜 开源协议
 

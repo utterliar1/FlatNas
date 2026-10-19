@@ -134,9 +134,9 @@ func authorizeTransferAccess(c *gin.Context, filename string) bool {
 }
 
 const (
-	maxUploadFileBytes = int64(2 << 30)
+	maxUploadFileBytes  = int64(2 << 30)
 	maxUploadChunkBytes = int64(16 << 20)
-	maxUploadChunks = 4096
+	maxUploadChunks     = 4096
 	maxUploadSessionAge = 24 * time.Hour
 )
 
@@ -1119,5 +1119,69 @@ func syncThumbs() {
 		} else {
 			log.Printf("Thumb sync: generated %d thumbnails", generated)
 		}
+	}
+}
+
+// StartTransferJanitor 定期清理「中途放弃 / 已过期」的分片上传残留。
+// 背景：validUploadSession 只会在请求时拒绝超过 24h 的会话，但磁盘上的
+// <uploadId>_chunks/ 目录与 <uploadId>.json 不会被删除，客户端放弃上传后
+// 这些分片会永久堆积（单个文件可达数 GB）。
+func StartTransferJanitor() {
+	go func() {
+		time.Sleep(30 * time.Second)
+		sweepStaleUploads()
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			sweepStaleUploads()
+		}
+	}()
+}
+
+func sweepStaleUploads() {
+	// 两种布局：新版 users/<用户名>/uploads/ 与旧版扁平 uploads/
+	roots := []string{getUploadsDir(), filepath.Join(getTransferDir(), "users")}
+	cutoff := time.Now().Add(-maxUploadSessionAge)
+	removedDirs, removedSessions := 0, 0
+
+	for _, root := range roots {
+		dirs := []string{root}
+		if entries, err := os.ReadDir(root); err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					dirs = append(dirs, filepath.Join(root, entry.Name(), "uploads"))
+				}
+			}
+		}
+		for _, dir := range dirs {
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				continue
+			}
+			for _, entry := range entries {
+				name := entry.Name()
+				info, err := entry.Info()
+				// mtime 新于阈值的视为仍在进行中的上传，绝不触碰
+				if err != nil || info.ModTime().After(cutoff) {
+					continue
+				}
+				full := filepath.Join(dir, name)
+				switch {
+				case entry.IsDir() && strings.HasSuffix(name, "_chunks"):
+					if os.RemoveAll(full) == nil {
+						removedDirs++
+					}
+				case !entry.IsDir() && strings.HasSuffix(name, ".json"):
+					// 只清理合法上传 ID 对应的会话文件，避免误删同目录其他 JSON
+					if isValidUploadID(strings.TrimSuffix(name, ".json")) && os.Remove(full) == nil {
+						removedSessions++
+					}
+				}
+			}
+		}
+	}
+
+	if removedDirs > 0 || removedSessions > 0 {
+		log.Printf("[transfer] 清理过期分片上传: chunk_dirs=%d sessions=%d", removedDirs, removedSessions)
 	}
 }

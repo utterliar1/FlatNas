@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"crypto/rand"
 	_ "embed"
 	"encoding/hex"
@@ -87,6 +88,13 @@ func Init() {
 	ensureDataFile()
 	ensureAdditionalDataFiles()
 	loadSecretKey()
+}
+
+// init 去掉内嵌 default.json 的 UTF-8 BOM。
+// 模板文件曾被 Windows 编辑器保存为带 BOM，而 ensureDataFile 会把字节原样写入
+// 新装实例的 data.json —— 之后 utils.ReadJSON 解析失败，首启直接读不到数据。
+func init() {
+	defaultJson = bytes.TrimPrefix(defaultJson, []byte{0xEF, 0xBB, 0xBF})
 }
 
 func dirExists(path string) bool {

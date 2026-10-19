@@ -474,9 +474,9 @@ func GetData(c *gin.Context) {
 			"backupLanUrls": {},
 			"lanHost":       {},
 			// appConfig 中的第三方服务密钥：访客不应获取，否则可被滥用/盗刷配额
-			"amapKey":           {},
-			"qweatherProjectId": {},
-			"qweatherKeyId":     {},
+			"amapKey":            {},
+			"qweatherProjectId":  {},
+			"qweatherKeyId":      {},
 			"qweatherPrivateKey": {},
 		}
 		removeSensitiveFields(userData, sensitiveKeys)
@@ -1461,7 +1461,7 @@ func migrateAuthModeData(from, to string) error {
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(adminUserFile, src, 0644)
+		return utils.AtomicWriteFile(adminUserFile, src)
 	}
 
 	if from == "multi" && to == "single" {
@@ -1472,7 +1472,7 @@ func migrateAuthModeData(from, to string) error {
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(dataFile, src, 0644)
+		return utils.AtomicWriteFile(dataFile, src)
 	}
 
 	return nil

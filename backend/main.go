@@ -99,7 +99,6 @@ func trimBasePath(basePath, reqPath string) string {
 	return reqPath
 }
 
-
 func main() {
 	fmt.Println("Backend process started")
 	gin.SetMode(gin.ReleaseMode)
@@ -109,6 +108,7 @@ func main() {
 	handlers.StartIPFetcher()
 	handlers.StartDataWarmup()
 	handlers.StartThumbSync()
+	handlers.StartTransferJanitor()
 	handlers.NewWeatherPoller().Start()
 
 	r := gin.New()

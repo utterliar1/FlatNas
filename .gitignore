@@ -146,8 +146,10 @@ debian/server/public/
 # Runtime state and secrets must stay local and must not be committed.
 server/data/*
 server/doc/*
+server/music/*
 !server/data/.gitkeep
 !server/doc/.gitkeep
+!server/music/.gitkeep
 
 # Debian 离线包运行期目录：整目录忽略（secret.key / data.json / icon-cache / 用户上传）
 # 注意 secret.key 绝不能入库：deploy.sh 会把这里的内容复制进安装目录，
