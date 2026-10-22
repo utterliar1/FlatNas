@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useMainStore } from "../stores/main";
 import OverlayMotion from "@/components/base/OverlayMotion.vue";
@@ -20,6 +20,9 @@ const store = useMainStore();
 const unlocked = ref(false);
 const code = ref("");
 const confirmCode = ref("");
+// 自动聚焦：弹窗出现后直接把焦点放到输码框，避免还要用鼠标点进去
+const codeInput = ref<HTMLInputElement | null>(null);
+const focusCode = () => nextTick(() => codeInput.value?.focus());
 const error = ref("");
 const busy = ref(false);
 const shake = ref(false);
@@ -56,9 +59,15 @@ watch(
       error.value = "";
       shake.value = false;
       manageMode.value = false;
+      focusCode();
     }
   },
 );
+
+// 进入「管理」态时同样要抢回焦点（此时弹窗已打开，只是分支内容变了）
+watch(manageMode, (v) => {
+  if (v) focusCode();
+});
 
 const close = () => emit("update:show", false);
 
@@ -232,6 +241,7 @@ const handleClearCode = async () => {
           </p>
           <input
             v-model="code"
+            ref="codeInput"
             type="password"
             autocomplete="off"
             :placeholder="t('settings.accessCode.newPlaceholder')"
@@ -317,6 +327,7 @@ const handleClearCode = async () => {
           </p>
           <input
             v-model="code"
+            ref="codeInput"
             type="password"
             autocomplete="off"
             :placeholder="t('settings.accessCode.setupPlaceholder')"
@@ -357,6 +368,7 @@ const handleClearCode = async () => {
         <template v-else-if="!manageMode">
           <input
             v-model="code"
+            ref="codeInput"
             type="password"
             autocomplete="off"
             :placeholder="t('settings.accessCode.codePlaceholder')"

@@ -23,7 +23,7 @@ export const useConfigStore = defineStore("config", () => {
   const serverSyncLockCount = ref(0);
 
   // Version / update checking
-  const currentVersion = "1.3.0";
+  const currentVersion = "1.3.1";
   const latestVersion = ref("");
   const updateCheckLastAt = useStorage<number>("flat-nas-update-check-last-at", 0);
   const UPDATE_CHECK_TTL = 30 * 60 * 1000;
